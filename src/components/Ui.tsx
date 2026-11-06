@@ -22,8 +22,9 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/** Local font for troika/drei <Text>. */
-export const DREI_FONT = '/fonts/Roboto-Regular.ttf'
+/** Local font for troika/drei <Text>, relative to Vite base URL for GitHub Pages compatibility. */
+const baseUrl = (import.meta.env.BASE_URL || './').replace(/\/?$/, '/')
+export const DREI_FONT = `${baseUrl}fonts/Roboto-Regular.ttf`
 
 /**
  * Normalizes text to ensure all glyphs exist in the standard MSDF atlas,

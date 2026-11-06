@@ -144,6 +144,9 @@ export function App() {
   const [customTitle, setCustomTitle] = useState('')
   const [customSummary, setCustomSummary] = useState('')
   const [customBadge, setCustomBadge] = useState('GOOGLE DOC')
+  const [supportsAR, setSupportsAR] = useState<boolean | null>(null)
+  const [supportsVR, setSupportsVR] = useState<boolean | null>(null)
+  const [isVisionPro, setIsVisionPro] = useState(false)
 
   const orb = useWorkspace((s) => s.orb)
   const setOrb = useWorkspace((s) => s.setOrb)
@@ -153,9 +156,71 @@ export function App() {
 
   const currentOrbCfg = ORB_STATE_OPTIONS.find((o) => o.id === orb) ?? ORB_STATE_OPTIONS[0]
 
-  const enter = useCallback(async (mode: 'immersive-ar' | 'immersive-vr') => {
-    console.log('App: enter called for mode:', mode)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || ''
+      const isVP =
+        /Apple Vision|visionOS/i.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0 && !/iPad/i.test(ua)) ||
+        (ua.includes('Macintosh') && navigator.maxTouchPoints > 2)
+      setIsVisionPro(isVP)
+
+      if (navigator.xr?.isSessionSupported) {
+        navigator.xr.isSessionSupported('immersive-ar')
+          .then((res) => setSupportsAR(res))
+          .catch(() => setSupportsAR(false))
+        navigator.xr.isSessionSupported('immersive-vr')
+          .then((res) => setSupportsVR(res))
+          .catch(() => setSupportsVR(false))
+      } else {
+        setSupportsAR(false)
+        setSupportsVR(false)
+      }
+    }
+  }, [])
+
+  const enter = useCallback(async (requestedMode: 'immersive-ar' | 'immersive-vr') => {
+    console.log('App: enter called for mode:', requestedMode)
     setError(null)
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setError(
+        'WebXR requiere HTTPS (contexto seguro). Si estas en Apple Vision Pro o red local, accede por https://lucahttp.github.io/spatial-workspace/'
+      )
+      return
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.xr) {
+      setError(
+        'Tu navegador no expone WebXR. En Apple Vision Pro usa Safari (visionOS 2+). En PICO usa PICO Browser o Wolvic.'
+      )
+      return
+    }
+
+    let mode = requestedMode
+    try {
+      const isRequestedSupported = await navigator.xr.isSessionSupported(mode)
+      if (!isRequestedSupported) {
+        if (mode === 'immersive-ar') {
+          const isVRSupported = await navigator.xr.isSessionSupported('immersive-vr')
+          if (isVRSupported) {
+            console.log(
+              'App: immersive-ar no soportado por Apple Vision Pro / Safari (politica de camara). Cambiando a immersive-vr...'
+            )
+            mode = 'immersive-vr'
+          } else {
+            setError('Tu visor o navegador no admite sesiones WebXR AR ni VR.')
+            return
+          }
+        } else {
+          setError(`El modo '${mode}' no es compatible con este navegador o visor.`)
+          return
+        }
+      }
+    } catch (checkErr) {
+      console.warn('App: error verificando soporte de sesion:', checkErr)
+    }
+
     const gl = glRef.current || (window as any).__gl
     if (gl?.xr) {
       try {
@@ -167,27 +232,56 @@ export function App() {
         console.warn('App: error setting up gl.xr before enter:', err)
       }
     }
+
     try {
-      console.log('App: requesting session via store.enterXR...')
+      console.log('App: requesting session via store.enterXR for mode:', mode)
       await store.enterXR(mode)
       console.log('App: enterXR SUCCESS!')
-    } catch (e) {
-      const errStr = e instanceof Error ? `${e.name}: ${e.message}\n${e.stack}` : String(e)
-      console.error('App: enterXR failed with local-floor: ' + errStr)
-      if (gl?.xr) {
+    } catch (e: any) {
+      const errStr = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+      console.error('App: enterXR failed:', e)
+
+      // Only retry with local reference space if the error is specifically about local-floor / reference space
+      const isRefSpaceErr = /reference\s*space|local-floor|floor/i.test(errStr)
+      if (isRefSpaceErr && gl?.xr) {
         try {
+          console.log('App: retrying with local reference space...')
           gl.xr.setReferenceSpaceType('local')
           await store.enterXR(mode)
           console.log('App: enterXR SUCCESS with local reference space!')
           return
-        } catch (e2) {
-          const errStr2 = e2 instanceof Error ? `${e2.name}: ${e2.message}\n${e2.stack}` : String(e2)
-          console.error('App: enterXR failed with local fallback: ' + errStr2)
-          setError(e2 instanceof Error ? e2.message : String(e2))
+        } catch (e2: any) {
+          setError(e2?.message || String(e2))
           return
         }
       }
-      setError(e instanceof Error ? e.message : String(e))
+
+      // If AR fails on Apple Vision Pro with security or unsupported, fallback to VR gracefully
+      if (mode === 'immersive-ar' && /security|supported|denied|cancel/i.test(errStr)) {
+        try {
+          console.log('App: immersive-ar no permitido; iniciando fallback a immersive-vr...')
+          await store.enterXR('immersive-vr')
+          console.log('App: enterXR SUCCESS con fallback immersive-vr!')
+          return
+        } catch (vrErr: any) {
+          setError(
+            `En Apple Vision Pro, Apple bloquea immersive-ar por privacidad de camaras. Intento VR fallo: ${vrErr?.message || errStr}`
+          )
+          return
+        }
+      }
+
+      if (/not secure|SecurityError/i.test(errStr)) {
+        setError(
+          'Error de seguridad WebXR: Requiere HTTPS. En Safari de visionOS verifica que los Feature Flags de WebXR esten habilitados.'
+        )
+      } else if (/not supported|NotSupportedError/i.test(errStr)) {
+        setError(
+          `Modo '${mode}' no soportado. En Apple Vision Pro utiliza el boton de Realidad Virtual (immersive-vr).`
+        )
+      } else {
+        setError(e instanceof Error ? e.message : String(e))
+      }
     }
   }, [])
 
@@ -269,17 +363,57 @@ export function App() {
                   + Spotlight
                 </button>
                 <div className="divider">|</div>
-                <button className="btn primary xr-ar" onClick={() => enter('immersive-ar')}>
-                  Passthrough AR (Pico 4 Ultra)
-                </button>
-                <button className="btn xr-vr" onClick={() => enter('immersive-vr')}>
-                  VR (Pico Neo)
-                </button>
+                {isVisionPro || (supportsVR && !supportsAR) ? (
+                  <>
+                    <button
+                      className="btn primary xr-vp"
+                      onClick={() => enter('immersive-vr')}
+                      title="Entrar en Apple Vision Pro (Modo Inmersivo WebXR)"
+                    >
+                      Apple Vision Pro (WebXR)
+                    </button>
+                    <button
+                      className="btn xr-ar"
+                      onClick={() => enter('immersive-ar')}
+                      style={{ opacity: 0.75 }}
+                      title="Passthrough AR (Nota: Safari en visionOS no permite acceso a camaras web por privacidad)"
+                    >
+                      AR (Pico 4 Ultra)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="btn primary xr-ar"
+                      onClick={() => enter('immersive-ar')}
+                      title="Passthrough AR (Pico 4 Ultra / Quest)"
+                    >
+                      Passthrough AR (Pico 4 Ultra)
+                    </button>
+                    <button
+                      className="btn xr-vr"
+                      onClick={() => enter('immersive-vr')}
+                      title="VR (Pico Neo / Apple Vision Pro)"
+                    >
+                      VR (Pico Neo)
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </BorderBeam>
 
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div
+              className="error"
+              onClick={() => setError(null)}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+              title="Haz clic para descartar este mensaje"
+            >
+              <span>{error}</span>
+              <span style={{ fontWeight: 700, marginLeft: 4 }}>✕</span>
+            </div>
+          )}
         </header>
 
         {/* SPOTLIGHT MODAL (Boceto 2: 'Spotlight nuevo serch docs google') */}
