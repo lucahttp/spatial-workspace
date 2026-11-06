@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>PICO OS — Spatial Workspace XR</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(ellipse at 50% 25%, #0d162b 0%, #060914 55%, #020408 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+        color: #e2e8f0;
+        user-select: none;
+        -webkit-font-smoothing: antialiased;
+      }
+      * {
+        box-sizing: border-box;
+      }
+
+      /* Unified VisionOS Top HUD Header */
+      .top-hud {
+        position: fixed;
+        top: 14px;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        pointer-events: none;
+        padding: 0 16px;
+      }
+      .hud-pill {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 6px 18px;
+        border-radius: 999px;
+        background: rgba(10, 16, 30, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(32px) saturate(190%);
+        -webkit-backdrop-filter: blur(32px) saturate(190%);
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+        pointer-events: auto;
+        font-size: 12px;
+      }
+      .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .hud-orb-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+      }
+      .brand-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        transition: background 0.3s, box-shadow 0.3s;
+      }
+      .brand-text {
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: 0.3px;
+        font-size: 12px;
+      }
+      .divider {
+        color: rgba(255, 255, 255, 0.20);
+        margin: 0 2px;
+      }
+      .status-text {
+        color: #94a3b8;
+        font-size: 11px;
+        max-width: 260px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Orb Selector Capsule */
+      .orb-selector-capsule {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.40);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 3px 10px;
+      }
+      .orb-pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+      .orb-select {
+        background: transparent;
+        border: none;
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 600;
+        outline: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .orb-select option {
+        background: #0f172a;
+        color: #fff;
+      }
+
+      /* HUD Action Buttons */
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.07);
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.16);
+        transform: translateY(-1.5px) scale(1.02);
+        border-color: rgba(255, 255, 255, 0.32);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      .btn:active {
+        transform: translateY(0.5px) scale(0.98);
+      }
+      .btn.primary {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        border-color: #38bdf8;
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(2, 132, 199, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      }
+      .btn.primary:hover {
+        background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+      }
+      .btn.spotlight-btn {
+        background: rgba(16, 185, 129, 0.20);
+        border-color: rgba(52, 211, 153, 0.60);
+        color: #6ee7b7;
+      }
+      .btn.spotlight-btn:hover {
+        background: rgba(16, 185, 129, 0.35);
+        border-color: #34d399;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+      }
+
+      .error {
+        font-size: 11px;
+        color: #fca5a5;
+        background: rgba(127, 29, 29, 0.85);
+        border: 1px solid rgba(252, 165, 165, 0.4);
+        padding: 6px 14px;
+        border-radius: 999px;
+        pointer-events: auto;
+      }
+
+      /* Spotlight Modal */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        background: rgba(0, 0, 0, 0.68);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .modal-card {
+        background: rgba(10, 16, 32, 0.94);
+        border: 1px solid rgba(255, 255, 255, 0.20);
+        border-radius: 24px;
+        width: 100%;
+        max-width: 480px;
+        padding: 28px;
+        backdrop-filter: blur(40px) saturate(200%);
+        -webkit-backdrop-filter: blur(40px) saturate(200%);
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.85), inset 0 1px 1.5px rgba(255, 255, 255, 0.35);
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .modal-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .modal-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #34d399;
+        box-shadow: 0 0 10px #34d399;
+      }
+      .modal-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .modal-subtitle {
+        margin: 0 0 16px 0;
+        font-size: 12px;
+        color: #94a3b8;
+        line-height: 1.4;
+      }
+      .close-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 4px;
+        transition: color 0.15s;
+      }
+      .close-btn:hover {
+        color: #fff;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .form-group label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        letter-spacing: 0.3px;
+      }
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        background: rgba(2, 6, 23, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

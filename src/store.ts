@@ -1,0 +1,214 @@
+import { create } from 'zustand'
+import { playArchiveSound, playClickSound, playSpotlightSound, playTrashSound } from './sound'
+import { layout } from './theme'
+
+export type OrbState =
+  | 'breathing'
+  | 'listening'
+  | 'searching'
+  | 'working'
+  | 'solving'
+  | 'connecting'
+  | 'weaving'
+  | 'composing'
+  | 'shaping'
+
+export type Card = {
+  id: string
+  badge: string
+  title: string
+  url: string
+  summary: string
+  /** true for the "+ Spotlight" seed card */
+  isSpotlight?: boolean
+}
+
+export type Source = {
+  id: string
+  title: string
+  badge: string
+  url: string
+}
+
+export type Droplet = {
+  id: string
+  start: [number, number, number]
+  end: [number, number, number]
+}
+
+export type Mode = 'carousel' | 'focus'
+
+type Workspace = {
+  cards: Card[]
+  selectedId: string | null
+  sources: Source[]
+  orb: OrbState
+  transcript: string[]
+  mode: Mode
+  /** panel id -> hidden */
+  hidden: Record<string, boolean>
+  /** last action, surfaced in the status line */
+  status: string
+  /** bumped to ask the workspace to re-anchor at eye height */
+  recenterTick: number
+  /** active animated droplets travelling to IdeaGraph */
+  droplets: Droplet[]
+
+  select: (id: string) => void
+  spawnSpotlight: (custom?: { title: string; summary: string; badge: string; url: string }) => void
+  archive: (id: string, startPos?: [number, number, number]) => void
+  discard: (id: string) => void
+  removeDroplet: (id: string) => void
+  setOrb: (s: OrbState) => void
+  setTranscript: (lines: string[]) => void
+  setStatus: (s: string) => void
+  toggleMode: (m: Mode) => void
+  toggleHidden: (id: string) => void
+  showAll: () => void
+  recenter: () => void
+}
+
+const SEED: Card[] = [
+  {
+    id: 'spotlight',
+    badge: 'SPOTLIGHT',
+    title: '+ Nueva búsqueda',
+    url: 'spotlight://new',
+    summary: 'Buscar, crear un Google Doc o abrir una fuente nueva.',
+    isSpotlight: true,
+  },
+  {
+    id: 'doc-spatial',
+    badge: 'GOOGLE DOC',
+    title: 'Diseño Spatial UI en Pico',
+    url: 'https://docs.google.com/spatial-pico-spec',
+    summary: 'Especificación de ventanas con barrita inferior, snap magnético y grafo de ideas.',
+  },
+  {
+    id: 'web-wolvic',
+    badge: 'WEB',
+    title: 'Wolvic & WebXR Layers',
+    url: 'https://wolvic.com/webxr-layers',
+    summary: 'Integración de navegador espacial multi-ventana y puente nativo SystemBridge.',
+  },
+  {
+    id: 'note-xr',
+    badge: 'RESEARCH PAPER',
+    title: 'Spatial Ergonomics 2026',
+    url: 'https://arxiv.org/abs/spatial-ux-2026',
+    summary: 'Cono de confort visual de 33.5 grados, anti-fatiga cervical y físicas magnéticas.',
+  },
+]
+
+export const useWorkspace = create<Workspace>((set, get) => ({
+  cards: SEED,
+  selectedId: SEED[1].id,
+  sources: [
+    {
+      id: 'src-seed',
+      title: 'Arquitectura WebXR Pico',
+      badge: 'DOC',
+      url: 'https://developer.picoxr.com/webxr',
+    },
+  ],
+  orb: 'breathing',
+  transcript: ['Asistente espacial listo. Apuntá a una tarjeta o hablale al Orbe.'],
+  mode: 'carousel',
+  hidden: {},
+  status: 'Apuntá a una tarjeta, al dock o arrastrá a las bandejas',
+  recenterTick: 0,
+  droplets: [],
+
+  select: (id) => {
+    playClickSound()
+    set({ selectedId: id, mode: 'focus' })
+    const card = get().cards.find((c) => c.id === id)
+    if (card && !card.isSpotlight) {
+      set({
+        orb: 'working',
+        transcript: [`Leyendo: ${card.title}`, `URL: ${card.url}`, 'Listo para archivar en Idea o descartar.'],
+      })
+      setTimeout(() => set({ orb: 'breathing' }), 2000)
+    }
+  },
+
+  spawnSpotlight: (custom) => {
+    playSpotlightSound()
+    const n = get().cards.length + 1
+    const card: Card = custom
+      ? {
+          id: `custom-${Date.now()}`,
+          badge: custom.badge || 'SPOTLIGHT',
+          title: custom.title,
+          url: custom.url || `spotlight://doc-${n}`,
+          summary: custom.summary,
+        }
+      : {
+          id: `gen-${Date.now()}`,
+          badge: `SPOTLIGHT #${n}`,
+          title: `Fuente XR #${n}: Spatial UI`,
+          url: `https://docs.google.com/xr-note-${n}`,
+          summary: 'Documento generado desde Spotlight con soporte de arrastre y archivo directo.',
+        }
+    set({
+      cards: [...get().cards, card],
+      selectedId: card.id,
+      orb: 'searching',
+      status: `Nueva tarjeta: ${card.title}`,
+      transcript: [`Buscando fuentes para "${card.title}"…`, 'Tarjeta añadida al Carrusel de cosas.'],
+    })
+    setTimeout(() => set({ orb: 'composing' }), 900)
+    setTimeout(() => set({ orb: 'breathing' }), 2600)
+  },
+
+  archive: (id, startPos) => {
+    const card = get().cards.find((c) => c.id === id)
+    if (!card || card.isSpotlight) return
+    playArchiveSound()
+
+    const dropStart: [number, number, number] = startPos || [-layout.padX, layout.padY, layout.padZ]
+    const dropEnd: [number, number, number] = [layout.graphX, layout.graphY, layout.graphZ]
+    const newDroplet: Droplet = {
+      id: `drop-${Date.now()}`,
+      start: dropStart,
+      end: dropEnd,
+    }
+
+    set({
+      cards: get().cards.filter((c) => c.id !== id),
+      sources: [...get().sources, { id: card.id, title: card.title, badge: card.badge, url: card.url }],
+      orb: 'connecting',
+      status: `Archivado en Idea: ${card.title}`,
+      transcript: [`"${card.title}" sumado al grafo de Idea y Fuentes.`, 'Nodo conectado con éxito.'],
+      droplets: [...get().droplets, newDroplet],
+    })
+
+    setTimeout(() => set({ orb: 'weaving' }), 500)
+    setTimeout(() => set({ orb: 'breathing' }), 2200)
+  },
+
+  discard: (id) => {
+    const card = get().cards.find((c) => c.id === id)
+    if (!card || card.isSpotlight) return
+    playTrashSound()
+    set({
+      cards: get().cards.filter((c) => c.id !== id),
+      orb: 'shaping',
+      status: `Descartado a Basura: ${card.title}`,
+      transcript: [`Tarjeta descartada: "${card.title}".`],
+    })
+    setTimeout(() => set({ orb: 'breathing' }), 1400)
+  },
+
+  removeDroplet: (id) => {
+    set({ droplets: get().droplets.filter((d) => d.id !== id) })
+  },
+
+  setOrb: (orb) => set({ orb }),
+  setTranscript: (transcript) => set({ transcript }),
+  setStatus: (status) => set({ status }),
+  recenter: () => set({ recenterTick: get().recenterTick + 1 }),
+  toggleMode: (mode) => set({ mode }),
+  toggleHidden: (id) => set({ hidden: { ...get().hidden, [id]: !get().hidden[id] } }),
+  showAll: () => set({ hidden: {} }),
+}))
