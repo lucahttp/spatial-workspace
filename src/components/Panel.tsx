@@ -1,6 +1,6 @@
 import { Handle, HandleTarget } from '@react-three/handle'
 import { Container, Text } from '@react-three/uikit'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Group } from 'three'
 import { color, radius, type as typeScale } from '../theme'
 import { cleanText, UiRoot } from './Ui'
@@ -41,20 +41,29 @@ export function Panel({
   const groupRef = useRef<Group>(null)
   const [barHovered, setBarHovered] = useState(false)
   const [panelHovered, setPanelHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Initialize group transform once on mount to avoid R3F resetting position on re-renders
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(position[0], position[1], position[2])
+      groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2])
+    }
+  }, [])
 
   const w = px(width)
   const h = px(height)
 
   return (
     <HandleTarget targetRef={groupRef}>
-      <group ref={groupRef} position={position} rotation={rotation}>
+      <group ref={groupRef}>
         {/* Realistic visionOS Window Shadow */}
         <mesh position={[0, -0.012, -0.008]}>
           <planeGeometry args={[width + 0.03, height + 0.03]} />
           <meshBasicMaterial
             color="#000000"
             transparent
-            opacity={panelHovered ? 0.32 : 0.18}
+            opacity={isDragging ? 0.42 : panelHovered ? 0.32 : 0.18}
             depthWrite={false}
           />
         </mesh>
@@ -198,7 +207,7 @@ export function Panel({
             {children}
           </Container>
 
-          {/* Floating PICO OS 5 Grab Bar */}
+          {/* Floating VisionOS / PICO OS Window Grab Bar */}
           {bar && (
             <Container
               positionType="absolute"
@@ -209,28 +218,69 @@ export function Panel({
               alignItems="center"
               justifyContent="center"
               gapColumn={10}
+              cursor="grab"
               onHoverChange={setBarHovered}
             >
               {/* Central Grab Pill */}
               <Container
-                width={barHovered ? 68 : 42}
-                height={5}
-                borderTopLeftRadius={2.5}
-                borderTopRightRadius={2.5}
-                borderBottomLeftRadius={2.5}
-                borderBottomRightRadius={2.5}
-                backgroundColor={barHovered ? accent : 'rgba(255,255,255,0.30)'}
+                width={isDragging ? 96 : barHovered ? 78 : 46}
+                height={6}
+                borderTopLeftRadius={3}
+                borderTopRightRadius={3}
+                borderBottomLeftRadius={3}
+                borderBottomRightRadius={3}
+                backgroundColor={
+                  isDragging
+                    ? accent
+                    : barHovered
+                    ? 'rgba(255, 255, 255, 0.95)'
+                    : 'rgba(255, 255, 255, 0.35)'
+                }
               />
             </Container>
           )}
         </UiRoot>
 
-        {/* Grab Handle Mesh for XR Laser Raycast */}
+        {/* Generous Bottom Grab Handle Mesh for XR Hands & Laser Raycast */}
         {bar && (
-          <group position-y={-height / 2 + BAR_OFFSET}>
-            <Handle targetRef={groupRef} translate scale={false} rotate={false} multitouch={false}>
+          <group position={[0, -height / 2 + BAR_OFFSET, 0.025]}>
+            <Handle
+              targetRef={groupRef}
+              translate
+              scale={false}
+              rotate={false}
+              multitouch={true}
+              apply={(state, target) => {
+                if (state.first) setIsDragging(true)
+                target.position.copy(state.current.position)
+                if (state.last) setIsDragging(false)
+              }}
+            >
               <mesh>
-                <planeGeometry args={[0.16, 0.05]} />
+                <planeGeometry args={[Math.max(width * 0.9, 0.45), 0.09]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+            </Handle>
+          </group>
+        )}
+
+        {/* Generous Top Header Grab Handle Mesh for natural window moving */}
+        {title && (
+          <group position={[0, height / 2 - 0.025, 0.025]}>
+            <Handle
+              targetRef={groupRef}
+              translate
+              scale={false}
+              rotate={false}
+              multitouch={true}
+              apply={(state, target) => {
+                if (state.first) setIsDragging(true)
+                target.position.copy(state.current.position)
+                if (state.last) setIsDragging(false)
+              }}
+            >
+              <mesh>
+                <planeGeometry args={[Math.max(width * 0.9, 0.45), 0.07]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
             </Handle>

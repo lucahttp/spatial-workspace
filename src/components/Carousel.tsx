@@ -361,6 +361,7 @@ function CardItem({
               alignItems="center"
               justifyContent="center"
               gapColumn={8}
+              cursor="grab"
               onHoverChange={setBarHovered}
             >
               <Container
@@ -400,26 +401,26 @@ function CardItem({
                 <XIcon width={9} color={barHovered ? color.danger : color.cardTextDim} />
               </Container>
               <Container
-                width={barHovered ? 56 : 38}
-                height={4.5}
+                width={barHovered ? 64 : 38}
+                height={5}
                 borderTopLeftRadius={2.5}
                 borderTopRightRadius={2.5}
                 borderBottomLeftRadius={2.5}
                 borderBottomRightRadius={2.5}
-                backgroundColor={barHovered ? color.accent : 'rgba(0,0,0,0.18)'}
+                backgroundColor={barHovered ? color.accent : 'rgba(0,0,0,0.22)'}
               />
             </Container>
           </Container>
         </UiRoot>
 
-        {/* Grab target for @react-three/handle */}
-        <group position-y={-layout.cardH / 2 + 0.02}>
+        {/* Generous Grab target for XR Hands & Laser Raycast */}
+        <group position={[0, -layout.cardH / 2 + 0.025, 0.025]}>
           <Handle
             targetRef={groupRef}
             translate
             scale={false}
             rotate={false}
-            multitouch={false}
+            multitouch={true}
             apply={(state, target) => {
               if (state.first) {
                 dragging.current = true
@@ -434,13 +435,58 @@ function CardItem({
             }}
           >
             <mesh>
-              <planeGeometry args={[0.20, 0.04]} />
+              <planeGeometry args={[layout.cardW + 0.04, 0.08]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
           </Handle>
         </group>
       </group>
     </HandleTarget>
+  )
+}
+
+function CarouselChevron({
+  direction,
+  onClick,
+  position,
+  rotation,
+}: {
+  direction: 'left' | 'right'
+  onClick: () => void
+  position: [number, number, number]
+  rotation: [number, number, number]
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <group position={position} rotation={rotation}>
+      <UiRoot width={px(0.065)} height={px(0.065)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+        <Container
+          cursor="pointer"
+          width={46}
+          height={46}
+          borderTopLeftRadius={23}
+          borderTopRightRadius={23}
+          borderBottomLeftRadius={23}
+          borderBottomRightRadius={23}
+          backgroundColor={hovered ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.88)'}
+          borderColor={hovered ? color.borderHover : 'rgba(255, 255, 255, 0.28)'}
+          borderTopWidth={1.5}
+          borderBottomWidth={1}
+          borderLeftWidth={1}
+          borderRightWidth={1}
+          alignItems="center"
+          justifyContent="center"
+          onClick={onClick}
+          onHoverChange={setHovered}
+        >
+          {direction === 'left' ? (
+            <ChevronLeftIcon width={20} color={hovered ? color.accent : color.textPrimary} />
+          ) : (
+            <ChevronRightIcon width={20} color={hovered ? color.accent : color.textPrimary} />
+          )}
+        </Container>
+      </UiRoot>
+    </group>
   )
 }
 
@@ -516,7 +562,16 @@ export function Carousel() {
           count={cards.length}
           offsetIndex={slideOffset}
           selected={card.id === selectedId}
-          onSelect={() => (card.isSpotlight ? spawn() : select(card.id))}
+          onSelect={() => {
+            if (card.isSpotlight) {
+              spawn()
+            } else {
+              select(card.id)
+              // Smoothly bring selected card to center of the arc
+              const mid = (cards.length - 1) / 2
+              setSlideOffset(mid - i)
+            }
+          }}
           onDrop={handleDrop}
           onArchive={(c) => archive(c.id)}
           onDiscard={(c) => discard(c.id)}
@@ -527,61 +582,18 @@ export function Carousel() {
       {/* Modern Frosted Glass Navigation Chevrons `<` and `>` */}
       {cards.length > 2 && (
         <>
-          <group
-            position={[-0.56, layout.carouselY, -1.16]}
+          <CarouselChevron
+            direction="left"
+            position={[-0.58, layout.carouselY, -1.16]}
             rotation={[0, 0.35, 0]}
             onClick={() => setSlideOffset((o) => o + 1)}
-          >
-            <UiRoot width={px(0.046)} height={px(0.046)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
-              <Container
-                cursor="pointer"
-                width={36}
-                height={36}
-                borderTopLeftRadius={18}
-                borderTopRightRadius={18}
-                borderBottomLeftRadius={18}
-                borderBottomRightRadius={18}
-                backgroundColor="rgba(15, 23, 42, 0.88)"
-                borderColor="rgba(255, 255, 255, 0.22)"
-                borderTopWidth={1.5}
-                borderBottomWidth={1}
-                borderLeftWidth={1}
-                borderRightWidth={1}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <ChevronLeftIcon width={16} color={color.textPrimary} />
-              </Container>
-            </UiRoot>
-          </group>
-
-          <group
-            position={[0.56, layout.carouselY, -1.16]}
+          />
+          <CarouselChevron
+            direction="right"
+            position={[0.58, layout.carouselY, -1.16]}
             rotation={[0, -0.35, 0]}
             onClick={() => setSlideOffset((o) => o - 1)}
-          >
-            <UiRoot width={px(0.046)} height={px(0.046)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
-              <Container
-                cursor="pointer"
-                width={36}
-                height={36}
-                borderTopLeftRadius={18}
-                borderTopRightRadius={18}
-                borderBottomLeftRadius={18}
-                borderBottomRightRadius={18}
-                backgroundColor="rgba(15, 23, 42, 0.88)"
-                borderColor="rgba(255, 255, 255, 0.22)"
-                borderTopWidth={1.5}
-                borderBottomWidth={1}
-                borderLeftWidth={1}
-                borderRightWidth={1}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <ChevronRightIcon width={16} color={color.textPrimary} />
-              </Container>
-            </UiRoot>
-          </group>
+          />
         </>
       )}
     </group>

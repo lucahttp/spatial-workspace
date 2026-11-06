@@ -1,6 +1,5 @@
 import { Container, Text } from '@react-three/uikit'
 import {
-  BookOpenIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
@@ -11,10 +10,100 @@ import {
   SparklesIcon,
   StarIcon,
 } from '@react-three/uikit-lucide'
+import { useState } from 'react'
 import { useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
 import { Panel } from './Panel'
 import { cleanText } from './Ui'
+
+function StarButton({
+  active,
+  onClick,
+}: {
+  active: boolean
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <Container
+      cursor="pointer"
+      width={24}
+      height={24}
+      borderTopLeftRadius={6}
+      borderTopRightRadius={6}
+      borderBottomLeftRadius={6}
+      borderBottomRightRadius={6}
+      backgroundColor={hovered ? 'rgba(255,255,255,0.14)' : 'transparent'}
+      alignItems="center"
+      justifyContent="center"
+      onClick={onClick}
+      onHoverChange={setHovered}
+    >
+      <StarIcon
+        width={14}
+        color={active || hovered ? color.idea : 'rgba(255,255,255,0.25)'}
+      />
+    </Container>
+  )
+}
+
+function ReadingProgressSlider({
+  progress,
+  onChange,
+}: {
+  progress: number
+  onChange: (newProgress: number) => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <Container
+      cursor="pointer"
+      flexDirection="row"
+      alignItems="center"
+      width="100%"
+      height={28}
+      paddingLeft={2}
+      paddingRight={2}
+      onClick={() => {
+        const nextP = progress >= 100 ? 25 : progress + 25
+        onChange(nextP)
+      }}
+      onHoverChange={setHovered}
+    >
+      {/* Active Track */}
+      <Container
+        width={`${progress}%`}
+        height={6}
+        borderTopLeftRadius={3}
+        borderBottomLeftRadius={3}
+        backgroundColor={hovered ? '#8b5cf6' : color.purple}
+      />
+      {/* Circular Thumb */}
+      <Container
+        width={hovered ? 18 : 14}
+        height={hovered ? 18 : 14}
+        borderTopLeftRadius={9}
+        borderTopRightRadius={9}
+        borderBottomLeftRadius={9}
+        borderBottomRightRadius={9}
+        backgroundColor={hovered ? '#a78bfa' : color.purple}
+        borderColor="#ffffff"
+        borderTopWidth={1.5}
+        borderBottomWidth={1.5}
+        borderLeftWidth={1.5}
+        borderRightWidth={1.5}
+      />
+      {/* Inactive Track */}
+      <Container
+        flexGrow={1}
+        height={6}
+        borderTopRightRadius={3}
+        borderBottomRightRadius={3}
+        backgroundColor={hovered ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.22)'}
+      />
+    </Container>
+  )
+}
 
 export function Preview() {
   const cards = useWorkspace((s) => s.cards)
@@ -28,6 +117,10 @@ export function Preview() {
 
   const progress = selected?.readProgress ?? 65
   const rating = selected?.rating ?? 5
+
+  const [favHovered, setFavHovered] = useState(false)
+  const [reloadHovered, setReloadHovered] = useState(false)
+  const [shareHovered, setShareHovered] = useState(false)
 
   return (
     <Panel
@@ -123,25 +216,66 @@ export function Preview() {
             </Container>
 
             {/* Quick Actions & Favorite Heart Toggle (User reference: uploaded_media_2) */}
-            <Container flexDirection="row" alignItems="center" gapColumn={8}>
+            <Container flexDirection="row" alignItems="center" gapColumn={6}>
               <Container
                 cursor="pointer"
-                width={24}
-                height={24}
-                borderTopLeftRadius={12}
-                borderTopRightRadius={12}
-                borderBottomLeftRadius={12}
-                borderBottomRightRadius={12}
-                backgroundColor={selected.favorite ? 'rgba(124, 58, 237, 0.20)' : 'rgba(255,255,255,0.06)'}
+                width={28}
+                height={28}
+                borderTopLeftRadius={14}
+                borderTopRightRadius={14}
+                borderBottomLeftRadius={14}
+                borderBottomRightRadius={14}
+                backgroundColor={
+                  selected.favorite
+                    ? 'rgba(124, 58, 237, 0.28)'
+                    : favHovered
+                    ? 'rgba(255,255,255,0.16)'
+                    : 'rgba(255,255,255,0.06)'
+                }
+                borderColor={selected.favorite ? color.purple : 'rgba(255,255,255,0.15)'}
+                borderTopWidth={1}
+                borderBottomWidth={1}
+                borderLeftWidth={1}
+                borderRightWidth={1}
                 alignItems="center"
                 justifyContent="center"
                 onClick={() => toggleFavorite(selected.id)}
+                onHoverChange={setFavHovered}
               >
-                <HeartIcon width={13} color={selected.favorite ? color.purple : color.textDim} />
+                <HeartIcon width={14} color={selected.favorite ? color.purple : color.textDim} />
               </Container>
-              <RotateCwIcon width={12} color={color.textDim} />
-              <BookOpenIcon width={12} color={color.accent} />
-              <ShareIcon width={12} color={color.textDim} />
+
+              <Container
+                cursor="pointer"
+                width={28}
+                height={28}
+                borderTopLeftRadius={14}
+                borderTopRightRadius={14}
+                borderBottomLeftRadius={14}
+                borderBottomRightRadius={14}
+                backgroundColor={reloadHovered ? 'rgba(255,255,255,0.14)' : 'transparent'}
+                alignItems="center"
+                justifyContent="center"
+                onHoverChange={setReloadHovered}
+              >
+                <RotateCwIcon width={13} color={reloadHovered ? color.textPrimary : color.textDim} />
+              </Container>
+
+              <Container
+                cursor="pointer"
+                width={28}
+                height={28}
+                borderTopLeftRadius={14}
+                borderTopRightRadius={14}
+                borderBottomLeftRadius={14}
+                borderBottomRightRadius={14}
+                backgroundColor={shareHovered ? 'rgba(255,255,255,0.14)' : 'transparent'}
+                alignItems="center"
+                justifyContent="center"
+                onHoverChange={setShareHovered}
+              >
+                <ShareIcon width={13} color={shareHovered ? color.textPrimary : color.textDim} />
+              </Container>
             </Container>
           </Container>
 
@@ -192,18 +326,13 @@ export function Preview() {
               </Container>
 
               {/* 5-Star Rating Bar (User reference: uploaded_media_2) */}
-              <Container flexDirection="row" alignItems="center" gapColumn={3}>
+              <Container flexDirection="row" alignItems="center" gapColumn={2}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Container
+                  <StarButton
                     key={star}
-                    cursor="pointer"
+                    active={star <= rating}
                     onClick={() => setRating(selected.id, star)}
-                  >
-                    <StarIcon
-                      width={12}
-                      color={star <= rating ? color.idea : 'rgba(255,255,255,0.25)'}
-                    />
-                  </Container>
+                  />
                 ))}
               </Container>
             </Container>
@@ -214,7 +343,7 @@ export function Preview() {
             </Text>
 
             {/* Reading Progress Slider (User reference: uploaded_media_2) */}
-            <Container flexDirection="column" gapRow={3} width="100%" marginTop={2} marginBottom={4}>
+            <Container flexDirection="column" gapRow={2} width="100%" marginTop={2} marginBottom={4}>
               <Container flexDirection="row" justifyContent="space-between" width="100%">
                 <Text fontSize={typeScale.micro} color={color.textDim} fontWeight={600}>
                   {cleanText('PROGRESO DE LECTURA')}
@@ -224,50 +353,10 @@ export function Preview() {
                 </Text>
               </Container>
 
-              {/* Slider Track with Purple Thumb */}
-              <Container
-                cursor="pointer"
-                flexDirection="row"
-                alignItems="center"
-                width="100%"
-                height={16}
-                onClick={() => {
-                  const nextP = progress >= 100 ? 25 : progress + 25
-                  setProgress(selected.id, nextP)
-                }}
-              >
-                {/* Active Purple Track */}
-                <Container
-                  width={`${progress}%`}
-                  height={5}
-                  borderTopLeftRadius={2.5}
-                  borderBottomLeftRadius={2.5}
-                  backgroundColor={color.purple}
-                />
-                {/* Purple Circular Thumb */}
-                <Container
-                  width={14}
-                  height={14}
-                  borderTopLeftRadius={7}
-                  borderTopRightRadius={7}
-                  borderBottomLeftRadius={7}
-                  borderBottomRightRadius={7}
-                  backgroundColor={color.purple}
-                  borderColor="#ffffff"
-                  borderTopWidth={1.5}
-                  borderBottomWidth={1.5}
-                  borderLeftWidth={1.5}
-                  borderRightWidth={1.5}
-                />
-                {/* Inactive White/Pastel Track */}
-                <Container
-                  flexGrow={1}
-                  height={5}
-                  borderTopRightRadius={2.5}
-                  borderBottomRightRadius={2.5}
-                  backgroundColor="rgba(255,255,255,0.25)"
-                />
-              </Container>
+              <ReadingProgressSlider
+                progress={progress}
+                onChange={(p) => setProgress(selected.id, p)}
+              />
             </Container>
 
             {/* Summary Box */}
