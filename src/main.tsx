@@ -66,43 +66,4 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Remote debug logging to help diagnose XR issues in real-time
-if (typeof window !== 'undefined') {
-  const send = (type: string, data: any) => {
-    try {
-      fetch('http://127.0.0.1:9999', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, data, time: Date.now() }),
-      }).catch(() => {})
-    } catch {}
-  }
-
-  const origLog = console.log
-  const origWarn = console.warn
-  const origError = console.error
-
-  console.log = (...args) => {
-    origLog(...args)
-    send('log', args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '))
-  }
-  console.warn = (...args) => {
-    origWarn(...args)
-    send('warn', args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '))
-  }
-  console.error = (...args) => {
-    origError(...args)
-    send('error', args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '))
-  }
-
-  window.addEventListener('error', (e) => {
-    send('window-error', { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: e.error?.stack })
-  })
-  window.addEventListener('unhandledrejection', (e) => {
-    send('unhandled-rejection', { reason: String(e.reason?.stack || e.reason) })
-  })
-
-  send('boot', { url: window.location.href, userAgent: navigator.userAgent })
-}
-
 createRoot(document.getElementById('root')!).render(<App />)
