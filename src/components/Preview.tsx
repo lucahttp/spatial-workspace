@@ -4,10 +4,12 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
+  HeartIcon,
   LockIcon,
   RotateCwIcon,
   ShareIcon,
   SparklesIcon,
+  StarIcon,
 } from '@react-three/uikit-lucide'
 import { useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
@@ -18,8 +20,14 @@ export function Preview() {
   const cards = useWorkspace((s) => s.cards)
   const selectedId = useWorkspace((s) => s.selectedId)
   const select = useWorkspace((s) => s.select)
+  const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
+  const setRating = useWorkspace((s) => s.setRating)
+  const setProgress = useWorkspace((s) => s.setProgress)
   const selected = cards.find((c) => c.id === selectedId) ?? cards[0]
   const sources = useWorkspace((s) => s.sources)
+
+  const progress = selected?.readProgress ?? 65
+  const rating = selected?.rating ?? 5
 
   return (
     <Panel
@@ -33,15 +41,15 @@ export function Preview() {
     >
       {selected ? (
         <Container flexDirection="column" width="100%" flexGrow={1}>
-          {/* Top Browser Bar: Navigation chevrons + URL capsule + Reader actions */}
+          {/* Top Browser Bar: Navigation + URL Capsule + Favorite + Share */}
           <Container
             width="100%"
-            height={34}
+            height={36}
             flexDirection="row"
             alignItems="center"
             justifyContent="space-between"
-            paddingLeft={8}
-            paddingRight={8}
+            paddingLeft={10}
+            paddingRight={10}
             backgroundColor={color.glassUrlBar}
             borderColor={color.borderSubtle}
             borderTopWidth={1}
@@ -53,7 +61,7 @@ export function Preview() {
             borderBottomLeftRadius={radius.button}
             borderBottomRightRadius={radius.button}
             flexShrink={0}
-            marginBottom={14}
+            marginBottom={12}
           >
             {/* Back / Forward chevrons */}
             <Container flexDirection="row" alignItems="center" gapColumn={4}>
@@ -93,24 +101,44 @@ export function Preview() {
               gapColumn={6}
               paddingLeft={12}
               paddingRight={12}
-              height={24}
-              backgroundColor="rgba(0,0,0,0.4)"
-              borderTopLeftRadius={12}
-              borderTopRightRadius={12}
-              borderBottomLeftRadius={12}
-              borderBottomRightRadius={12}
+              height={26}
+              backgroundColor="rgba(0,0,0,0.35)"
+              borderColor="rgba(255,255,255,0.12)"
+              borderTopWidth={1}
+              borderBottomWidth={1}
+              borderLeftWidth={1}
+              borderRightWidth={1}
+              borderTopLeftRadius={13}
+              borderTopRightRadius={13}
+              borderBottomLeftRadius={13}
+              borderBottomRightRadius={13}
               flexGrow={1}
               marginLeft={8}
               marginRight={8}
             >
               <LockIcon width={10} color={color.success} />
-              <Text fontSize={10} color={color.accent} fontWeight={500}>
+              <Text fontSize={10} color={color.accent} fontWeight={600}>
                 {cleanText(selected.url)}
               </Text>
             </Container>
 
-            {/* Quick Actions */}
-            <Container flexDirection="row" alignItems="center" gapColumn={6}>
+            {/* Quick Actions & Favorite Heart Toggle (User reference: uploaded_media_2) */}
+            <Container flexDirection="row" alignItems="center" gapColumn={8}>
+              <Container
+                cursor="pointer"
+                width={24}
+                height={24}
+                borderTopLeftRadius={12}
+                borderTopRightRadius={12}
+                borderBottomLeftRadius={12}
+                borderBottomRightRadius={12}
+                backgroundColor={selected.favorite ? 'rgba(124, 58, 237, 0.20)' : 'rgba(255,255,255,0.06)'}
+                alignItems="center"
+                justifyContent="center"
+                onClick={() => toggleFavorite(selected.id)}
+              >
+                <HeartIcon width={13} color={selected.favorite ? color.purple : color.textDim} />
+              </Container>
               <RotateCwIcon width={12} color={color.textDim} />
               <BookOpenIcon width={12} color={color.accent} />
               <ShareIcon width={12} color={color.textDim} />
@@ -126,41 +154,58 @@ export function Preview() {
             paddingRight={4}
             gapRow={8}
           >
-            {/* Meta badge row */}
-            <Container flexDirection="row" alignItems="center" gapColumn={8}>
-              <Container
-                flexDirection="row"
-                alignItems="center"
-                gapColumn={4}
-                paddingLeft={8}
-                paddingRight={8}
-                paddingTop={3}
-                paddingBottom={3}
-                backgroundColor={selected.isSpotlight ? 'rgba(52,211,153,0.18)' : 'rgba(56,189,248,0.15)'}
-                borderColor={selected.isSpotlight ? color.success : color.accent}
-                borderTopWidth={1}
-                borderBottomWidth={1}
-                borderLeftWidth={1}
-                borderRightWidth={1}
-                borderTopLeftRadius={999}
-                borderTopRightRadius={999}
-                borderBottomLeftRadius={999}
-                borderBottomRightRadius={999}
-              >
-                <SparklesIcon width={10} color={selected.isSpotlight ? color.success : color.accent} />
-                <Text
-                  fontSize={typeScale.micro}
-                  fontWeight={700}
-                  color={selected.isSpotlight ? color.success : color.accent}
-                  letterSpacing={0.5}
+            {/* Meta badge row + 5-Star Rating (User reference: uploaded_media_2) */}
+            <Container flexDirection="row" alignItems="center" justifyContent="space-between" width="100%">
+              <Container flexDirection="row" alignItems="center" gapColumn={8}>
+                <Container
+                  flexDirection="row"
+                  alignItems="center"
+                  gapColumn={4}
+                  paddingLeft={8}
+                  paddingRight={8}
+                  paddingTop={3}
+                  paddingBottom={3}
+                  backgroundColor={selected.isSpotlight ? 'rgba(124,58,237,0.18)' : 'rgba(14,165,233,0.18)'}
+                  borderColor={selected.isSpotlight ? color.purple : color.accent}
+                  borderTopWidth={1}
+                  borderBottomWidth={1}
+                  borderLeftWidth={1}
+                  borderRightWidth={1}
+                  borderTopLeftRadius={999}
+                  borderTopRightRadius={999}
+                  borderBottomLeftRadius={999}
+                  borderBottomRightRadius={999}
                 >
-                  {cleanText(selected.badge)}
+                  <SparklesIcon width={10} color={selected.isSpotlight ? color.purple : color.accent} />
+                  <Text
+                    fontSize={typeScale.micro}
+                    fontWeight={700}
+                    color={selected.isSpotlight ? color.purple : color.accent}
+                    letterSpacing={0.5}
+                  >
+                    {cleanText(selected.badge)}
+                  </Text>
+                </Container>
+                <Text fontSize={typeScale.micro} color={color.textDim}>
+                  {cleanText('Lectura recomendada · 4 min')}
                 </Text>
               </Container>
 
-              <Text fontSize={typeScale.micro} color={color.textDim}>
-                {cleanText('Documento verificado · Tiempo de lectura: 4 min')}
-              </Text>
+              {/* 5-Star Rating Bar (User reference: uploaded_media_2) */}
+              <Container flexDirection="row" alignItems="center" gapColumn={3}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Container
+                    key={star}
+                    cursor="pointer"
+                    onClick={() => setRating(selected.id, star)}
+                  >
+                    <StarIcon
+                      width={12}
+                      color={star <= rating ? color.idea : 'rgba(255,255,255,0.25)'}
+                    />
+                  </Container>
+                ))}
+              </Container>
             </Container>
 
             {/* Document Title */}
@@ -168,14 +213,71 @@ export function Preview() {
               {cleanText(selected.title)}
             </Text>
 
-            {/* Callout quote box */}
+            {/* Reading Progress Slider (User reference: uploaded_media_2) */}
+            <Container flexDirection="column" gapRow={3} width="100%" marginTop={2} marginBottom={4}>
+              <Container flexDirection="row" justifyContent="space-between" width="100%">
+                <Text fontSize={typeScale.micro} color={color.textDim} fontWeight={600}>
+                  {cleanText('PROGRESO DE LECTURA')}
+                </Text>
+                <Text fontSize={typeScale.micro} color={color.purple} fontWeight={700}>
+                  {`${progress}%`}
+                </Text>
+              </Container>
+
+              {/* Slider Track with Purple Thumb */}
+              <Container
+                cursor="pointer"
+                flexDirection="row"
+                alignItems="center"
+                width="100%"
+                height={16}
+                onClick={() => {
+                  const nextP = progress >= 100 ? 25 : progress + 25
+                  setProgress(selected.id, nextP)
+                }}
+              >
+                {/* Active Purple Track */}
+                <Container
+                  width={`${progress}%`}
+                  height={5}
+                  borderTopLeftRadius={2.5}
+                  borderBottomLeftRadius={2.5}
+                  backgroundColor={color.purple}
+                />
+                {/* Purple Circular Thumb */}
+                <Container
+                  width={14}
+                  height={14}
+                  borderTopLeftRadius={7}
+                  borderTopRightRadius={7}
+                  borderBottomLeftRadius={7}
+                  borderBottomRightRadius={7}
+                  backgroundColor={color.purple}
+                  borderColor="#ffffff"
+                  borderTopWidth={1.5}
+                  borderBottomWidth={1.5}
+                  borderLeftWidth={1.5}
+                  borderRightWidth={1.5}
+                />
+                {/* Inactive White/Pastel Track */}
+                <Container
+                  flexGrow={1}
+                  height={5}
+                  borderTopRightRadius={2.5}
+                  borderBottomRightRadius={2.5}
+                  backgroundColor="rgba(255,255,255,0.25)"
+                />
+              </Container>
+            </Container>
+
+            {/* Summary Box */}
             <Container
               width="100%"
               paddingLeft={12}
               paddingRight={12}
               paddingTop={8}
               paddingBottom={8}
-              backgroundColor="rgba(255,255,255,0.04)"
+              backgroundColor="rgba(255,255,255,0.05)"
               borderColor={color.accent}
               borderLeftWidth={3}
               borderTopRightRadius={8}
@@ -188,25 +290,25 @@ export function Preview() {
               </Text>
             </Container>
 
-            {/* Additional editorial synthesis context */}
-            <Container flexDirection="column" gapRow={4} marginTop={4}>
+            {/* Editorial Takeaways */}
+            <Container flexDirection="column" gapRow={4} marginTop={2}>
               <Text fontSize={typeScale.caption} fontWeight={600} color={color.textPrimary}>
-                {cleanText('Puntos Clave y Metadatos:')}
+                {cleanText('Puntos Clave:')}
               </Text>
               <Text fontSize={typeScale.caption} color={color.textDim} lineHeight={1.3}>
                 {cleanText('> Arquitectura espacial optimizada para visores PICO 4 Ultra y PICO Neo.')}
               </Text>
               <Text fontSize={typeScale.caption} color={color.textDim} lineHeight={1.3}>
-                {cleanText('> Diseno con glassmorphism nativo, profundidad optica y audio sintetico.')}
+                {cleanText('> Diseño flat pastel con ergonomía visual y físicas elásticas GSAP.')}
               </Text>
             </Container>
 
-            {/* Constellation Archived Sources Linkage */}
+            {/* Constellation Sources Linkage */}
             {sources.length > 0 && (
               <Container
                 flexDirection="column"
-                marginTop={10}
-                paddingTop={8}
+                marginTop={6}
+                paddingTop={6}
                 borderColor="rgba(255,255,255,0.1)"
                 borderTopWidth={1}
                 gapRow={6}
@@ -232,8 +334,8 @@ export function Preview() {
                       paddingRight={8}
                       paddingTop={4}
                       paddingBottom={4}
-                      backgroundColor="rgba(251,191,36,0.12)"
-                      borderColor="rgba(251,191,36,0.4)"
+                      backgroundColor="rgba(245,158,11,0.14)"
+                      borderColor="rgba(245,158,11,0.4)"
                       borderTopWidth={1}
                       borderBottomWidth={1}
                       borderLeftWidth={1}

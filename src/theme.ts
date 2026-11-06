@@ -9,27 +9,37 @@ export const color = {
   voidDepth: '#030509',
   surfaceStudio: 'rgba(15, 23, 42, 0.65)',
 
-  // Glass surfaces (layered translucency inspired by VisionOS & Libraries.dev)
-  glassPanel: 'rgba(10, 16, 30, 0.82)',
-  glassPanelDeep: 'rgba(6, 10, 20, 0.92)',
-  glassPanelHeader: 'rgba(18, 28, 48, 0.88)',
-  glassCard: 'rgba(13, 20, 36, 0.85)',
-  glassCardActive: 'rgba(20, 34, 60, 0.94)',
-  glassCardHover: 'rgba(26, 42, 72, 0.92)',
-  glassCardSpotlight: 'rgba(8, 28, 22, 0.92)',
-  glassDock: 'rgba(9, 14, 26, 0.88)',
-  glassUrlBar: 'rgba(3, 7, 18, 0.80)',
+  // VisionOS frosted glass surfaces
+  glassPanel: 'rgba(15, 23, 42, 0.72)',
+  glassPanelDeep: 'rgba(10, 16, 30, 0.85)',
+  glassPanelHeader: 'rgba(255, 255, 255, 0.08)',
+  glassDock: 'rgba(15, 23, 42, 0.80)',
+  glassUrlBar: 'rgba(255, 255, 255, 0.10)',
 
-  // Specular Hairlines & Border Beams
-  borderSubtle: 'rgba(255, 255, 255, 0.14)',
-  borderSpecular: 'rgba(255, 255, 255, 0.45)', // Crisp top refraction glint
-  borderHairline: 'rgba(255, 255, 255, 0.20)',
-  borderHover: 'rgba(255, 255, 255, 0.35)',
-  borderActive: '#38bdf8',                     // Electric Cyan Beam
-  borderSpotlight: '#34d399',                  // Emerald Jade Beam
-  borderGlow: 'rgba(56, 189, 248, 0.35)',
+  // Flat Pastel Card Surfaces (User references: uploaded_media_2 & uploaded_media_3)
+  glassCard: '#e0f2fe',            // Soft pastel sky blue
+  glassCardHover: '#dbeafe',       // Slightly deeper pastel sky
+  glassCardActive: '#bae6fd',      // Active pastel cyan
+  glassCardSpotlight: '#ede9fe',   // Soft pastel lavender / purple
+  glassCardMint: '#d1fae5',        // Soft pastel mint
 
-  // Typography (aliases for compatibility)
+  // Text colors for Pastel cards (high contrast & legibility)
+  cardTextPrimary: '#0f172a',      // Dark slate primary text
+  cardTextSecondary: '#334155',    // Slate secondary text
+  cardTextDim: '#64748b',          // Muted slate
+  cardTextFaint: '#94a3b8',
+
+  // Specular Hairlines & Crisp Outlines
+  borderSubtle: 'rgba(255, 255, 255, 0.22)',
+  borderSpecular: 'rgba(255, 255, 255, 0.65)',
+  borderHairline: 'rgba(255, 255, 255, 0.35)',
+  borderCard: 'rgba(255, 255, 255, 0.75)',
+  borderHover: '#38bdf8',
+  borderActive: '#0284c7',
+  borderSpotlight: '#7c3aed',
+  borderGlow: 'rgba(56, 189, 248, 0.25)',
+
+  // General Spatial Typography
   text: '#ffffff',
   textPrimary: '#ffffff',
   textSecondary: '#cbd5e1',
@@ -37,26 +47,30 @@ export const color = {
   textMuted: '#64748b',
   textFaint: '#475569',
 
-  // Semantic Accents
-  accent: '#38bdf8',       // Electric Cyan / Voice / Primary
-  accentDim: '#0284c7',    // Deep Sky Blue
-  accentGlow: 'rgba(56, 189, 248, 0.40)',
+  // Flat & Pastel Accents
+  accent: '#0ea5e9',               // Flat Sky Blue (Button in uploaded_media_3)
+  accentDim: '#0284c7',            // Deep Sky Blue
+  accentGlow: 'rgba(14, 165, 233, 0.30)',
 
-  success: '#34d399',      // Jade Emerald / Archive
-  successDim: '#059669',   // Forest Jade
-  successGlow: 'rgba(52, 211, 153, 0.40)',
+  purple: '#7c3aed',               // Flat Purple / Heart / Dock + (uploaded_media_2)
+  purpleLight: '#ede9fe',          // Pastel lavender
+  purpleDim: '#6d28d9',
+  purpleGlow: 'rgba(124, 58, 237, 0.30)',
 
-  danger: '#fb7185',       // Soft Coral Rose / Trash
-  dangerDim: '#e11d48',    // Deep Crimson
-  dangerGlow: 'rgba(251, 113, 133, 0.40)',
+  success: '#10b981',              // Flat Emerald / Mint
+  successLight: '#d1fae5',
+  successDim: '#059669',
+  successGlow: 'rgba(16, 185, 129, 0.30)',
 
-  idea: '#fbbf24',         // Warm Amber / Idea node
-  ideaDim: '#d97706',      // Golden Ochre
-  ideaGlow: 'rgba(251, 191, 36, 0.45)',
+  danger: '#f43f5e',               // Flat Coral Rose / Trash
+  dangerLight: '#ffe4e6',
+  dangerDim: '#e11d48',
+  dangerGlow: 'rgba(244, 63, 94, 0.30)',
 
-  purple: '#c084fc',       // Synth Violet / Research
-  purpleDim: '#9333ea',    // Royal Purple
-  purpleGlow: 'rgba(192, 132, 252, 0.40)',
+  idea: '#f59e0b',                 // Warm Amber / Star rating
+  ideaLight: '#fef3c7',
+  ideaDim: '#d97706',
+  ideaGlow: 'rgba(245, 158, 11, 0.30)',
 } as const
 
 /**

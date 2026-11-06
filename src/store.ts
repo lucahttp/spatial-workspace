@@ -21,6 +21,9 @@ export type Card = {
   summary: string
   /** true for the "+ Spotlight" seed card */
   isSpotlight?: boolean
+  favorite?: boolean
+  rating?: number
+  readProgress?: number
 }
 
 export type Source = {
@@ -55,6 +58,9 @@ type Workspace = {
   droplets: Droplet[]
 
   select: (id: string) => void
+  toggleFavorite: (id: string) => void
+  setRating: (id: string, rating: number) => void
+  setProgress: (id: string, progress: number) => void
   spawnSpotlight: (custom?: { title: string; summary: string; badge: string; url: string }) => void
   archive: (id: string, startPos?: [number, number, number]) => void
   discard: (id: string) => void
@@ -83,6 +89,9 @@ const SEED: Card[] = [
     title: 'Diseño Spatial UI en Pico',
     url: 'https://docs.google.com/spatial-pico-spec',
     summary: 'Especificación de ventanas con barrita inferior, snap magnético y grafo de ideas.',
+    favorite: true,
+    rating: 5,
+    readProgress: 65,
   },
   {
     id: 'web-wolvic',
@@ -90,6 +99,9 @@ const SEED: Card[] = [
     title: 'Wolvic & WebXR Layers',
     url: 'https://wolvic.com/webxr-layers',
     summary: 'Integración de navegador espacial multi-ventana y puente nativo SystemBridge.',
+    favorite: false,
+    rating: 4,
+    readProgress: 40,
   },
   {
     id: 'note-xr',
@@ -97,6 +109,9 @@ const SEED: Card[] = [
     title: 'Spatial Ergonomics 2026',
     url: 'https://arxiv.org/abs/spatial-ux-2026',
     summary: 'Cono de confort visual de 33.5 grados, anti-fatiga cervical y físicas magnéticas.',
+    favorite: true,
+    rating: 5,
+    readProgress: 85,
   },
 ]
 
@@ -130,6 +145,26 @@ export const useWorkspace = create<Workspace>((set, get) => ({
       })
       setTimeout(() => set({ orb: 'breathing' }), 2000)
     }
+  },
+
+  toggleFavorite: (id) => {
+    playClickSound()
+    set({
+      cards: get().cards.map((c) => (c.id === id ? { ...c, favorite: !c.favorite } : c)),
+    })
+  },
+
+  setRating: (id, rating) => {
+    playClickSound()
+    set({
+      cards: get().cards.map((c) => (c.id === id ? { ...c, rating } : c)),
+    })
+  },
+
+  setProgress: (id, progress) => {
+    set({
+      cards: get().cards.map((c) => (c.id === id ? { ...c, readProgress: progress } : c)),
+    })
   },
 
   spawnSpotlight: (custom) => {

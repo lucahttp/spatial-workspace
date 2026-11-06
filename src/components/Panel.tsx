@@ -1,7 +1,7 @@
 import { Handle, HandleTarget } from '@react-three/handle'
 import { Container, Text } from '@react-three/uikit'
 import { useRef, useState } from 'react'
-import { AdditiveBlending, Group } from 'three'
+import { Group } from 'three'
 import { color, radius, type as typeScale } from '../theme'
 import { cleanText, UiRoot } from './Ui'
 
@@ -48,15 +48,14 @@ export function Panel({
   return (
     <HandleTarget targetRef={groupRef}>
       <group ref={groupRef} position={position} rotation={rotation}>
-        {/* Soft Volumetric Halo / Ambient Bloom Layer (Border Beam aesthetic) */}
-        <mesh position={[0, 0, -0.008]}>
-          <planeGeometry args={[width + 0.06, height + 0.06]} />
+        {/* Realistic visionOS Window Shadow */}
+        <mesh position={[0, -0.012, -0.008]}>
+          <planeGeometry args={[width + 0.03, height + 0.03]} />
           <meshBasicMaterial
-            color={accent}
+            color="#000000"
             transparent
-            opacity={panelHovered ? 0.22 : 0.09}
+            opacity={panelHovered ? 0.32 : 0.18}
             depthWrite={false}
-            blending={AdditiveBlending}
           />
         </mesh>
 

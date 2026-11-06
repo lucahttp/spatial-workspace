@@ -1,16 +1,13 @@
 import { Container, Text } from '@react-three/uikit'
 import {
-  ArchiveIcon,
-  CompassIcon,
-  GlobeIcon,
-  LayersIcon,
-  MessageSquareIcon,
-  NetworkIcon,
+  BookmarkIcon,
+  CalendarIcon,
+  HouseIcon,
+  MicIcon,
+  PencilIcon,
   PlusIcon,
-  RotateCcwIcon,
 } from '@react-three/uikit-lucide'
 import { ReactNode, useState } from 'react'
-import { AdditiveBlending } from 'three'
 import { color, layout, radius } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
@@ -19,21 +16,16 @@ type DockItem = {
   id: string
   label: string
   icon: ReactNode
-  tint: string
 }
 
 const ITEMS: DockItem[] = [
-  { id: 'all', label: 'Todo', icon: <LayersIcon width={16} color={color.textPrimary} />, tint: color.textDim },
-  { id: 'voice', label: 'Orbe', icon: <MessageSquareIcon width={16} color={color.accent} />, tint: color.accent },
-  { id: 'carousel', label: 'Carrusel', icon: <CompassIcon width={16} color={color.accent} />, tint: color.accent },
-  { id: 'preview', label: 'Preview', icon: <GlobeIcon width={16} color={color.accent} />, tint: color.accent },
-  { id: 'graph', label: 'Grafo', icon: <NetworkIcon width={16} color={color.idea} />, tint: color.idea },
-  { id: 'archive', label: 'Archivo', icon: <ArchiveIcon width={16} color={color.success} />, tint: color.success },
-  { id: 'spotlight', label: 'Spotlight', icon: <PlusIcon width={16} color={color.success} />, tint: color.success },
-  { id: 'recenter', label: 'Centrar', icon: <RotateCcwIcon width={16} color={color.textPrimary} />, tint: color.textDim },
+  { id: 'all', label: 'Inicio', icon: <HouseIcon width={16} color={color.textPrimary} /> },
+  { id: 'favorites', label: 'Favoritos', icon: <BookmarkIcon width={16} color={color.textPrimary} /> },
+  { id: 'calendar', label: 'Agenda', icon: <CalendarIcon width={16} color={color.textPrimary} /> },
+  { id: 'voice', label: 'Voz', icon: <MicIcon width={16} color={color.textPrimary} /> },
 ]
 
-function DockButton({
+function DockIconButton({
   item,
   onClick,
   active,
@@ -46,36 +38,26 @@ function DockButton({
   return (
     <Container
       cursor="pointer"
-      width={46}
-      flexDirection="column"
+      width={44}
+      height={44}
+      borderTopLeftRadius={12}
+      borderTopRightRadius={12}
+      borderBottomLeftRadius={12}
+      borderBottomRightRadius={12}
+      backgroundColor={
+        hovered ? 'rgba(255,255,255,0.18)' : active ? 'rgba(14, 165, 233, 0.22)' : 'rgba(255,255,255,0.05)'
+      }
+      borderColor={hovered ? 'rgba(255,255,255,0.40)' : active ? color.accent : 'rgba(255,255,255,0.10)'}
+      borderTopWidth={1}
+      borderBottomWidth={1}
+      borderLeftWidth={1}
+      borderRightWidth={1}
       alignItems="center"
-      gapRow={3}
+      justifyContent="center"
       onClick={onClick}
       onHoverChange={setHovered}
     >
-      <Container
-        width={38}
-        height={38}
-        borderTopLeftRadius={radius.button}
-        borderTopRightRadius={radius.button}
-        borderBottomLeftRadius={radius.button}
-        borderBottomRightRadius={radius.button}
-        backgroundColor={
-          hovered ? 'rgba(255,255,255,0.22)' : active ? item.tint + '40' : 'rgba(255,255,255,0.07)'
-        }
-        borderColor={hovered ? 'rgba(255,255,255,0.45)' : active ? item.tint : 'rgba(255,255,255,0.12)'}
-        borderTopWidth={1.5}
-        borderBottomWidth={1}
-        borderLeftWidth={1}
-        borderRightWidth={1}
-        alignItems="center"
-        justifyContent="center"
-      >
-        {item.icon}
-      </Container>
-      <Text fontSize={9} fontWeight={hovered || active ? 700 : 400} color={hovered ? color.textPrimary : color.textDim}>
-        {cleanText(item.label)}
-      </Text>
+      {item.icon}
     </Container>
   )
 }
@@ -87,18 +69,15 @@ export function Dock({
   onAction: (id: string) => void
   active?: string
 }) {
+  const [plusHovered, setPlusHovered] = useState(false)
+  const [editHovered, setEditHovered] = useState(false)
+
   return (
     <group position={[0, layout.dockY, layout.dockZ]} rotation={[-0.42, 0, 0]}>
-      {/* Soft Volumetric Backlight Halo */}
-      <mesh position={[0, 0, -0.006]}>
-        <planeGeometry args={[layout.dockW + 0.05, 0.11]} />
-        <meshBasicMaterial
-          color={color.accent}
-          transparent
-          opacity={0.14}
-          depthWrite={false}
-          blending={AdditiveBlending}
-        />
+      {/* Realistic visionOS Drop Shadow */}
+      <mesh position={[0, -0.006, -0.005]}>
+        <planeGeometry args={[layout.dockW + 0.04, 0.10]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.25} depthWrite={false} />
       </mesh>
 
       <UiRoot
@@ -127,9 +106,9 @@ export function Dock({
           flexDirection="row"
           alignItems="center"
           justifyContent="center"
-          gapColumn={8}
-          paddingTop={8}
-          paddingBottom={6}
+          gapColumn={10}
+          paddingLeft={16}
+          paddingRight={16}
         >
           {/* Top Specular Hairline Glint */}
           <Container
@@ -141,9 +120,69 @@ export function Dock({
             backgroundColor={color.borderSpecular}
           />
 
+          {/* Left standard outline icon buttons (User reference: uploaded_media_2) */}
           {ITEMS.map((item) => (
-            <DockButton key={item.id} item={item} onClick={() => onAction(item.id)} active={active === item.id} />
+            <DockIconButton
+              key={item.id}
+              item={item}
+              onClick={() => onAction(item.id)}
+              active={active === item.id}
+            />
           ))}
+
+          {/* Prominent Circular Purple (+) Action Button (User reference: uploaded_media_2) */}
+          <Container
+            cursor="pointer"
+            width={48}
+            height={48}
+            borderTopLeftRadius={24}
+            borderTopRightRadius={24}
+            borderBottomLeftRadius={24}
+            borderBottomRightRadius={24}
+            backgroundColor={plusHovered ? color.purpleDim : color.purple}
+            borderColor="rgba(255, 255, 255, 0.35)"
+            borderTopWidth={1.5}
+            borderBottomWidth={1}
+            borderLeftWidth={1}
+            borderRightWidth={1}
+            alignItems="center"
+            justifyContent="center"
+            marginLeft={4}
+            marginRight={4}
+            onClick={() => onAction('spotlight')}
+            onHoverChange={setPlusHovered}
+          >
+            <PlusIcon width={22} color="#ffffff" />
+          </Container>
+
+          {/* Pill Edit/Centrar Button (User reference: uploaded_media_2) */}
+          <Container
+            cursor="pointer"
+            flexDirection="row"
+            alignItems="center"
+            justifyContent="center"
+            gapColumn={6}
+            height={40}
+            paddingLeft={14}
+            paddingRight={14}
+            borderTopLeftRadius={20}
+            borderTopRightRadius={20}
+            borderBottomLeftRadius={20}
+            borderBottomRightRadius={20}
+            backgroundColor={editHovered ? color.purpleDim : color.purple}
+            borderColor="rgba(255, 255, 255, 0.30)"
+            borderTopWidth={1.5}
+            borderBottomWidth={1}
+            borderLeftWidth={1}
+            borderRightWidth={1}
+            onClick={() => onAction('recenter')}
+            onHoverChange={setEditHovered}
+          >
+            <Text fontSize={12} fontWeight={700} color="#ffffff">
+              {cleanText('Centrar')}
+            </Text>
+            <PencilIcon width={13} color="#ffffff" />
+          </Container>
         </Container>
       </UiRoot>
     </group>

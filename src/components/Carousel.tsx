@@ -2,22 +2,16 @@ import { Handle, HandleTarget } from '@react-three/handle'
 import { useFrame } from '@react-three/fiber'
 import { Container, Text } from '@react-three/uikit'
 import {
-  ArchiveIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  EyeIcon,
-  FileTextIcon,
-  GlobeIcon,
+  HeartIcon,
   MinusIcon,
   PlusIcon,
-  SearchIcon,
-  SparklesIcon,
-  Trash2Icon,
   XIcon,
 } from '@react-three/uikit-lucide'
 import { Line } from '@react-three/drei'
 import { useMemo, useRef, useState } from 'react'
-import { AdditiveBlending, Group, Vector3 } from 'three'
+import { Group, Vector3 } from 'three'
 import { Card as CardType, useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
 import { px, PIXEL } from './Panel'
@@ -70,6 +64,7 @@ function CardItem({
   const dragging = useRef(false)
   const [hovered, setHovered] = useState(false)
   const [barHovered, setBarHovered] = useState(false)
+  const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
 
   const slot = useMemo(() => arcSlot(index, count, offsetIndex), [index, count, offsetIndex])
   const home = useMemo(
@@ -99,15 +94,14 @@ function CardItem({
   return (
     <HandleTarget targetRef={groupRef}>
       <group ref={groupRef} position={[home.x, home.y, home.z]} rotation={[0, slot.rotY, 0]}>
-        {/* Soft Volumetric Halo / Border Beam Glow (Libraries.dev bloom layer) */}
-        <mesh position={[0, 0, -0.007]}>
-          <planeGeometry args={[layout.cardW + 0.04, layout.cardH + 0.04]} />
+        {/* Realistic visionOS Depth Shadow */}
+        <mesh position={[0, -0.008, -0.005]}>
+          <planeGeometry args={[layout.cardW + 0.015, layout.cardH + 0.015]} />
           <meshBasicMaterial
-            color={card.isSpotlight ? color.success : selected ? color.accent : color.accent}
+            color="#000000"
             transparent
-            opacity={card.isSpotlight ? 0.30 : selected ? 0.28 : hovered ? 0.16 : 0.04}
+            opacity={selected ? 0.32 : hovered ? 0.22 : 0.10}
             depthWrite={false}
-            blending={AdditiveBlending}
           />
         </mesh>
 
@@ -133,11 +127,11 @@ function CardItem({
                 : color.glassCard
             }
             borderColor={borderColor}
-            borderTopWidth={selected || card.isSpotlight ? 2 : 1.5}
-            borderBottomWidth={1}
-            borderLeftWidth={1}
-            borderRightWidth={1}
-            borderBend={0.5}
+            borderTopWidth={selected ? 2.5 : 1.5}
+            borderBottomWidth={selected ? 2.5 : 1.5}
+            borderLeftWidth={selected ? 2.5 : 1.5}
+            borderRightWidth={selected ? 2.5 : 1.5}
+            borderBend={0.4}
             borderTopLeftRadius={radius.card}
             borderTopRightRadius={radius.card}
             borderBottomLeftRadius={radius.card}
@@ -146,29 +140,30 @@ function CardItem({
             flexDirection="column"
             alignItems="flex-start"
             paddingTop={16}
-            paddingBottom={44}
+            paddingBottom={36}
             paddingLeft={18}
             paddingRight={18}
             onClick={onSelect}
             onHoverChange={setHovered}
             cursor="pointer"
           >
-            {/* Top Specular Edge Glint (Refractive Glass Highlight) */}
+            {/* Top Specular Edge Glint */}
             <Container
               positionType="absolute"
               positionTop={0}
               positionLeft={14}
               positionRight={14}
               height={1}
-              backgroundColor={card.isSpotlight ? color.success : selected ? color.accent : color.borderSpecular}
+              backgroundColor={card.isSpotlight ? color.purple : selected ? color.accent : 'rgba(255, 255, 255, 0.9)'}
             />
-            {/* Header Badge & Category Tag */}
+
+            {/* Header: Category Badge (Left) & Favorite Heart (Right, uploaded_media_2/3) */}
             <Container
               flexDirection="row"
               alignItems="center"
               justifyContent="space-between"
               width="100%"
-              marginBottom={8}
+              marginBottom={12}
             >
               <Container
                 flexDirection="row"
@@ -176,18 +171,16 @@ function CardItem({
                 gapColumn={6}
                 paddingTop={3}
                 paddingBottom={3}
-                paddingLeft={8}
-                paddingRight={8}
+                paddingLeft={10}
+                paddingRight={10}
                 borderTopLeftRadius={999}
                 borderTopRightRadius={999}
                 borderBottomLeftRadius={999}
                 borderBottomRightRadius={999}
                 backgroundColor={
                   card.isSpotlight
-                    ? 'rgba(52, 211, 153, 0.22)'
-                    : selected
-                    ? 'rgba(56, 189, 248, 0.20)'
-                    : 'rgba(255, 255, 255, 0.08)'
+                    ? 'rgba(124, 58, 237, 0.15)'
+                    : 'rgba(2, 132, 199, 0.14)'
                 }
               >
                 <Container
@@ -197,29 +190,42 @@ function CardItem({
                   borderTopRightRadius={3}
                   borderBottomLeftRadius={3}
                   borderBottomRightRadius={3}
-                  backgroundColor={card.isSpotlight ? color.success : selected ? color.accent : color.textMuted}
+                  backgroundColor={card.isSpotlight ? color.purple : color.accent}
                 />
                 <Text
                   fontSize={typeScale.micro}
                   fontWeight={700}
-                  color={card.isSpotlight ? color.success : selected ? color.accent : color.textSecondary}
+                  color={card.isSpotlight ? color.purple : color.accentDim}
                   letterSpacing={0.8}
                 >
                   {cleanText(card.badge)}
                 </Text>
               </Container>
 
-              {card.isSpotlight && (
-                <Container flexDirection="row" alignItems="center" gapColumn={4}>
-                  <SparklesIcon width={10} color={color.success} />
-                  <Text fontSize={typeScale.micro} color={color.success} fontWeight={700}>
-                    {cleanText('NUEVO')}
-                  </Text>
+              {/* Heart Favorite Toggle (User reference: uploaded_media_2 & uploaded_media_3) */}
+              {!card.isSpotlight && (
+                <Container
+                  cursor="pointer"
+                  width={28}
+                  height={28}
+                  borderTopLeftRadius={14}
+                  borderTopRightRadius={14}
+                  borderBottomLeftRadius={14}
+                  borderBottomRightRadius={14}
+                  backgroundColor={card.favorite ? 'rgba(124, 58, 237, 0.18)' : 'rgba(0, 0, 0, 0.05)'}
+                  alignItems="center"
+                  justifyContent="center"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleFavorite(card.id)
+                  }}
+                >
+                  <HeartIcon width={14} color={card.favorite ? color.purple : '#94a3b8'} />
                 </Container>
               )}
             </Container>
 
-            {/* Boceto 2 Spotlight Center Lens: (+) Icon inside circle */}
+            {/* Spotlight Card Layout vs Standard Doc Card Layout */}
             {card.isSpotlight ? (
               <Container
                 flexDirection="column"
@@ -230,14 +236,14 @@ function CardItem({
                 gapRow={8}
               >
                 <Container
-                  width={54}
-                  height={54}
-                  borderTopLeftRadius={27}
-                  borderTopRightRadius={27}
-                  borderBottomLeftRadius={27}
-                  borderBottomRightRadius={27}
-                  backgroundColor="rgba(52, 211, 153, 0.22)"
-                  borderColor={color.success}
+                  width={52}
+                  height={52}
+                  borderTopLeftRadius={26}
+                  borderTopRightRadius={26}
+                  borderBottomLeftRadius={26}
+                  borderBottomRightRadius={26}
+                  backgroundColor="rgba(124, 58, 237, 0.18)"
+                  borderColor={color.purple}
                   borderTopWidth={2}
                   borderBottomWidth={2}
                   borderLeftWidth={2}
@@ -245,202 +251,102 @@ function CardItem({
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <PlusIcon width={24} color={color.success} />
+                  <PlusIcon width={24} color={color.purple} />
                 </Container>
-                <Text fontSize={typeScale.title} fontWeight={700} color={color.textPrimary} textAlign="center">
+                <Text fontSize={typeScale.title} fontWeight={700} color={color.cardTextPrimary} textAlign="center">
                   {cleanText(card.title)}
                 </Text>
-                <Text fontSize={typeScale.body} color={color.textSecondary} textAlign="center" lineHeight={1.35}>
-                  {cleanText(
-                    card.summary.length > 95 ? card.summary.slice(0, 92) + '...' : card.summary
-                  )}
+                <Container
+                  width={34}
+                  height={3.5}
+                  borderTopLeftRadius={2}
+                  borderTopRightRadius={2}
+                  borderBottomLeftRadius={2}
+                  borderBottomRightRadius={2}
+                  backgroundColor={color.purple}
+                />
+                <Text fontSize={typeScale.caption} color={color.cardTextSecondary} textAlign="center" lineHeight={1.35}>
+                  {cleanText(card.summary)}
                 </Text>
                 <Container
-                  flexDirection="row"
+                  cursor="pointer"
+                  width="100%"
+                  height={32}
+                  borderTopLeftRadius={16}
+                  borderTopRightRadius={16}
+                  borderBottomLeftRadius={16}
+                  borderBottomRightRadius={16}
+                  backgroundColor={color.purple}
                   alignItems="center"
-                  gapColumn={6}
-                  paddingLeft={12}
-                  paddingRight={12}
-                  paddingTop={6}
-                  paddingBottom={6}
-                  backgroundColor="rgba(52, 211, 153, 0.25)"
-                  borderColor={color.success}
-                  borderTopWidth={1}
-                  borderBottomWidth={1}
-                  borderLeftWidth={1}
-                  borderRightWidth={1}
-                  borderTopLeftRadius={999}
-                  borderTopRightRadius={999}
-                  borderBottomLeftRadius={999}
-                  borderBottomRightRadius={999}
+                  justifyContent="center"
                   marginTop={6}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect()
+                  }}
                 >
-                  <SearchIcon width={12} color={color.success} />
-                  <Text fontSize={typeScale.caption} fontWeight={700} color={color.success}>
-                    {cleanText('+ Abrir Busqueda')}
+                  <Text fontSize={11} fontWeight={700} color="#ffffff">
+                    {cleanText('+ Abrir Búsqueda')}
                   </Text>
                 </Container>
               </Container>
             ) : (
               <Container flexDirection="column" width="100%" flexGrow={1} alignItems="flex-start">
-                {/* Card Title & Icon Header */}
-                <Container flexDirection="row" alignItems="center" gapColumn={8} width="100%" marginTop={6} marginBottom={6}>
-                  <Container
-                    width={28}
-                    height={28}
-                    borderTopLeftRadius={8}
-                    borderTopRightRadius={8}
-                    borderBottomLeftRadius={8}
-                    borderBottomRightRadius={8}
-                    backgroundColor="rgba(255, 255, 255, 0.08)"
-                    alignItems="center"
-                    justifyContent="center"
-                    flexShrink={0}
-                  >
-                    {card.badge.includes('DOC') ? (
-                      <FileTextIcon width={14} color={color.accent} />
-                    ) : card.badge.includes('WEB') ? (
-                      <GlobeIcon width={14} color={color.accent} />
-                    ) : (
-                      <SparklesIcon width={14} color={color.purple} />
-                    )}
-                  </Container>
-                  <Container flexDirection="column" flexGrow={1} flexShrink={1}>
-                    <Text
-                      fontSize={13}
-                      fontWeight={700}
-                      color={color.textPrimary}
-                      lineHeight={1.3}
-                    >
-                      {cleanText(card.title)}
-                    </Text>
-                  </Container>
-                </Container>
-
-                {/* Inset Frosted Glass Summary Box */}
-                <Container
-                  width="100%"
-                  height={58}
-                  paddingLeft={10}
-                  paddingRight={10}
-                  paddingTop={8}
-                  paddingBottom={8}
-                  backgroundColor="rgba(0, 0, 0, 0.35)"
-                  borderColor="rgba(255, 255, 255, 0.08)"
-                  borderTopWidth={1}
-                  borderBottomWidth={1}
-                  borderLeftWidth={1}
-                  borderRightWidth={1}
-                  borderTopLeftRadius={10}
-                  borderTopRightRadius={10}
-                  borderBottomLeftRadius={10}
-                  borderBottomRightRadius={10}
-                  marginBottom={8}
-                  overflow="hidden"
+                {/* Title */}
+                <Text
+                  fontSize={14}
+                  fontWeight={700}
+                  color={color.cardTextPrimary}
+                  lineHeight={1.3}
+                  marginBottom={4}
                 >
+                  {cleanText(card.title)}
+                </Text>
+
+                {/* Blue Horizontal Accent Underline (User reference: uploaded_media_3) */}
+                <Container
+                  width={36}
+                  height={3.5}
+                  borderTopLeftRadius={2}
+                  borderTopRightRadius={2}
+                  borderBottomLeftRadius={2}
+                  borderBottomRightRadius={2}
+                  backgroundColor={color.accent}
+                  marginBottom={8}
+                />
+
+                {/* Summary with whitespace */}
+                <Container width="100%" flexGrow={1} marginBottom={8}>
                   <Text
-                    fontSize={10}
-                    color={color.textSecondary}
-                    lineHeight={1.35}
+                    fontSize={11}
+                    color={color.cardTextSecondary}
+                    lineHeight={1.4}
                   >
                     {cleanText(card.summary)}
                   </Text>
                 </Container>
 
-                {/* Bottom Actions Row (Anti-Gorilla-Arm micro pills) */}
+                {/* Primary Pill Button (User reference: uploaded_media_3) */}
                 <Container
-                  flexDirection="row"
-                  alignItems="center"
-                  justifyContent="space-between"
+                  cursor="pointer"
                   width="100%"
-                  gapColumn={6}
+                  height={32}
+                  borderTopLeftRadius={16}
+                  borderTopRightRadius={16}
+                  borderBottomLeftRadius={16}
+                  borderBottomRightRadius={16}
+                  backgroundColor={color.accent}
+                  alignItems="center"
+                  justifyContent="center"
+                  marginTop={6}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect()
+                  }}
                 >
-                  <Container
-                    cursor="pointer"
-                    flexGrow={1}
-                    height={28}
-                    borderTopLeftRadius={radius.button}
-                    borderTopRightRadius={radius.button}
-                    borderBottomLeftRadius={radius.button}
-                    borderBottomRightRadius={radius.button}
-                    backgroundColor={selected ? 'rgba(56, 189, 248, 0.28)' : 'rgba(56, 189, 248, 0.14)'}
-                    borderColor={selected ? color.accent : 'rgba(56, 189, 248, 0.40)'}
-                    borderTopWidth={1}
-                    borderBottomWidth={1}
-                    borderLeftWidth={1}
-                    borderRightWidth={1}
-                    flexDirection="row"
-                    alignItems="center"
-                    justifyContent="center"
-                    gapColumn={4}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelect()
-                    }}
-                  >
-                    <EyeIcon width={11} color={color.accent} />
-                    <Text fontSize={9} fontWeight={700} color={color.accent}>
-                      {cleanText('Ver')}
-                    </Text>
-                  </Container>
-
-                  <Container
-                    cursor="pointer"
-                    flexGrow={1}
-                    height={28}
-                    borderTopLeftRadius={radius.button}
-                    borderTopRightRadius={radius.button}
-                    borderBottomLeftRadius={radius.button}
-                    borderBottomRightRadius={radius.button}
-                    backgroundColor="rgba(52, 211, 153, 0.14)"
-                    borderColor="rgba(52, 211, 153, 0.40)"
-                    borderTopWidth={1}
-                    borderBottomWidth={1}
-                    borderLeftWidth={1}
-                    borderRightWidth={1}
-                    flexDirection="row"
-                    alignItems="center"
-                    justifyContent="center"
-                    gapColumn={4}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onArchive(card)
-                    }}
-                  >
-                    <ArchiveIcon width={11} color={color.success} />
-                    <Text fontSize={9} fontWeight={700} color={color.success}>
-                      {cleanText('Archivar')}
-                    </Text>
-                  </Container>
-
-                  <Container
-                    cursor="pointer"
-                    flexGrow={1}
-                    height={28}
-                    borderTopLeftRadius={radius.button}
-                    borderTopRightRadius={radius.button}
-                    borderBottomLeftRadius={radius.button}
-                    borderBottomRightRadius={radius.button}
-                    backgroundColor="rgba(251, 113, 133, 0.12)"
-                    borderColor="rgba(251, 113, 133, 0.35)"
-                    borderTopWidth={1}
-                    borderBottomWidth={1}
-                    borderLeftWidth={1}
-                    borderRightWidth={1}
-                    flexDirection="row"
-                    alignItems="center"
-                    justifyContent="center"
-                    gapColumn={4}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDiscard(card)
-                    }}
-                  >
-                    <Trash2Icon width={11} color={color.danger} />
-                    <Text fontSize={9} fontWeight={700} color={color.danger}>
-                      {cleanText('Borrar')}
-                    </Text>
-                  </Container>
+                  <Text fontSize={11} fontWeight={700} color="#ffffff">
+                    {cleanText('Ver Documento')}
+                  </Text>
                 </Container>
               </Container>
             )}
@@ -448,7 +354,7 @@ function CardItem({
             {/* PICO OS 5 Grab Bar */}
             <Container
               positionType="absolute"
-              positionBottom={6}
+              positionBottom={8}
               width="100%"
               height={22}
               flexDirection="row"
@@ -458,39 +364,49 @@ function CardItem({
               onHoverChange={setBarHovered}
             >
               <Container
-                width={16}
-                height={16}
-                borderTopLeftRadius={8}
-                borderTopRightRadius={8}
-                borderBottomLeftRadius={8}
-                borderBottomRightRadius={8}
-                backgroundColor={barHovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)'}
+                cursor="pointer"
+                width={18}
+                height={18}
+                borderTopLeftRadius={9}
+                borderTopRightRadius={9}
+                borderBottomLeftRadius={9}
+                borderBottomRightRadius={9}
+                backgroundColor={barHovered ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.05)'}
                 alignItems="center"
                 justifyContent="center"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onArchive(card)
+                }}
               >
-                <MinusIcon width={8} color={barHovered ? color.textPrimary : color.textMuted} />
+                <MinusIcon width={9} color={barHovered ? color.cardTextPrimary : color.cardTextDim} />
               </Container>
               <Container
-                width={16}
-                height={16}
-                borderTopLeftRadius={8}
-                borderTopRightRadius={8}
-                borderBottomLeftRadius={8}
-                borderBottomRightRadius={8}
-                backgroundColor={barHovered ? 'rgba(244,63,94,0.22)' : 'rgba(255,255,255,0.06)'}
+                cursor="pointer"
+                width={18}
+                height={18}
+                borderTopLeftRadius={9}
+                borderTopRightRadius={9}
+                borderBottomLeftRadius={9}
+                borderBottomRightRadius={9}
+                backgroundColor={barHovered ? 'rgba(244,63,94,0.22)' : 'rgba(0,0,0,0.05)'}
                 alignItems="center"
                 justifyContent="center"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDiscard(card)
+                }}
               >
-                <XIcon width={8} color={barHovered ? color.danger : color.textMuted} />
+                <XIcon width={9} color={barHovered ? color.danger : color.cardTextDim} />
               </Container>
               <Container
-                width={barHovered ? 58 : 36}
+                width={barHovered ? 56 : 38}
                 height={4.5}
                 borderTopLeftRadius={2.5}
                 borderTopRightRadius={2.5}
                 borderBottomLeftRadius={2.5}
                 borderBottomRightRadius={2.5}
-                backgroundColor={barHovered ? color.accent : 'rgba(255,255,255,0.22)'}
+                backgroundColor={barHovered ? color.accent : 'rgba(0,0,0,0.18)'}
               />
             </Container>
           </Container>

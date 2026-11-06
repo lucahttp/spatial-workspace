@@ -21,39 +21,36 @@ function ArchivePedestal({ count, hovered, onHoverChange }: { count: number; hov
     <group position={[-layout.padX, layout.padY, layout.padZ]} rotation={[-0.42, 0.12, 0]}>
       {/* 3D Frosted Glass & Metal Tray (Boceto 2: Bandeja de Archivar) */}
       <group position={[0, -0.065, -0.03]}>
-        {/* Base plinth: Dark brushed glass */}
+        {/* Base plinth: Clean matte slate tray */}
         <mesh position={[0, -0.015, 0]}>
-          <boxGeometry args={[0.30, 0.03, 0.20]} />
+          <boxGeometry args={[0.30, 0.024, 0.20]} />
           <meshStandardMaterial
-            color="#081511"
-            roughness={0.2}
-            metalness={0.8}
-            emissive="#064e3b"
-            emissiveIntensity={hovered ? 0.6 : 0.15}
+            color="#1e293b"
+            roughness={0.5}
+            metalness={0.2}
           />
         </mesh>
 
-        {/* Emerald glowing rim frame */}
-        <mesh position={[0, 0.005, 0]}>
-          <boxGeometry args={[0.305, 0.006, 0.205]} />
+        {/* Pastel Mint rim frame */}
+        <mesh position={[0, 0.002, 0]}>
+          <boxGeometry args={[0.304, 0.005, 0.204]} />
           <meshStandardMaterial
             color={color.success}
-            emissive={color.success}
-            emissiveIntensity={hovered ? 0.8 : 0.25}
+            roughness={0.3}
             transparent
-            opacity={0.7}
+            opacity={0.65}
           />
         </mesh>
 
-        {/* Stepped translucent document leaves (Archival Stack) */}
+        {/* Stepped pastel mint document leaves (Archival Stack) */}
         <group ref={paperRef}>
-          <mesh position={[0, 0.015, -0.01]} rotation={[-0.08, 0, 0]}>
-            <boxGeometry args={[0.22, 0.006, 0.13]} />
-            <meshStandardMaterial color="#34d399" roughness={0.3} transparent opacity={0.65} />
+          <mesh position={[0, 0.012, -0.01]} rotation={[-0.08, 0, 0]}>
+            <boxGeometry args={[0.22, 0.005, 0.13]} />
+            <meshStandardMaterial color="#a7f3d0" roughness={0.4} />
           </mesh>
-          <mesh position={[-0.01, 0.024, -0.02]} rotation={[-0.12, 0.02, 0]}>
+          <mesh position={[-0.01, 0.020, -0.02]} rotation={[-0.12, 0.02, 0]}>
             <boxGeometry args={[0.20, 0.005, 0.12]} />
-            <meshStandardMaterial color="#6ee7b7" roughness={0.3} transparent opacity={0.5} />
+            <meshStandardMaterial color="#d1fae5" roughness={0.4} />
           </mesh>
         </group>
       </group>
@@ -132,28 +129,24 @@ function TrashPedestal({ count, hovered, onHoverChange }: { count: number; hover
     <group position={[layout.padX, layout.padY, layout.padZ]} rotation={[-0.42, -0.12, 0]}>
       {/* 3D Dark Titanium & Coral Receptacle (Boceto 2: Tacho de Basura) */}
       <group position={[0, -0.07, -0.03]}>
-        {/* Recycler cylinder chamber */}
+        {/* Recycler cylinder chamber: Clean matte graphite */}
         <mesh>
-          <cylinderGeometry args={[0.10, 0.08, 0.14, 32, 1, true]} />
+          <cylinderGeometry args={[0.095, 0.075, 0.13, 32, 1, true]} />
           <meshStandardMaterial
-            color="#14080b"
-            roughness={0.25}
-            metalness={0.85}
+            color="#1e2433"
+            roughness={0.6}
+            metalness={0.15}
             side={2}
-            emissive="#7f1d1d"
-            emissiveIntensity={hovered ? 0.6 : 0.15}
           />
         </mesh>
 
-        {/* Floating Coral Rim Ring */}
-        <mesh ref={ringRef} position={[0, 0.072, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.102, 0.005, 12, 36]} />
+        {/* Floating Pastel Coral Rim Ring */}
+        <mesh ref={ringRef} position={[0, 0.068, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.098, 0.004, 12, 36]} />
           <meshStandardMaterial
             color={color.danger}
-            emissive={color.danger}
-            emissiveIntensity={hovered ? 0.9 : 0.35}
-            roughness={0.15}
-            metalness={0.9}
+            roughness={0.3}
+            metalness={0.3}
           />
         </mesh>
       </group>

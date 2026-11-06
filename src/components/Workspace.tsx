@@ -346,7 +346,13 @@ export function Workspace() {
     switch (id) {
       case 'all':
         showAll()
-        setStatus('Todo restaurado')
+        setStatus('Vista principal: Todas las ventanas restauradas')
+        break
+      case 'favorites':
+        setStatus('Filtro: Documentos favoritos destacados con corazón')
+        break
+      case 'calendar':
+        setStatus('Agenda: 3 documentos y notas sincronizadas para hoy')
         break
       case 'voice':
         toggleHidden('voice')
@@ -368,7 +374,7 @@ export function Workspace() {
         break
       case 'recenter':
         recenter()
-        setStatus('Workspace recentrado')
+        setStatus('Workspace recentrado frente a tu vista')
         break
     }
   }
