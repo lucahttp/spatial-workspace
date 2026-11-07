@@ -66,11 +66,36 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
     * **Puente de Herramientas IA (wZed AI SDK)**: Implementación del conjunto de herramientas de wZed (`read_file`, `write_file`, `list_directory`, `execute_command`) enlazado al Orbe Cognitivo y comandos de voz.
     * **Ventana 3D Móvil**: Integrada con la cápsula contextual (`SpatialCapsule`), permitiendo orientarla hacia el usuario (`Mirar a mí`), rotarla y reposicionarla libremente en la sala virtual.
 
+### 9. ☁️ Despliegue en Microsoft Copilot Managed Runtime (CMR Managed App)
+* **Arquitectura de Managed App (`@microsoft/cmr-apps`)**:
+  * Configuración oficial mediante [`ms.config.json`](file:///Users/luca/Documents/spatial-workspace/ms.config.json) acorde al esquema de Microsoft Copilot Managed Runtime (`schemas/ms.config.schema.json`).
+  * Integración con el plugin de empaquetado para Vite (`@microsoft/cmr-apps-vite-plugin`), permitiendo que la aplicación espacial se despliegue y aloje como una Managed Application en el ecosistema de Microsoft 365 y Copilot con gobernanza y seguridad de nivel empresarial.
+  * Comando para despliegue directo:
+    ```bash
+    npm run deploy:cmr
+    ```
+
+### 10. 🎙️ Azure AI Foundry GPT Live & Delegación de Subagente de Código wZed
+* **Conexión a Azure AI Foundry**:
+  * Compatible con proyectos de Azure AI Foundry y Copilot Managed Runtime mediante variables de entorno seguras (`VITE_AZURE_FOUNDRY_ENDPOINT` y `VITE_AZURE_AI_KEY`).
+  * Soporte para sesiones de audio en tiempo real y protocolo de agentes (`invocations_ws` / REST).
+* **Arquitectura de Delegación Supervisor-Subagente**:
+  * **Agente Supervisor (Orbe de Voz 3D)**: Escucha las instrucciones habladas del usuario en el espacio tridimensional y analiza la intención con GPT Live de Azure Foundry.
+  * **Subagente de Código (wZed Agent)**: Cuando el usuario pide crear código, modificar componentes, ejecutar scripts o consultar archivos, el Orbe de Voz delega la tarea al subagente de wZed (`delegate_to_coding_subagent`).
+  * **Ejecución y Feedback Visual**: El subagente ejecuta las herramientas en el VFS (`createFile`, `writeFile`, `runFile`), transmite los logs al terminal 3D y despliega el resultado gráfico en la tarjeta de **Previsualización Web**.
+  * **Respuesta Cognitiva**: El Orbe adopta estados visuales (`thinking`, `working`, `solving`, `connecting`) y devuelve el reporte consolidado al usuario.
+
 ---
 
 ## 📚 Librerías, Referencias y Ejemplos Utilizados
 
-1. **[wZed (ScelarOrg/wZed)](https://github.com/ScelarOrg/wZed)**:
+1. **[Microsoft Copilot Managed Runtime (microsoft/Copilot-Managed-Runtime)](https://github.com/microsoft/Copilot-Managed-Runtime)**:
+   * **SDK y Esquemas de Managed Apps**: Configuración `ms.config.json` y empaquetado para despliegue en entornos gobernados de Copilot Managed Runtime.
+
+2. **[Azure AI Foundry (Microsoft)](https://ai.azure.com/)**:
+   * **GPT Live & Invocations Protocol**: Servicios de agentes de voz en tiempo real con delegación jerárquica a subagentes de desarrollo.
+
+3. **[wZed (ScelarOrg/wZed)](https://github.com/ScelarOrg/wZed)**:
    * **Arquitectura de WebIDE en cliente**: Conceptos de Nodepod, VFS (/project), ejecución de código y terminal interactivo integrados sin romper el pipeline de renderizado 3D de WebXR.
    * **Herramientas de Agente IA (`src/lib/ai-sdk.ts`)**: Esquema de llamadas de herramientas (`read_file`, `write_file`, `list_directory`) para manipulación programática de archivos desde el orbe espacial.
 

@@ -18,6 +18,7 @@ import { Panel } from './Panel'
 import { Preview } from './Preview'
 import { SparklingControllerRay } from './SparklingControllerRay'
 import { SpatialCodeStudio } from './SpatialCodeStudio'
+import { azureFoundryVoice } from '../services/azureFoundryVoice'
 import { cleanText, FontProvider } from './Ui'
 
 function GLBridge() {
@@ -216,6 +217,19 @@ function TranscriptPanel() {
   const mic = useMicLevel()
   const listening = orb === 'listening'
 
+  useEffect(() => {
+    return azureFoundryVoice.subscribe(({ status, message, subagentLog }) => {
+      if (status === 'delegating') setOrb('working')
+      else if (status === 'executing') setOrb('solving')
+      else if (status === 'responding') setOrb('connecting')
+      else if (status === 'listening') setOrb('listening')
+
+      const lines = [message]
+      if (subagentLog) lines.push(`[Subagente wZed]: ${subagentLog}`)
+      setTranscript(lines)
+    })
+  }, [setOrb, setTranscript])
+
   return (
     <>
       <Panel
@@ -245,6 +259,22 @@ function TranscriptPanel() {
               </Text>
             </Container>
 
+            {/* Azure Foundry Live Indicator */}
+            <Container flexDirection="row" alignItems="center" gapColumn={4}>
+              <Container
+                width={6}
+                height={6}
+                borderTopLeftRadius={3}
+                borderTopRightRadius={3}
+                borderBottomLeftRadius={3}
+                borderBottomRightRadius={3}
+                backgroundColor={color.success}
+              />
+              <Text fontSize={8} fontWeight={700} color={color.success} letterSpacing={0.4}>
+                {cleanText('FOUNDRY LIVE')}
+              </Text>
+            </Container>
+
             {/* Simulated Live Equalizer Waveform */}
             <Container flexDirection="row" alignItems="center" gapColumn={3} height={18}>
               <EqualizerBar index={0} active={listening || mic.enabled} />
@@ -267,6 +297,75 @@ function TranscriptPanel() {
                 {cleanText(line)}
               </Text>
             ))}
+          </Container>
+
+          {/* Quick Voice Delegation Pills (Supervisory Agent -> wZed Subagent) */}
+          <Container flexDirection="row" flexWrap="wrap" gapColumn={4} gapRow={4} paddingTop={2} paddingBottom={2}>
+            <Container
+              cursor="pointer"
+              paddingLeft={6}
+              paddingRight={6}
+              height={20}
+              borderTopLeftRadius={10}
+              borderTopRightRadius={10}
+              borderBottomLeftRadius={10}
+              borderBottomRightRadius={10}
+              backgroundColor="rgba(124,58,237,0.18)"
+              borderColor={color.purple}
+              borderTopWidth={1}
+              borderBottomWidth={1}
+              borderLeftWidth={1}
+              borderRightWidth={1}
+              onClick={() => azureFoundryVoice.handleVoiceCommand('ejecuta el script principal')}
+            >
+              <Text fontSize={8} fontWeight={600} color={color.purple}>
+                {cleanText('▶ Correr wZed')}
+              </Text>
+            </Container>
+
+            <Container
+              cursor="pointer"
+              paddingLeft={6}
+              paddingRight={6}
+              height={20}
+              borderTopLeftRadius={10}
+              borderTopRightRadius={10}
+              borderBottomLeftRadius={10}
+              borderBottomRightRadius={10}
+              backgroundColor="rgba(14,165,233,0.18)"
+              borderColor={color.accent}
+              borderTopWidth={1}
+              borderBottomWidth={1}
+              borderLeftWidth={1}
+              borderRightWidth={1}
+              onClick={() => azureFoundryVoice.handleVoiceCommand('crea un modulo spatial para el preview')}
+            >
+              <Text fontSize={8} fontWeight={600} color={color.accent}>
+                {cleanText('✨ Crear Módulo 3D')}
+              </Text>
+            </Container>
+
+            <Container
+              cursor="pointer"
+              paddingLeft={6}
+              paddingRight={6}
+              height={20}
+              borderTopLeftRadius={10}
+              borderTopRightRadius={10}
+              borderBottomLeftRadius={10}
+              borderBottomRightRadius={10}
+              backgroundColor="rgba(16,185,129,0.18)"
+              borderColor={color.success}
+              borderTopWidth={1}
+              borderBottomWidth={1}
+              borderLeftWidth={1}
+              borderRightWidth={1}
+              onClick={() => azureFoundryVoice.handleVoiceCommand('lista los archivos del proyecto')}
+            >
+              <Text fontSize={8} fontWeight={600} color={color.success}>
+                {cleanText('📁 Listar VFS')}
+              </Text>
+            </Container>
           </Container>
 
           {/* Interactive Microphone Switch Pill */}

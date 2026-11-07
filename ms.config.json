@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/Copilot-Managed-Runtime/main/schemas/ms.config.schema.json",
+  "version": "0.0",
+  "appId": "ed477751-29ae-4f39-83ab-8a0dd0adac86",
+  "appDisplayName": "Spatial Workspace XR",
+  "description": "Spatial Workspace with WebXR, 3D Hand Tracking, wZed In-Browser Code Studio and Azure AI Foundry Voice Agent",
+  "buildType": "build",
+  "buildCommand": "npm run build",
+  "buildPath": "dist",
+  "buildEntryPoint": "dist/index.html",
+  "cloud": "public",
+  "repoType": "github",
+  "externalRepoUrl": "https://github.com/lucahttp/spatial-workspace"
+}

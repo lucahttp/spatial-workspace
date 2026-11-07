@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "deploy:cmr": "ms app deploy"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",
@@ -27,6 +28,8 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@microsoft/cmr-apps": "^0.6.5",
+    "@microsoft/cmr-apps-vite-plugin": "^0.5.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.187.0",

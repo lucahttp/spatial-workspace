@@ -10,6 +10,7 @@ import { Workspace } from './components/Workspace'
 import { glRef } from './glRef'
 import { OrbState, useWorkspace } from './store'
 import { initTransformersHandEngine } from './services/handTracking'
+import { azureFoundryVoice } from './services/azureFoundryVoice'
 
 const store = createXRStore({
   foveation: 0,
@@ -358,6 +359,21 @@ export function App() {
 
               {/* Global Actions */}
               <div className="actions">
+                <button
+                  className="btn icon-btn ml-btn"
+                  onClick={async () => {
+                    const prompt = window.prompt(
+                      'Comando para Orbe de Voz (Azure Foundry + wZed Subagente):',
+                      'crea un componente espacial y corre index.js'
+                    )
+                    if (prompt) {
+                      await azureFoundryVoice.handleVoiceCommand(prompt)
+                    }
+                  }}
+                  title="Orbe de Voz con Azure AI Foundry GPT Live y Delegación a wZed Subagent"
+                >
+                  🎙️ Foundry Voice
+                </button>
                 <button
                   className="btn icon-btn ml-btn"
                   onClick={async () => {
