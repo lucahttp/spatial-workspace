@@ -1,5 +1,5 @@
 /** @module heybuddy/HeyBuddy */
-import { ONNX } from './onnx'
+import { ONNX, isWasmSupported } from './onnx'
 import { AudioBatcher } from './AudioBatcher'
 import { SileroVAD, SpeechEmbedding, MelSpectrogram, WakeWord } from './models'
 import type { WakeWordResult } from './models'
@@ -138,10 +138,10 @@ export class HeyBuddy {
       negativeVadThreshold,
       negativeVadCount
     )
-    this.vad.test(this.debug)
+    if (isWasmSupported()) this.vad.test(this.debug)
 
     this.spectrogram = new MelSpectrogram(spectrogramModelPath)
-    this.spectrogram.test(this.debug)
+    if (isWasmSupported()) this.spectrogram.test(this.debug)
     this.spectrogramMelBins = spectrogramMelBins
 
     this.embedding = new SpeechEmbedding(
@@ -150,7 +150,7 @@ export class HeyBuddy {
       embeddingWindowSize,
       embeddingWindowStride
     )
-    this.embedding.test(this.debug)
+    if (isWasmSupported()) this.embedding.test(this.debug)
     this.embeddingDim = embeddingDim
     this.embeddingWindowSize = embeddingWindowSize
     this.embeddingWindowStride = embeddingWindowStride
@@ -165,7 +165,7 @@ export class HeyBuddy {
     for (const model of modelArray) {
       const modelName = model.split('/').pop()?.split('.')[0] || 'model'
       this.wakeWords[modelName] = new WakeWord(model, this.wakeWordThreshold)
-      this.wakeWords[modelName].test(this.debug)
+      if (isWasmSupported()) this.wakeWords[modelName].test(this.debug)
     }
 
     this.recording = false
@@ -334,56 +334,77 @@ export class HeyBuddy {
 
     const lastBatch = audio.subarray(audio.length - this.batcher.batchIntervalSamples)
 
-    try {
-      const spectrograms = (await this.spectrogram.run(audio)) as ort.Tensor
-      const embedding = await this.embedding.getEmbeddingFromMelSpectrogramOutput(spectrograms)
-      const numFramesPerEmbedding = embedding.dims[0]
-      const maxEmbeddings = this.wakeWordEmbeddingFrames / numFramesPerEmbedding
+    // Check if ONNX WASM pipeline is available
+    if (isWasmSupported() && this.spectrogram.isAvailable) {
+      try {
+        const spectrograms = (await this.spectrogram.run(audio)) as ort.Tensor
+        if (spectrograms) {
+          const embedding = await this.embedding.getEmbeddingFromMelSpectrogramOutput(spectrograms)
+          const numFramesPerEmbedding = embedding.dims[0]
+          const maxEmbeddings = this.wakeWordEmbeddingFrames / numFramesPerEmbedding
 
-      this.embeddingBufferArray.push(embedding)
-      if (this.embeddingBufferArray.length > maxEmbeddings) {
-        this.embeddingBufferArray.shift()
+          this.embeddingBufferArray.push(embedding)
+          if (this.embeddingBufferArray.length > maxEmbeddings) {
+            this.embeddingBufferArray.shift()
+          }
+
+          this.embeddingBuffer = await embeddingBufferArrayToEmbedding(
+            this.embeddingBufferArray,
+            numFramesPerEmbedding,
+            this.embeddingDim
+          )
+          const { isSpeaking, speechProbability, justStoppedSpeaking, justStartedSpeaking } =
+            await this.vad.hasSpeechAudio(lastBatch)
+
+          if (justStartedSpeaking) this.speechStart()
+          if (justStoppedSpeaking) this.speechEnd()
+
+          if (
+            isSpeaking &&
+            this.embeddingBuffer &&
+            this.embeddingBuffer.dims[0] === this.wakeWordEmbeddingFrames
+          ) {
+            const wakeWordsCalled = await this.checkWakeWords()
+            this.processed({
+              listening: true,
+              recording: this.recording,
+              speech: { probability: speechProbability, active: isSpeaking },
+              wakeWords: wakeWordsCalled,
+            })
+          } else {
+            this.processed({
+              listening: false,
+              recording: this.recording,
+              speech: { probability: speechProbability, active: isSpeaking },
+              wakeWords: Object.keys(this.wakeWords).reduce(
+                (carry: Record<string, { probability: number; active: boolean }>, name: string) => {
+                  carry[name] = { probability: 0.0, active: false }
+                  return carry
+                },
+                {}
+              ),
+            })
+          }
+        }
+      } catch (err) {
+        if (this.debug) console.warn('[HeyBuddy] Processing inference error:', err)
       }
-
-      this.embeddingBuffer = await embeddingBufferArrayToEmbedding(
-        this.embeddingBufferArray,
-        numFramesPerEmbedding,
-        this.embeddingDim
-      )
-      const { isSpeaking, speechProbability, justStoppedSpeaking, justStartedSpeaking } =
-        await this.vad.hasSpeechAudio(lastBatch)
-
-      if (justStartedSpeaking) this.speechStart()
-      if (justStoppedSpeaking) this.speechEnd()
-
-      if (
-        isSpeaking &&
-        this.embeddingBuffer &&
-        this.embeddingBuffer.dims[0] === this.wakeWordEmbeddingFrames
-      ) {
-        const wakeWordsCalled = await this.checkWakeWords()
-        this.processed({
-          listening: true,
-          recording: this.recording,
-          speech: { probability: speechProbability, active: isSpeaking },
-          wakeWords: wakeWordsCalled,
-        })
-      } else {
-        this.processed({
-          listening: false,
-          recording: this.recording,
-          speech: { probability: speechProbability, active: isSpeaking },
-          wakeWords: Object.keys(this.wakeWords).reduce(
-            (carry: Record<string, { probability: number; active: boolean }>, name: string) => {
-              carry[name] = { probability: 0.0, active: false }
-              return carry
-            },
-            {}
-          ),
-        })
+    } else {
+      // Fast main-thread energy VAD fallback when WASM is restricted by host CSP
+      let sumSquares = 0
+      for (let i = 0; i < lastBatch.length; i++) {
+        sumSquares += lastBatch[i] * lastBatch[i]
       }
-    } catch (err) {
-      if (this.debug) console.warn('[HeyBuddy] Processing inference error:', err)
+      const rms = Math.sqrt(sumSquares / lastBatch.length)
+      const isSpeaking = rms > 0.04
+      const probability = Math.min(1, rms * 15)
+
+      this.processed({
+        listening: true,
+        recording: this.recording,
+        speech: { probability, active: isSpeaking },
+        wakeWords: {},
+      })
     }
 
     if (this.recording) {

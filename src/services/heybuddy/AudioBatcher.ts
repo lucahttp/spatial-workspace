@@ -1,48 +1,11 @@
 /** @module heybuddy/AudioBatcher */
 
-// Minified AudioWorklet processor code matching mortimer-js
-const workletName = 'hey-buddy'
-const workletCode = `(()=>{class t extends AudioWorkletProcessor{constructor(t){super(t),this.targetSampleRate=t.processorOptions.targetSampleRate,this.inputBuffer=new Float32Array(this.inputFrameSize),this.inputBufferSize=0,this.outputBuffer=new Float32Array(this.targetFrameSize)}get inputFrameSize(){return Math.round(sampleRate/50)}get targetFrameSize(){return Math.round(this.targetSampleRate/50)}async flush(){const t=sampleRate/this.targetSampleRate;this.outputBuffer.fill(0);for(let e=0;e<this.targetFrameSize;e++){const i=e*t,r=Math.floor(i),s=Math.min(r+1,this.targetFrameSize-1),u=i-r;this.outputBuffer[e]=this.inputBuffer[r]*(1-u)+this.inputBuffer[s]*u}await this.port.postMessage(this.outputBuffer)}pushAudio(t){const e=t.length,i=this.inputFrameSize-this.inputBufferSize;if(e<i)return this.inputBuffer.set(t,this.inputBufferSize),void(this.inputBufferSize+=e);this.inputBuffer.set(t.subarray(0,i),this.inputBufferSize),this.flush(),this.inputBufferSize=0,this.pushAudio(t.subarray(i))}process(t,e,i){return this.pushAudio(t[0][0]),!0}}registerProcessor("${workletName}",t)})();`
-
-let workletUrl: string | null = null
-
-function getWorkletUrl(): string {
-  if (!workletUrl && typeof window !== 'undefined') {
-    const workletBlob = new Blob([workletCode], { type: 'application/javascript' })
-    workletUrl = URL.createObjectURL(workletBlob)
-  }
-  return workletUrl || ''
-}
-
 export type AudioBatchCallback = (batch: Float32Array) => void
 
 /**
- * AudioNode wrapping an AudioWorkletNode.
- */
-export class AudioNode {
-  context: AudioContext
-  worker: AudioWorkletNode
-
-  constructor(context: AudioContext, worker: AudioWorkletNode) {
-    this.context = context
-    this.worker = worker
-  }
-
-  static async create(context: AudioContext, targetSampleRate: number): Promise<AudioNode> {
-    const url = getWorkletUrl()
-    await context.audioWorklet.addModule(url)
-    const workletOptions = {
-      processorOptions: {
-        targetSampleRate: targetSampleRate,
-      },
-    }
-    const worker = new AudioWorkletNode(context, workletName, workletOptions)
-    return new AudioNode(context, worker)
-  }
-}
-
-/**
  * Batches audio samples and fires callbacks for wake word & VAD evaluation.
+ * Implemented using pure Web Audio API (ScriptProcessorNode) without any blob URLs,
+ * workers, or external scripts to remain 100% compliant with strict CSP (script-src 'self').
  */
 export class AudioBatcher {
   initialized: boolean
@@ -55,7 +18,7 @@ export class AudioBatcher {
   stream: MediaStream | null
   audioContext: AudioContext | null
   sourceNode: MediaStreamAudioSourceNode | null
-  workerNode: AudioNode | null
+  processorNode: ScriptProcessorNode | null
 
   constructor(
     batchSeconds = 2.0,
@@ -73,7 +36,7 @@ export class AudioBatcher {
     this.stream = null
     this.audioContext = null
     this.sourceNode = null
-    this.workerNode = null
+    this.processorNode = null
   }
 
   get batchSamples(): number {
@@ -112,40 +75,74 @@ export class AudioBatcher {
   async initialize(): Promise<void> {
     if (this.initialized) return
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        autoGainControl: true,
-        noiseSuppression: true,
-      },
-    })
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          autoGainControl: true,
+          noiseSuppression: true,
+        },
+      })
 
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    this.audioContext = new AudioContextClass()
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      this.audioContext = new AudioContextClass()
 
-    this.sourceNode = new MediaStreamAudioSourceNode(this.audioContext, {
-      mediaStream: this.stream,
-    })
+      this.sourceNode = this.audioContext.createMediaStreamSource(this.stream)
 
-    this.workerNode = await AudioNode.create(this.audioContext, this.targetSampleRate)
-    this.sourceNode.connect(this.workerNode.worker)
+      // ScriptProcessor buffer size: 4096 frames
+      const bufferSize = 4096
+      this.processorNode = this.audioContext.createScriptProcessor(bufferSize, 1, 1)
 
-    this.workerNode.worker.port.onmessage = (event: MessageEvent<Float32Array>) => {
-      this.push(event.data)
+      const actualSampleRate = this.audioContext.sampleRate
+      const ratio = actualSampleRate / this.targetSampleRate
+
+      this.processorNode.onaudioprocess = (e: AudioProcessingEvent) => {
+        const inputData = e.inputBuffer.getChannelData(0)
+        const targetLength = Math.round(inputData.length / ratio)
+        const resampled = new Float32Array(targetLength)
+
+        // Linear interpolation downsampling to 16kHz
+        for (let i = 0; i < targetLength; i++) {
+          const originalIndex = i * ratio
+          const indexFloor = Math.floor(originalIndex)
+          const indexCeil = Math.min(indexFloor + 1, inputData.length - 1)
+          const fraction = originalIndex - indexFloor
+          resampled[i] = inputData[indexFloor] * (1 - fraction) + inputData[indexCeil] * fraction
+        }
+
+        this.push(resampled)
+      }
+
+      this.sourceNode.connect(this.processorNode)
+      this.processorNode.connect(this.audioContext.destination)
+
+      this.clearBuffer()
+      this.initialized = true
+    } catch (err) {
+      console.warn('[AudioBatcher] Initialization warning (CSP or microphone access):', err)
+      throw err
     }
-
-    this.clearBuffer()
-    this.initialized = true
   }
 
   destroy(): void {
+    if (this.processorNode) {
+      this.processorNode.disconnect()
+      this.processorNode.onaudioprocess = null
+      this.processorNode = null
+    }
+    if (this.sourceNode) {
+      this.sourceNode.disconnect()
+      this.sourceNode = null
+    }
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop())
       this.stream = null
     }
     if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close()
+      this.audioContext.close().catch(() => {})
       this.audioContext = null
     }
     this.initialized = false

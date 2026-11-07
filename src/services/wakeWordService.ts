@@ -100,11 +100,13 @@ class WakeWordService {
       })
 
       this.heyBuddy.onRecording((samples: Float32Array) => {
-        console.log(`[Hey-Buddy ONNX] Audio batch captured: ${samples.length} samples`)
-        const blob = samplesToBlob(samples)
-        if (this.isCommandActive) {
-          // If in command mode, notify audio blob readiness
-          console.log('[Hey-Buddy ONNX] WAV blob generated:', blob.size, 'bytes')
+        try {
+          const blob = samplesToBlob(samples)
+          if (this.isCommandActive) {
+            console.log('[Hey-Buddy] WAV blob captured:', blob.size, 'bytes')
+          }
+        } catch {
+          // Ignored
         }
       })
     } catch (err) {

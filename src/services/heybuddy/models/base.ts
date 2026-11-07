@@ -1,6 +1,6 @@
 /** @module heybuddy/models/base */
 import { sleep } from '../helpers'
-import { ONNX } from '../onnx'
+import { ONNX, isWasmSupported } from '../onnx'
 import type * as ort from 'onnxruntime-web'
 
 /**
@@ -17,6 +17,7 @@ export abstract class ONNXModel {
   webgl: number | null
   wasm: number | null
   power: number
+  isAvailable = false
 
   constructor(
     modelPath: string,
@@ -32,9 +33,12 @@ export abstract class ONNXModel {
     this.webgpu = webgpu
     this.webgl = webgl
     this.wasm = wasm
-    this.load().catch((err) => {
-      console.warn(`[HeyBuddy] Failed to pre-load model from ${this.modelPath}:`, err)
-    })
+
+    if (typeof window !== 'undefined' && isWasmSupported()) {
+      this.load().catch((err) => {
+        console.warn(`[HeyBuddy] Failed to pre-load model from ${this.modelPath}:`, err)
+      })
+    }
   }
 
   get sessionOptions(): ort.InferenceSession.SessionOptions {
@@ -44,24 +48,43 @@ export abstract class ONNXModel {
   }
 
   async load(): Promise<void> {
+    if (!isWasmSupported()) {
+      this.isAvailable = false
+      return
+    }
+
     if (!this.session) {
-      this.session = await ONNX.createInferenceSession(
-        this.modelPath,
-        this.sessionOptions
-      )
+      try {
+        this.session = await ONNX.createInferenceSession(
+          this.modelPath,
+          this.sessionOptions
+        )
+        this.isAvailable = true
+      } catch (err) {
+        this.isAvailable = false
+        console.warn(`[HeyBuddy] Could not initialize session for ${this.modelPath}:`, err)
+      }
     }
   }
 
-  async waitUntilLoaded(): Promise<void> {
-    while (this.session === null) {
+  async waitUntilLoaded(): Promise<boolean> {
+    if (!isWasmSupported()) return false
+    let attempts = 0
+    while (this.session === null && attempts < 50) {
       await sleep(10)
+      attempts++
     }
+    return this.session !== null
   }
 
   abstract execute(input: unknown): Promise<unknown>
 
   async run(input: unknown): Promise<any> {
-    await this.waitUntilLoaded()
+    const ready = await this.waitUntilLoaded()
+    if (!ready || !this.session) {
+      return null
+    }
+
     const currentTime = Date.now()
     const result = await this.execute(input)
     const executionDuration = Date.now() - currentTime

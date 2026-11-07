@@ -7,7 +7,7 @@ export type {
   ProcessedCallback,
   RecordingCallback,
 } from './HeyBuddy'
-export { AudioBatcher, AudioNode } from './AudioBatcher'
+export { AudioBatcher } from './AudioBatcher'
 export { ONNX } from './onnx'
 export { sleep, isEmpty } from './helpers'
 export * from './models'

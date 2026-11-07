@@ -1,45 +1,44 @@
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 
-// Continuous 60 FPS XR frame driver using Web Worker (unthrottled by Chrome when tab is in background/occluded)
+// Background frame driver for XR/Tab occlusion without CSP blob-worker violations
 if (typeof window !== 'undefined') {
   try {
-    const workerCode = `
-      let interval = null;
-      self.onmessage = (e) => {
-        if (e.data === 'start' && !interval) {
-          interval = setInterval(() => self.postMessage('tick'), 16.666);
-        } else if (e.data === 'stop' && interval) {
-          clearInterval(interval);
-          interval = null;
-        }
-      };
-    `
-    const blob = new Blob([workerCode], { type: 'application/javascript' })
-    const worker = new Worker(URL.createObjectURL(blob))
-    worker.postMessage('start')
-
     const bgQueue: FrameRequestCallback[] = []
     let nextHandle = 1
     const handleMap = new Map<number, FrameRequestCallback>()
     const origRAF = window.requestAnimationFrame.bind(window)
     const origCancelRAF = window.cancelAnimationFrame.bind(window)
 
-    worker.onmessage = () => {
-      if (document.hidden && bgQueue.length > 0) {
-        const callbacks = bgQueue.slice()
-        bgQueue.length = 0
-        handleMap.clear()
-        const now = performance.now()
-        for (const cb of callbacks) {
-          try {
-            cb(now)
-          } catch (e) {
-            console.error('BG RAF callback error:', e)
-          }
+    // Main-thread fallback interval when tab is occluded
+    let fallbackInterval: number | null = null
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (!fallbackInterval) {
+          fallbackInterval = window.setInterval(() => {
+            if (bgQueue.length > 0) {
+              const callbacks = bgQueue.slice()
+              bgQueue.length = 0
+              handleMap.clear()
+              const now = performance.now()
+              for (const cb of callbacks) {
+                try {
+                  cb(now)
+                } catch (e) {
+                  console.error('BG RAF callback error:', e)
+                }
+              }
+            }
+          }, 16.666)
+        }
+      } else {
+        if (fallbackInterval) {
+          window.clearInterval(fallbackInterval)
+          fallbackInterval = null
         }
       }
-    }
+    })
 
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       if (document.hidden) {
@@ -62,7 +61,7 @@ if (typeof window !== 'undefined') {
       origCancelRAF(id)
     }
   } catch (err) {
-    console.warn('Web Worker RAF fallback error:', err)
+    console.warn('RAF fallback initialization warning:', err)
   }
 }
 

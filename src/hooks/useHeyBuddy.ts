@@ -164,8 +164,13 @@ export function useHeyBuddy(
     })
 
     heyBuddy.onRecording((audioSamples) => {
-      const blob = samplesToBlob(audioSamples)
-      const url = URL.createObjectURL(blob)
+      let url: string | null = null
+      try {
+        const blob = samplesToBlob(audioSamples)
+        url = URL.createObjectURL(blob)
+      } catch {
+        // Blob URL optional for playback
+      }
 
       updateState({
         recording: url,
