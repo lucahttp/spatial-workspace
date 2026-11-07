@@ -144,22 +144,35 @@ class AzureFoundryVoiceService {
 
     try {
       const url = this.config.projectEndpoint.replace(/\/+$/, '')
-      // Check project endpoint or chat completion test
-      const res = await fetch(`${url}?api-version=2024-05-01-preview`, {
+      let testUrl = `${url}?api-version=2024-05-01-preview`
+      try {
+        const parsed = new URL(url)
+        testUrl = `${parsed.origin}/models/chat/completions?api-version=2024-05-01-preview`
+      } catch {
+        // fallback to url
+      }
+
+      const res = await fetch(testUrl, {
         method: 'GET',
         headers: {
           'api-key': this.config.apiKey,
         },
       })
 
-      if (res.ok || res.status === 200 || res.status === 404) {
+      if (res.ok || res.status === 200 || res.status === 404 || res.status === 405) {
         return { ok: true, message: `Conexión verificada con Azure AI Foundry (HTTP ${res.status}).` }
       } else {
         return { ok: false, message: `Azure respondió con estado ${res.status}: ${res.statusText}` }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      return { ok: false, message: `Error de red o CORS al contactar Azure: ${msg}` }
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('blocked')) {
+        return {
+          ok: false,
+          message: '⚠️ Bloqueado por el navegador o adblocker (net::ERR_BLOCKED_BY_CLIENT / CORS). Si tienes uBlock, AdBlock o Brave Shields, desactívalo para este sitio. Puedes pulsar "Guardar y Conectar" para usarlo igualmente.',
+        }
+      }
+      return { ok: false, message: `Error de red al contactar Azure: ${msg}` }
     }
   }
 
@@ -266,7 +279,15 @@ return \`<div style="padding:10px;color:#7c3aed;background:#ede9fe;border-radius
     if (this.isConfigured()) {
       try {
         const cleanBase = this.config.projectEndpoint.replace(/\/+$/, '')
-        const endpointUrl = `${cleanBase}/models/chat/completions?api-version=2024-05-01-preview`
+        let endpointUrl = `${cleanBase}/models/chat/completions?api-version=2024-05-01-preview`
+        if (cleanBase.includes('/api/projects/')) {
+          try {
+            const parsed = new URL(cleanBase)
+            endpointUrl = `${parsed.origin}/models/chat/completions?api-version=2024-05-01-preview`
+          } catch {
+            // keep default endpointUrl
+          }
+        }
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 8000)

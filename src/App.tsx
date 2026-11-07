@@ -607,90 +607,94 @@ export function App() {
                   Configura tus credenciales de Azure AI Foundry para activar voz en vivo y control del subagente wZed en GitHub Pages y WebXR. Se almacenan únicamente en el <code>localStorage</code> de este dispositivo.
                 </p>
 
-                <div className="form-group">
-                  <label>Project Endpoint URL</label>
-                  <input
-                    type="text"
-                    placeholder="https://<recurso>.services.ai.azure.com/api/projects/<proyecto>"
-                    value={foundryEndpoint}
-                    onChange={(e) => setFoundryEndpoint(e.target.value)}
-                  />
-                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleSaveFoundryConfig()
+                    setShowFoundryModal(false)
+                  }}
+                >
+                  <div className="form-group">
+                    <label>Project Endpoint URL</label>
+                    <input
+                      type="text"
+                      placeholder="https://<recurso>.services.ai.azure.com/api/projects/<proyecto>"
+                      value={foundryEndpoint}
+                      onChange={(e) => setFoundryEndpoint(e.target.value)}
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label>API Key</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowKeyPassword(!showKeyPassword)}
-                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>API Key</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowKeyPassword(!showKeyPassword)}
+                        style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}
+                      >
+                        {showKeyPassword ? 'Ocultar' : 'Mostrar'}
+                      </button>
+                    </div>
+                    <input
+                      type={showKeyPassword ? 'text' : 'password'}
+                      placeholder="Pega tu API Key de Azure Foundry aquí"
+                      value={foundryKey}
+                      onChange={(e) => setFoundryKey(e.target.value)}
+                    />
+                  </div>
+
+                  {foundryStatusMsg && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        marginBottom: 12,
+                        background: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200')
+                          ? 'rgba(52, 211, 153, 0.15)'
+                          : 'rgba(56, 189, 248, 0.15)',
+                        color: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200') ? '#34d399' : '#38bdf8',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
                     >
-                      {showKeyPassword ? 'Ocultar' : 'Mostrar'}
-                    </button>
+                      {foundryStatusMsg}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 16, lineHeight: 1.4 }}>
+                    🔒 <strong>Sin filtraciones:</strong> Tus credenciales nunca se envían al repositorio de GitHub ni se incluyen en ningún bundle público.<br/>
+                    💡 <strong>Tip para enlace directo:</strong> También puedes abrir la app pasando hash:<br/>
+                    <code style={{ fontSize: 9, color: '#cbd5e1' }}>#endpoint=&lt;url&gt;&amp;key=&lt;key&gt;</code> (se guarda y se limpia automáticamente).
                   </div>
-                  <input
-                    type={showKeyPassword ? 'text' : 'password'}
-                    placeholder="Pega tu API Key de Azure Foundry aquí"
-                    value={foundryKey}
-                    onChange={(e) => setFoundryKey(e.target.value)}
-                  />
-                </div>
 
-                {foundryStatusMsg && (
-                  <div
-                    style={{
-                      fontSize: 11,
-                      padding: '8px 12px',
-                      borderRadius: 10,
-                      marginBottom: 12,
-                      background: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200')
-                        ? 'rgba(52, 211, 153, 0.15)'
-                        : 'rgba(56, 189, 248, 0.15)',
-                      color: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200') ? '#34d399' : '#38bdf8',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
-                    {foundryStatusMsg}
-                  </div>
-                )}
-
-                <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 16, lineHeight: 1.4 }}>
-                  🔒 <strong>Sin filtraciones:</strong> Tus credenciales nunca se envían al repositorio de GitHub ni se incluyen en ningún bundle público.<br/>
-                  💡 <strong>Tip para enlace directo:</strong> También puedes abrir la app pasando hash:<br/>
-                  <code style={{ fontSize: 9, color: '#cbd5e1' }}>#endpoint=&lt;url&gt;&amp;key=&lt;key&gt;</code> (se guarda y se limpia automáticamente).
-                </div>
-
-                <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={handleClearFoundryConfig}
-                    style={{ color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
-                    title="Eliminar credenciales almacenadas"
-                  >
-                    Borrar
-                  </button>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <button
                       type="button"
                       className="btn"
-                      onClick={handleTestFoundryConnection}
-                      disabled={testingConnection}
+                      onClick={handleClearFoundryConfig}
+                      style={{ color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                      title="Eliminar credenciales almacenadas"
                     >
-                      {testingConnection ? 'Probando...' : 'Probar Conexión'}
+                      Borrar
                     </button>
-                    <button
-                      type="button"
-                      className="btn primary"
-                      onClick={() => {
-                        handleSaveFoundryConfig()
-                        setShowFoundryModal(false)
-                      }}
-                    >
-                      Guardar y Conectar
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleTestFoundryConnection}
+                        disabled={testingConnection}
+                      >
+                        {testingConnection ? 'Probando...' : 'Probar Conexión'}
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn primary"
+                      >
+                        Guardar y Conectar
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </form>
               </div>
             </BorderBeam>
           </div>

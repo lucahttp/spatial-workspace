@@ -165,8 +165,10 @@ class WakeWordService {
         }
       }
 
-      this.recognition.onerror = (e) => {
-        console.warn('[WakeWordService] Speech recognition event:', e)
+      this.recognition.onerror = (e: any) => {
+        // 'no-speech' is triggered when user pauses or ambient silence occurs; don't spam console
+        if (e && e.error === 'no-speech') return
+        console.warn('[WakeWordService] Speech recognition event:', e?.error)
       }
 
       this.recognition.onend = () => {

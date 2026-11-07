@@ -46,6 +46,13 @@ export function cleanText(str: string | undefined | null): string {
     .replace(/[‘’]/g, "'")
     .replace(/[×]/g, 'x')
     .replace(/[¿¡]/g, '')
+    .replace(/[▶►]/g, '>')
+    .replace(/[✨⭐★]/g, '*')
+    .replace(/[⚡]/g, '!')
+    .replace(/[⚙🔧🛠]/g, '')
+    .replace(/[⏳⌛]/g, '...')
+    .replace(/[✓✔]/g, 'v')
+    .replace(/[^\x20-\x7E\n]/g, '')
 }
 
 export function UiRoot(props: ComponentProps<typeof Root>) {
