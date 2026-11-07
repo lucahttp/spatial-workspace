@@ -148,8 +148,6 @@ export function App() {
   const [customSummary, setCustomSummary] = useState('')
   const [customBadge, setCustomBadge] = useState('GOOGLE DOC')
   const [supportsAR, setSupportsAR] = useState<boolean | null>(null)
-  const [supportsVR, setSupportsVR] = useState<boolean | null>(null)
-  const [isVisionPro, setIsVisionPro] = useState(false)
   const [showFoundryModal, setShowFoundryModal] = useState(false)
   const [foundryEndpoint, setFoundryEndpoint] = useState(() => azureFoundryVoice.getConfig().projectEndpoint)
   const [foundryKey, setFoundryKey] = useState(() => azureFoundryVoice.getConfig().apiKey)
@@ -174,27 +172,14 @@ export function App() {
     }
   }, [wakeWordEnabled])
 
-  const currentOrbCfg = ORB_STATE_OPTIONS.find((o) => o.id === orb) ?? ORB_STATE_OPTIONS[0]
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const ua = navigator.userAgent || ''
-      const isVP =
-        /Apple Vision|visionOS/i.test(ua) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0 && !/iPad/i.test(ua)) ||
-        (ua.includes('Macintosh') && navigator.maxTouchPoints > 2)
-      setIsVisionPro(isVP)
-
       if (navigator.xr?.isSessionSupported) {
         navigator.xr.isSessionSupported('immersive-ar')
           .then((res) => setSupportsAR(res))
           .catch(() => setSupportsAR(false))
-        navigator.xr.isSessionSupported('immersive-vr')
-          .then((res) => setSupportsVR(res))
-          .catch(() => setSupportsVR(false))
       } else {
         setSupportsAR(false)
-        setSupportsVR(false)
       }
     }
   }, [])
@@ -387,83 +372,9 @@ export function App() {
                 <span className="status-text">{status}</span>
               </div>
 
-              {/* Orb State Selector Capsule */}
-              <div className="orb-selector-capsule">
-                <span className="orb-pill-dot" style={{ background: currentOrbCfg.color }}></span>
-                <select
-                  className="orb-select"
-                  value={orb}
-                  onChange={(e) => setOrb(e.target.value as OrbState)}
-                >
-                  {ORB_STATE_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      Orbe: {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Global Actions */}
-              <div className="actions">
-                <button
-                  className="btn icon-btn ml-btn"
-                  onClick={async () => {
-                    const prompt = window.prompt(
-                      'Comando para Orbe de Voz (Azure Foundry + wZed Subagente):',
-                      'crea un componente espacial y corre index.js'
-                    )
-                    if (prompt) {
-                      await azureFoundryVoice.handleVoiceCommand(prompt)
-                    }
-                  }}
-                  title="Orbe de Voz con Azure AI Foundry GPT Live y Delegación a wZed Subagent"
-                >
-                  🎙️ Hablar
-                </button>
-                <button
-                  className={`btn icon-btn ml-btn ${azureFoundryVoice.isConfigured() ? 'active' : ''}`}
-                  onClick={() => {
-                    setFoundryEndpoint(azureFoundryVoice.getConfig().projectEndpoint)
-                    setFoundryKey(azureFoundryVoice.getConfig().apiKey)
-                    setFoundryStatusMsg('')
-                    setShowFoundryModal(true)
-                  }}
-                  style={azureFoundryVoice.isConfigured() ? { borderColor: '#34d399', color: '#34d399', background: 'rgba(52, 211, 153, 0.12)' } : {}}
-                  title="Configurar Endpoint y API Key de Azure AI Foundry (almacenamiento seguro cliente)"
-                >
-                  {azureFoundryVoice.isConfigured() ? '⚡ Foundry: Conectado' : '⚙️ Azure Foundry'}
-                </button>
-                <button
-                  className={`btn icon-btn ml-btn ${wakeWordEnabled ? 'active' : ''}`}
-                  onClick={() => {
-                    const next = !wakeWordEnabled
-                    setWakeWordEnabled(next)
-                    setStatus(next ? 'Wake Word activo: Di "Hey Buddy" o "Oye Orbe"' : 'Wake Word desactivado')
-                  }}
-                  title="Detección de Wake Word manos libres ('Hey Buddy', 'Oye Orbe') inspirado en hey-buddy"
-                >
-                  {wakeWordEnabled ? '👂 Wake Word: ON' : '🔇 Wake Word: OFF'}
-                </button>
-                <button
-                  className="btn icon-btn ml-btn"
-                  onClick={async () => {
-                    setStatus('Iniciando Transformers.js ONNX Hand Engine...')
-                    const ok = await initTransformersHandEngine()
-                    if (ok) {
-                      setStatus('Transformers.js ONNX Hand Engine: Activo!')
-                    }
-                  }}
-                  title="Activar motor local de tracking de manos (Transformers.js ONNX Runtime Web)"
-                >
-                  🖐️ Hand ML
-                </button>
-                <button className="btn icon-btn" onClick={recenter} title="Recentrar espacio visual">
-                  Recentrar
-                </button>
-                <button className="btn spotlight-btn" onClick={() => setShowModal(true)}>
-                  + Spotlight
-                </button>
-                <div className="divider">|</div>
+              {/* Exactly TWO Action Buttons in Top Header (User request: tiene que haber dos botones. uno para entrar al modo vr/mr otro para los settings esos) */}
+              <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {/* 1. VR / MR Action Button */}
                 {inXR ? (
                   <button
                     className="btn primary xr-exit"
@@ -472,46 +383,37 @@ export function App() {
                       if (session) session.end()
                     }}
                     style={{ background: 'rgba(244, 63, 94, 0.35)', borderColor: '#fb7185', color: '#ffffff' }}
-                    title="Salir de la sesión inmersiva WebXR (Exit Space)"
+                    title="Salir de la sesión inmersiva WebXR"
                   >
-                    Salir de XR ✕
+                    🥽 Salir de XR ✕
                   </button>
-                ) : isVisionPro || (supportsVR && !supportsAR) ? (
-                  <>
-                    <button
-                      className="btn primary xr-vp"
-                      onClick={() => enter('immersive-vr')}
-                      title="Entrar en Apple Vision Pro (Modo Inmersivo WebXR)"
-                    >
-                      Apple Vision Pro (WebXR)
-                    </button>
-                    <button
-                      className="btn xr-ar"
-                      onClick={() => enter('immersive-ar')}
-                      style={{ opacity: 0.75 }}
-                      title="Passthrough AR (Nota: Safari en visionOS no permite acceso a camaras web por privacidad)"
-                    >
-                      AR (Pico 4 Ultra)
-                    </button>
-                  </>
                 ) : (
-                  <>
-                    <button
-                      className="btn primary xr-ar"
-                      onClick={() => enter('immersive-ar')}
-                      title="Passthrough AR (Pico 4 Ultra / Quest)"
-                    >
-                      Passthrough AR (Pico 4 Ultra)
-                    </button>
-                    <button
-                      className="btn xr-vr"
-                      onClick={() => enter('immersive-vr')}
-                      title="VR (Pico Neo / Apple Vision Pro)"
-                    >
-                      VR (Pico Neo)
-                    </button>
-                  </>
+                  <button
+                    className="btn primary xr-ar"
+                    onClick={() => enter(supportsAR ? 'immersive-ar' : 'immersive-vr')}
+                    title="Entrar a Modo Inmersivo VR/MR (Pico 4 Ultra, Pico Neo, Apple Vision Pro)"
+                  >
+                    🥽 {supportsAR ? 'Passthrough AR (Pico 4 Ultra)' : 'VR (Pico Neo / WebXR)'}
+                  </button>
                 )}
+
+                {/* 2. System Settings & Tools Button ("los settings esos") */}
+                <button
+                  className="btn icon-btn"
+                  onClick={() => {
+                    setFoundryEndpoint(azureFoundryVoice.getConfig().projectEndpoint)
+                    setFoundryKey(azureFoundryVoice.getConfig().apiKey)
+                    setShowFoundryModal(true)
+                  }}
+                  style={{
+                    background: azureFoundryVoice.isConfigured() ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                    borderColor: azureFoundryVoice.isConfigured() ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)',
+                    color: azureFoundryVoice.isConfigured() ? '#38bdf8' : '#e2e8f0',
+                  }}
+                  title="Configuración de Sistema, Azure Foundry, Wake Word, Hand ML y Herramientas"
+                >
+                  ⚙️ Configuración
+                </button>
               </div>
             </div>
           </BorderBeam>
@@ -589,112 +491,212 @@ export function App() {
           </div>
         )}
 
-        {/* AZURE AI FOUNDRY CONFIGURATION MODAL (Cliente Seguro) */}
+        {/* UNIFIED VISIONOS SYSTEM SETTINGS & TOOLS MODAL ("los settings esos") */}
         {showFoundryModal && (
           <div className="modal-overlay" onClick={() => setShowFoundryModal(false)}>
             <BorderBeam size="md" colorVariant="ocean" borderRadius={24} duration={8}>
-              <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-card" style={{ maxWidth: 520, maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <div className="modal-title-row">
                     <span className="modal-dot" style={{ background: '#38bdf8', boxShadow: '0 0 10px #38bdf8' }}></span>
-                    <h3>Azure AI Foundry (GPT Live Voice)</h3>
+                    <h3>Configuración de Sistema & Herramientas</h3>
                   </div>
                   <button className="close-btn" onClick={() => setShowFoundryModal(false)}>
                     ✕
                   </button>
                 </div>
                 <p className="modal-subtitle">
-                  Configura tus credenciales de Azure AI Foundry para activar voz en vivo y control del subagente wZed en GitHub Pages y WebXR. Se almacenan únicamente en el <code>localStorage</code> de este dispositivo.
+                  Gestiona Azure AI Foundry, control por voz manos libres (Hey-Buddy), tracking de manos y orientación del espacio.
                 </p>
 
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleSaveFoundryConfig()
-                    setShowFoundryModal(false)
-                  }}
-                >
-                  <div className="form-group">
-                    <label>Project Endpoint URL</label>
-                    <input
-                      type="text"
-                      placeholder="https://<recurso>.services.ai.azure.com/api/projects/<proyecto>"
-                      value={foundryEndpoint}
-                      onChange={(e) => setFoundryEndpoint(e.target.value)}
-                    />
+                {/* SECTION 1: AZURE AI FOUNDRY */}
+                <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 13 }}>⚡</span>
+                    <strong style={{ fontSize: 12, color: '#38bdf8' }}>Azure AI Foundry (GPT Live Voice)</strong>
                   </div>
+                  
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleSaveFoundryConfig()
+                      setShowFoundryModal(false)
+                    }}
+                  >
+                    <div className="form-group">
+                      <label>Project Endpoint URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://<recurso>.services.ai.azure.com/api/projects/<proyecto>"
+                        value={foundryEndpoint}
+                        onChange={(e) => setFoundryEndpoint(e.target.value)}
+                      />
+                    </div>
 
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label>API Key</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowKeyPassword(!showKeyPassword)}
-                        style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label>API Key</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowKeyPassword(!showKeyPassword)}
+                          style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}
+                        >
+                          {showKeyPassword ? 'Ocultar' : 'Mostrar'}
+                        </button>
+                      </div>
+                      <input
+                        type={showKeyPassword ? 'text' : 'password'}
+                        placeholder="Pega tu API Key de Azure Foundry aquí"
+                        value={foundryKey}
+                        onChange={(e) => setFoundryKey(e.target.value)}
+                      />
+                    </div>
+
+                    {foundryStatusMsg && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          marginBottom: 10,
+                          background: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200')
+                            ? 'rgba(52, 211, 153, 0.15)'
+                            : 'rgba(56, 189, 248, 0.15)',
+                          color: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200') ? '#34d399' : '#38bdf8',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }}
                       >
-                        {showKeyPassword ? 'Ocultar' : 'Mostrar'}
-                      </button>
-                    </div>
-                    <input
-                      type={showKeyPassword ? 'text' : 'password'}
-                      placeholder="Pega tu API Key de Azure Foundry aquí"
-                      value={foundryKey}
-                      onChange={(e) => setFoundryKey(e.target.value)}
-                    />
-                  </div>
+                        {foundryStatusMsg}
+                      </div>
+                    )}
 
-                  {foundryStatusMsg && (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        marginBottom: 12,
-                        background: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200')
-                          ? 'rgba(52, 211, 153, 0.15)'
-                          : 'rgba(56, 189, 248, 0.15)',
-                        color: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200') ? '#34d399' : '#38bdf8',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                    >
-                      {foundryStatusMsg}
-                    </div>
-                  )}
-
-                  <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 16, lineHeight: 1.4 }}>
-                    🔒 <strong>Sin filtraciones:</strong> Tus credenciales nunca se envían al repositorio de GitHub ni se incluyen en ningún bundle público.<br/>
-                    💡 <strong>Tip para enlace directo:</strong> También puedes abrir la app pasando hash:<br/>
-                    <code style={{ fontSize: 9, color: '#cbd5e1' }}>#endpoint=&lt;url&gt;&amp;key=&lt;key&gt;</code> (se guarda y se limpia automáticamente).
-                  </div>
-
-                  <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={handleClearFoundryConfig}
-                      style={{ color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
-                      title="Eliminar credenciales almacenadas"
-                    >
-                      Borrar
-                    </button>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                       <button
                         type="button"
                         className="btn"
-                        onClick={handleTestFoundryConnection}
-                        disabled={testingConnection}
+                        onClick={handleClearFoundryConfig}
+                        style={{ color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)', padding: '6px 12px', fontSize: 11 }}
+                        title="Eliminar credenciales almacenadas"
                       >
-                        {testingConnection ? 'Probando...' : 'Probar Conexión'}
+                        Borrar Claves
                       </button>
-                      <button
-                        type="submit"
-                        className="btn primary"
-                      >
-                        Guardar y Conectar
-                      </button>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={handleTestFoundryConnection}
+                          disabled={testingConnection}
+                          style={{ padding: '6px 12px', fontSize: 11 }}
+                        >
+                          {testingConnection ? 'Probando...' : 'Probar Conexión'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn primary"
+                          style={{ padding: '6px 14px', fontSize: 11 }}
+                        >
+                          Guardar y Conectar
+                        </button>
+                      </div>
                     </div>
+                  </form>
+                </div>
+
+                {/* SECTION 2: VOZ, WAKE WORD & ORBE */}
+                <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 13 }}>🎙️</span>
+                    <strong style={{ fontSize: 12, color: '#c084fc' }}>Voz Manos Libres & Orbe</strong>
                   </div>
-                </form>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                    <button
+                      type="button"
+                      className={`btn ${wakeWordEnabled ? 'active' : ''}`}
+                      onClick={() => {
+                        const next = !wakeWordEnabled
+                        setWakeWordEnabled(next)
+                        setStatus(next ? 'Wake Word activo: Di "Hey Buddy" o "Oye Orbe"' : 'Wake Word desactivado')
+                      }}
+                      style={{ fontSize: 11, padding: '7px 12px' }}
+                    >
+                      {wakeWordEnabled ? '👂 Wake Word: ON' : '🔇 Wake Word: OFF'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={async () => {
+                        const prompt = window.prompt(
+                          'Comando para Orbe de Voz (Azure Foundry + wZed Subagente):',
+                          'crea un componente espacial y corre index.js'
+                        )
+                        if (prompt) {
+                          await azureFoundryVoice.handleVoiceCommand(prompt)
+                        }
+                      }}
+                      style={{ fontSize: 11, padding: '7px 12px' }}
+                    >
+                      🎙️ Hablar ahora
+                    </button>
+                    <select
+                      className="orb-select"
+                      value={orb}
+                      onChange={(e) => setOrb(e.target.value as OrbState)}
+                      style={{ fontSize: 11, padding: '6px 10px', background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8 }}
+                    >
+                      {ORB_STATE_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          Estado: {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* SECTION 3: HERRAMIENTAS ESPACIALES & HAND ML */}
+                <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 13 }}>🖐️</span>
+                    <strong style={{ fontSize: 12, color: '#34d399' }}>Herramientas Espaciales</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={async () => {
+                        setStatus('Iniciando Transformers.js ONNX Hand Engine...')
+                        const ok = await initTransformersHandEngine()
+                        if (ok) setStatus('Transformers.js ONNX Hand Engine: Activo!')
+                      }}
+                      style={{ fontSize: 11, padding: '7px 12px' }}
+                    >
+                      🖐️ Hand ML (ONNX)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        recenter()
+                        setStatus('Espacio recentrado')
+                      }}
+                      style={{ fontSize: 11, padding: '7px 12px' }}
+                    >
+                      🎯 Recentrar Vista
+                    </button>
+                    <button
+                      type="button"
+                      className="btn spotlight-btn"
+                      onClick={() => {
+                        setShowFoundryModal(false)
+                        setShowModal(true)
+                      }}
+                      style={{ fontSize: 11, padding: '7px 14px' }}
+                    >
+                      + Spotlight (Búsqueda)
+                    </button>
+                  </div>
+                </div>
               </div>
             </BorderBeam>
           </div>

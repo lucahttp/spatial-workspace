@@ -16,11 +16,13 @@ import {
 } from 'three'
 import { MODE_FRAMES, resolvePreset } from 'thinking-orbs'
 import { OrbState, useWorkspace } from '../store'
-import { radius as themeRadius, color } from '../theme'
+import { color } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
 import { wakeWordService } from '../services/wakeWordService'
+import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
+import { SpatialAffordancePill } from './SpatialAffordancePill'
 
 /**
  * Hand-tuned color accents for the 9 states of Thinking Orbs (Libraries.dev)
@@ -428,7 +430,10 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
   const groupRef = useRef<Group>(null)
   const [hovered, setHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  
+  // Unified 3-second dwell, grip trigger, and hand proximity affordance
+  const affordance = useSpatialAffordance(groupRef)
+  const isDragging = affordance.isDragging
 
   // Initialize transform once on mount
   useEffect(() => {
@@ -497,50 +502,41 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
           <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
         </mesh>
 
-        {/* Tactile Grab Ring Underneath Orb */}
-        <group position={[0, -0.065, 0]}>
-          <UiRoot width={px(0.16)} height={px(0.04)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
-            <Container
-              cursor="grab"
-              width={px(0.16)}
-              height={px(0.04)}
-              borderTopLeftRadius={themeRadius.pill}
-              borderTopRightRadius={themeRadius.pill}
-              borderBottomLeftRadius={themeRadius.pill}
-              borderBottomRightRadius={themeRadius.pill}
-              backgroundColor={isDragging ? 'rgba(56, 189, 248, 0.35)' : hovered ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.12)'}
-              borderColor={ORB_COLORS[orbState] || color.accent}
-              borderTopWidth={1}
-              borderBottomWidth={1}
-              borderLeftWidth={1}
-              borderRightWidth={1}
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Text fontSize={9} fontWeight={700} color={ORB_COLORS[orbState] || color.accent} letterSpacing={0.5}>
-                {cleanText('MOVER ORBE')}
-              </Text>
-            </Container>
-          </UiRoot>
+        {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+        <SpatialAffordancePill
+          label="MOVER ORBE"
+          visible={affordance.visible}
+          isDragging={isDragging}
+          dwellProgress={affordance.dwellProgress}
+          accentColor={ORB_COLORS[orbState] || color.accent}
+          yOffset={-0.08}
+          width={0.16}
+        />
 
-          {/* Generous Grab Handle for Orb */}
+        {/* Generous Grab Handle for Orb with Two-Handed Manipulation */}
+        <group position={[0, -0.065, 0]}>
           <Handle
             targetRef={groupRef}
             translate
             rotate={true}
-            scale={false}
+            scale={true}
             multitouch={true}
             apply={(state, target) => {
-              if (state.first) setIsDragging(true)
+              if (state.first) affordance.setIsDragging(true)
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
+              target.scale.copy(state.current.scale)
               if (state.last) {
-                setIsDragging(false)
+                affordance.setIsDragging(false)
                 setOrbPosition([target.position.x, target.position.y, target.position.z])
               }
             }}
           >
-            <mesh>
+            <mesh
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <sphereGeometry args={[0.09, 16, 16]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>

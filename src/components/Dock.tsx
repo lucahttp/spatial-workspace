@@ -1,8 +1,8 @@
 import { Container, Text } from '@react-three/uikit'
 import {
-  BookmarkIcon,
-  CalendarIcon,
   CodeIcon,
+  EyeIcon,
+  FileTextIcon,
   HouseIcon,
   LogOutIcon,
   MicIcon,
@@ -22,9 +22,9 @@ type DockItem = {
 
 const ITEMS: DockItem[] = [
   { id: 'all', label: 'Inicio', icon: <HouseIcon width={16} color={color.textPrimary} /> },
-  { id: 'code', label: 'Código', icon: <CodeIcon width={16} color={color.textPrimary} /> },
-  { id: 'favorites', label: 'Favoritos', icon: <BookmarkIcon width={16} color={color.textPrimary} /> },
-  { id: 'calendar', label: 'Agenda', icon: <CalendarIcon width={16} color={color.textPrimary} /> },
+  { id: 'code', label: 'wZed', icon: <CodeIcon width={16} color={color.textPrimary} /> },
+  { id: 'preview', label: 'Preview', icon: <EyeIcon width={16} color={color.textPrimary} /> },
+  { id: 'carousel', label: 'Fuentes', icon: <FileTextIcon width={16} color={color.textPrimary} /> },
   { id: 'voice', label: 'Voz', icon: <MicIcon width={16} color={color.textPrimary} /> },
 ]
 

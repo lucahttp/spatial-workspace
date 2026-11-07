@@ -18,6 +18,7 @@ import { Panel } from './Panel'
 import { Preview } from './Preview'
 import { SparklingControllerRay } from './SparklingControllerRay'
 import { SpatialCodeStudio } from './SpatialCodeStudio'
+import { FloatingAiPanel, FloatingExplorerPanel, FloatingTerminalPanel } from './FloatingStudioPanels'
 import { azureFoundryVoice } from '../services/azureFoundryVoice'
 import { cleanText, FontProvider } from './Ui'
 
@@ -429,6 +430,7 @@ export function Workspace() {
   const recenter = useWorkspace((s) => s.recenter)
   const droplets = useWorkspace((s) => s.droplets)
   const removeDroplet = useWorkspace((s) => s.removeDroplet)
+  const undockedViews = useWorkspace((s) => s.undockedViews)
   const session = useXR((s) => s.session)
   const mode = useXR((s) => s.mode)
   const blend = useXR((s) => s.session?.environmentBlendMode)
@@ -522,6 +524,11 @@ export function Workspace() {
           {!hidden.preview && <Preview />}
           {!hidden.graph && <IdeaGraph />}
           {!hidden.archive && <Pads />}
+
+          {/* Undocked Floating Spatial Panels (Operated by User & GPT Live) */}
+          {undockedViews.terminal && <FloatingTerminalPanel />}
+          {undockedViews.explorer && <FloatingExplorerPanel />}
+          {undockedViews.ai && <FloatingAiPanel />}
 
           {/* Animated Gooey droplets travelling from Archivar pad to IdeaGraph */}
           {droplets.map((d) => (

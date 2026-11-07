@@ -97,6 +97,25 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
   * **Ejecución y Feedback Visual**: El subagente ejecuta las herramientas en el VFS (`createFile`, `writeFile`, `runFile`), transmite los logs al terminal 3D y despliega el resultado gráfico en la tarjeta de **Previsualización Web**.
   * **Respuesta Cognitiva**: El Orbe adopta estados visuales (`thinking`, `working`, `solving`, `connecting`) y devuelve el reporte consolidado al usuario.
 
+### 11. 👐 Manipulación Bimanual & Affordance Universal Unificada
+* **Control Bimanual (Two-Handed Manipulation)**:
+  * Al interactuar con ambas manos o controladores simultáneamente, los objetos tridimensionales (paneles, orbe, carrusel, bandejas) calculan la traslación del punto medio, la rotación angular y el escalado/distancia en tiempo real mediante `@react-three/handle` con `multitouch={true}`, `scale={true}`, `rotate={true}` y `translate={true}`.
+* **Affordance Universal Unificada (`useSpatialAffordance`)**:
+  * Las cápsulas y ayudas visuales de movimiento ya no abarrotan permanentemente la pantalla.
+  * Aparecen únicamente bajo tres condiciones intuitivas idénticas en todos los objetos 3D:
+    1. **Hover sostenido (> 3 segundos)**: Apuntar fijamente al objeto durante 3s revela suavemente la barra de agarre y la píldora `MOVER`.
+    2. **Gatillo lateral (Grip/Squeeze)**: Al apretar el gatillo lateral del controlador o cerrar el puño con seguimiento de manos.
+    3. **Proximidad física (< 0.42 m)**: Al acercar la mano o el visor al objeto en el espacio tridimensional.
+* **HUD Superior Simplificado (2 Botones)**:
+  * Rediseñado a exactamente 2 botones ergonómicos:
+    1. `VR / Passthrough MR`: Entrada directa al modo inmersivo correspondiente.
+    2. `⚙️ Configuración`: Abre una ventana modal de cristal visionOS unificada con ajustes de Azure AI Foundry, Wake Word ("Hey Buddy"), Orbe de pensamiento, Hand ML y herramientas de recentrado.
+* **Desacople y Acople Dinámico de Pantallas wZed**:
+  * Las sub-vistas del estudio de código (**Terminal**, **Explorador VFS**, **Asistente IA**) pueden desacoplarse del panel principal hacia ventanas 3D flotantes independientes mediante botones de interfaz o por comando de voz con GPT Live (*"desacopla el terminal"*, *"acopla el explorador"*).
+* **Bandeja de Documentos con Botón Proactivo `(+)` & Dock Depurado**:
+  * La bandeja de archivo muestra dinámicamente un botón resplandeciente `(+)` al acercar el puntero o la mano para crear o añadir tarjetas al vuelo.
+  * El dock inferior unifica el control de visibilidad de ventanas espaciales minimizando el desorden visual.
+
 ---
 
 ## 📚 Librerías, Referencias y Ejemplos Utilizados

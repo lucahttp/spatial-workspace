@@ -10,6 +10,7 @@
 import { executeWzedTool } from './aiCodingBridge'
 import { spatialRuntime } from './spatialRuntime'
 import { vfs } from './vfs'
+import { useWorkspace } from '../store'
 
 export interface AzureFoundryConfig {
   projectEndpoint: string
@@ -210,6 +211,27 @@ class AzureFoundryVoiceService {
     const lower = task.toLowerCase()
 
     try {
+      // 0. Undock / Dock views (Operado por GPT Live / Voz)
+      if (lower.includes('desacopla') || lower.includes('desacoplar') || lower.includes('desprende') || lower.includes('separa') || lower.includes('undock')) {
+        let viewId = 'terminal'
+        if (lower.includes('explorador') || lower.includes('archivo') || lower.includes('folder')) viewId = 'explorer'
+        if (lower.includes('ia') || lower.includes('chat') || lower.includes('asistente') || lower.includes('bot')) viewId = 'ai'
+
+        useWorkspace.getState().undockView(viewId)
+        const summary = `Desacoplada la ventana ${viewId.toUpperCase()} como panel 3D flotante.`
+        return { action: 'undock_view', success: true, summary }
+      }
+
+      if (lower.includes('acopla') || lower.includes('acoplar') || lower.includes('dock') || lower.includes('junta') || lower.includes('une')) {
+        let viewId = 'terminal'
+        if (lower.includes('explorador') || lower.includes('archivo') || lower.includes('folder')) viewId = 'explorer'
+        if (lower.includes('ia') || lower.includes('chat') || lower.includes('asistente') || lower.includes('bot')) viewId = 'ai'
+
+        useWorkspace.getState().dockView(viewId)
+        const summary = `Re-acoplada la ventana ${viewId.toUpperCase()} al panel central de wZed.`
+        return { action: 'dock_view', success: true, summary }
+      }
+
       // 1. Run/Execute command
       if (lower.includes('ejecut') || lower.includes('corr') || lower.includes('run')) {
         let file = '/project/index.js'

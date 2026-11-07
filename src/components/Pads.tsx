@@ -1,6 +1,6 @@
 import { Handle, HandleTarget } from '@react-three/handle'
 import { Container, Text } from '@react-three/uikit'
-import { ArchiveIcon, Trash2Icon } from '@react-three/uikit-lucide'
+import { ArchiveIcon, PlusIcon, Trash2Icon } from '@react-three/uikit-lucide'
 import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Group, Mesh } from 'three'
@@ -9,6 +9,8 @@ import { color, radius, type as typeScale } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
+import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
+import { SpatialAffordancePill } from './SpatialAffordancePill'
 
 function ArchivePedestal({ count }: { count: number }) {
   const groupRef = useRef<Group>(null)
@@ -18,10 +20,12 @@ function ArchivePedestal({ count }: { count: number }) {
   const archivePosition = useWorkspace((s) => s.archivePosition)
   const setArchivePosition = useWorkspace((s) => s.setArchivePosition)
   const toggleHidden = useWorkspace((s) => s.toggleHidden)
+  const spawnSpotlight = useWorkspace((s) => s.spawnSpotlight)
 
   const [hovered, setHovered] = useState(false)
   const [revealed, setRevealed] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  const affordance = useSpatialAffordance(groupRef)
+  const isDragging = affordance.isDragging
 
   // Initialize position once on mount
   useEffect(() => {
@@ -171,24 +175,68 @@ function ArchivePedestal({ count }: { count: number }) {
             </Container>
           </UiRoot>
 
-          {/* Generous Grab Handle for moving Archive Tray anywhere */}
+          {/* Floating (+) Action Button (User request: tiene que aparecer un boton con el simbolo de mas cuando acerca el puntero o la mano) */}
+          {affordance.visible && (
+            <group position={[0, 0.08, 0.02]}>
+              <UiRoot width={px(0.04)} height={px(0.04)} anchorY="center" pixelSize={PIXEL}>
+                <Container
+                  cursor="pointer"
+                  width={34}
+                  height={34}
+                  borderTopLeftRadius={17}
+                  borderTopRightRadius={17}
+                  borderBottomLeftRadius={17}
+                  borderBottomRightRadius={17}
+                  backgroundColor="rgba(16, 185, 129, 0.92)"
+                  borderColor="#6ee7b7"
+                  borderTopWidth={1.5}
+                  borderBottomWidth={1}
+                  borderLeftWidth={1}
+                  borderRightWidth={1}
+                  alignItems="center"
+                  justifyContent="center"
+                  onClick={() => spawnSpotlight()}
+                >
+                  <PlusIcon width={16} color="#ffffff" />
+                </Container>
+              </UiRoot>
+            </group>
+          )}
+
+          {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+          <SpatialAffordancePill
+            label="MOVER BANDEJA"
+            visible={affordance.visible}
+            isDragging={isDragging}
+            dwellProgress={affordance.dwellProgress}
+            accentColor={color.success}
+            yOffset={-0.07}
+            width={0.16}
+          />
+
+          {/* Two-Handed Generous Grab Handle for moving Archive Tray anywhere */}
           <Handle
             targetRef={groupRef}
             translate
             rotate={true}
-            scale={false}
+            scale={true}
             multitouch={true}
             apply={(state, target) => {
-              if (state.first) setIsDragging(true)
+              if (state.first) affordance.setIsDragging(true)
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
+              target.scale.copy(state.current.scale)
               if (state.last) {
-                setIsDragging(false)
+                affordance.setIsDragging(false)
                 setArchivePosition([target.position.x, target.position.y, target.position.z])
               }
             }}
           >
-            <mesh>
+            <mesh
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <planeGeometry args={[0.34, 0.16]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
@@ -210,7 +258,8 @@ function TrashPedestal({ count }: { count: number }) {
 
   const [hovered, setHovered] = useState(false)
   const [revealed, setRevealed] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  const affordance = useSpatialAffordance(groupRef)
+  const isDragging = affordance.isDragging
 
   // Initialize position once on mount
   useEffect(() => {
@@ -345,24 +394,40 @@ function TrashPedestal({ count }: { count: number }) {
             </Container>
           </UiRoot>
 
-          {/* Generous Grab Handle for moving Trash Can anywhere */}
+          {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+          <SpatialAffordancePill
+            label="MOVER BASURA"
+            visible={affordance.visible}
+            isDragging={isDragging}
+            dwellProgress={affordance.dwellProgress}
+            accentColor={color.danger}
+            yOffset={-0.08}
+            width={0.16}
+          />
+
+          {/* Two-Handed Generous Grab Handle for moving Trash Can anywhere */}
           <Handle
             targetRef={groupRef}
             translate
             rotate={true}
-            scale={false}
+            scale={true}
             multitouch={true}
             apply={(state, target) => {
-              if (state.first) setIsDragging(true)
+              if (state.first) affordance.setIsDragging(true)
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
+              target.scale.copy(state.current.scale)
               if (state.last) {
-                setIsDragging(false)
+                affordance.setIsDragging(false)
                 setTrashPosition([target.position.x, target.position.y, target.position.z])
               }
             }}
           >
-            <mesh>
+            <mesh
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <cylinderGeometry args={[0.14, 0.14, 0.18, 16]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>

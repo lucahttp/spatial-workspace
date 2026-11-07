@@ -71,6 +71,10 @@ type Workspace = {
   trashPosition: [number, number, number]
   isGripActive: boolean
 
+  /** wZed Studio View Undocking & Floating Window Positions */
+  undockedViews: Record<string, boolean>
+  viewPositions: Record<string, [number, number, number]>
+
   /** Voice interaction & Hey-Buddy wake word state */
   voiceListening: boolean
   voiceTranscript: string
@@ -93,6 +97,10 @@ type Workspace = {
   setArchivePosition: (pos: [number, number, number]) => void
   setTrashPosition: (pos: [number, number, number]) => void
   setIsGripActive: (active: boolean) => void
+  undockView: (viewId: string) => void
+  dockView: (viewId: string) => void
+  toggleDockView: (viewId: string) => void
+  updateViewPosition: (viewId: string, pos: [number, number, number]) => void
   setVoiceListening: (v: boolean) => void
   setVoiceTranscript: (t: string) => void
   setVoiceResponse: (r: string | null) => void
@@ -174,6 +182,14 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   archivePosition: [-layout.padX, layout.padY, layout.padZ],
   trashPosition: [layout.padX, layout.padY, layout.padZ],
   isGripActive: false,
+  undockedViews: {},
+  viewPositions: {
+    terminal: [0.65, -0.15, -1.05],
+    explorer: [-0.68, 0.22, -1.15],
+    ai: [0.72, 0.28, -1.18],
+    git: [-0.65, -0.18, -1.05],
+    search: [0.0, 0.45, -1.2],
+  },
   voiceListening: false,
   voiceTranscript: '',
   voiceResponse: null,
@@ -333,6 +349,36 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   setArchivePosition: (archivePosition) => set({ archivePosition }),
   setTrashPosition: (trashPosition) => set({ trashPosition }),
   setIsGripActive: (isGripActive) => set({ isGripActive }),
+  undockView: (viewId) => {
+    playClickSound()
+    set({
+      undockedViews: { ...get().undockedViews, [viewId]: true },
+      status: `Vista desacoplada como ventana flotante: ${viewId.toUpperCase()}`,
+      transcript: [`${viewId.toUpperCase()} desacoplada. Puedes moverla en el espacio con dos manos.`],
+    })
+  },
+  dockView: (viewId) => {
+    playClickSound()
+    const next = { ...get().undockedViews }
+    delete next[viewId]
+    set({
+      undockedViews: next,
+      status: `Vista re-acoplada al editor: ${viewId.toUpperCase()}`,
+      transcript: [`${viewId.toUpperCase()} re-acoplada al panel principal de wZed.`],
+    })
+  },
+  toggleDockView: (viewId) => {
+    if (get().undockedViews[viewId]) {
+      get().dockView(viewId)
+    } else {
+      get().undockView(viewId)
+    }
+  },
+  updateViewPosition: (viewId, pos) => {
+    set({
+      viewPositions: { ...get().viewPositions, [viewId]: pos },
+    })
+  },
   setVoiceListening: (voiceListening) => set({ voiceListening }),
   setVoiceTranscript: (voiceTranscript) => set({ voiceTranscript }),
   setVoiceResponse: (voiceResponse) => set({ voiceResponse }),

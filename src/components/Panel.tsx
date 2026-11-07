@@ -2,9 +2,11 @@ import { Handle, HandleTarget } from '@react-three/handle'
 import { Container, Text } from '@react-three/uikit'
 import { useEffect, useRef, useState } from 'react'
 import { Group } from 'three'
+import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
 import { color, radius, type as typeScale } from '../theme'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
+import { SpatialAffordancePill } from './SpatialAffordancePill'
 
 export const PIXEL = 0.0014
 export const px = (metres: number) => Math.round(metres / PIXEL)
@@ -43,7 +45,10 @@ export function Panel({
   const [barHovered, setBarHovered] = useState(false)
   const [panelHovered, setPanelHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  
+  // Unified 3-second dwell, grip trigger, and hand proximity affordance
+  const affordance = useSpatialAffordance(groupRef)
+  const isDragging = affordance.isDragging
 
   // Initialize group transform once on mount to avoid R3F resetting position on re-renders
   useEffect(() => {
@@ -213,8 +218,8 @@ export function Panel({
             {children}
           </Container>
 
-          {/* Floating VisionOS / PICO OS Window Grab Bar */}
-          {bar && (
+          {/* Floating VisionOS / PICO OS Window Grab Bar (visible on demand) */}
+          {bar && affordance.visible && (
             <Container
               positionType="absolute"
               positionBottom={6}
@@ -247,6 +252,17 @@ export function Panel({
           )}
         </UiRoot>
 
+        {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+        <SpatialAffordancePill
+          label="MOVER VENTANA"
+          visible={affordance.visible}
+          isDragging={isDragging}
+          dwellProgress={affordance.dwellProgress}
+          accentColor={accent}
+          yOffset={-height / 2 - 0.038}
+          width={0.18}
+        />
+
         {/* Auto-Hiding Contextual Actions Capsule (Cerrar, Minimizar, Mover, Orientar) */}
         <group position={[0, height / 2 + 0.05, 0.02]}>
           <SpatialCapsule
@@ -259,23 +275,28 @@ export function Panel({
           />
         </group>
 
-        {/* Generous Bottom Grab Handle Mesh for XR Hands & Laser Raycast */}
+        {/* Two-Handed + One-Handed Generous Grab Handle for XR Hands & Laser Raycast */}
         {bar && (
           <group position={[0, -height / 2 + BAR_OFFSET, 0.025]}>
             <Handle
               targetRef={groupRef}
               translate
-              scale={false}
+              scale={true}
               rotate={true}
               multitouch={true}
               apply={(state, target) => {
-                if (state.first) setIsDragging(true)
+                if (state.first) affordance.setIsDragging(true)
                 target.position.copy(state.current.position)
                 target.rotation.copy(state.current.rotation)
-                if (state.last) setIsDragging(false)
+                target.scale.copy(state.current.scale)
+                if (state.last) affordance.setIsDragging(false)
               }}
             >
-              <mesh>
+              <mesh
+                onPointerEnter={affordance.onPointerEnter}
+                onPointerLeave={affordance.onPointerLeave}
+                onPointerDown={affordance.onPointerDown}
+              >
                 <planeGeometry args={[Math.max(width * 0.9, 0.45), 0.09]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
@@ -283,23 +304,28 @@ export function Panel({
           </group>
         )}
 
-        {/* Generous Top Header Grab Handle Mesh for natural window moving and rotation */}
+        {/* Two-Handed Generous Top Header Grab Handle Mesh */}
         {title && (
           <group position={[0, height / 2 - 0.025, 0.025]}>
             <Handle
               targetRef={groupRef}
               translate
-              scale={false}
+              scale={true}
               rotate={true}
               multitouch={true}
               apply={(state, target) => {
-                if (state.first) setIsDragging(true)
+                if (state.first) affordance.setIsDragging(true)
                 target.position.copy(state.current.position)
                 target.rotation.copy(state.current.rotation)
-                if (state.last) setIsDragging(false)
+                target.scale.copy(state.current.scale)
+                if (state.last) affordance.setIsDragging(false)
               }}
             >
-              <mesh>
+              <mesh
+                onPointerEnter={affordance.onPointerEnter}
+                onPointerLeave={affordance.onPointerLeave}
+                onPointerDown={affordance.onPointerDown}
+              >
                 <planeGeometry args={[Math.max(width * 0.9, 0.45), 0.07]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>

@@ -125,6 +125,8 @@ export function Preview() {
   const [runtimePreview, setRuntimePreview] = useState<string | null>(null)
 
   useEffect(() => {
+    // Populate initial wZed output preview on mount
+    spatialRuntime.runFile('/project/spatial-card.js')
     return spatialRuntime.onPreview((html) => {
       setRuntimePreview(html)
     })

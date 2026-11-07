@@ -2,6 +2,7 @@ import { Container, Text } from '@react-three/uikit'
 import {
   ActivityIcon,
   BotIcon,
+  ExternalLinkIcon,
   FileCodeIcon,
   FolderIcon,
   GitBranchIcon,
@@ -16,6 +17,7 @@ import {
   Trash2Icon,
 } from '@react-three/uikit-lucide'
 import { useEffect, useState } from 'react'
+import { useWorkspace } from '../store'
 import { LogLine, spatialRuntime } from '../services/spatialRuntime'
 import { vfs } from '../services/vfs'
 import { azureFoundryVoice } from '../services/azureFoundryVoice'
@@ -119,6 +121,11 @@ export function SpatialCodeStudio({
   const [logs, setLogs] = useState<LogLine[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [runHovered, setRunHovered] = useState(false)
+
+  // Undocked floating windows state
+  const undockedViews = useWorkspace((s) => s.undockedViews)
+  const toggleDockView = useWorkspace((s) => s.toggleDockView)
+  const dockView = useWorkspace((s) => s.dockView)
 
   // AI Assistant Chat state (wZed AIPanel parity)
   const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'done'>('idle')
@@ -475,6 +482,26 @@ export function SpatialCodeStudio({
                       borderTopRightRadius={4}
                       borderBottomLeftRadius={4}
                       borderBottomRightRadius={4}
+                      backgroundColor={undockedViews.explorer ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.08)'}
+                      onClick={() => toggleDockView('explorer')}
+                    >
+                      <ExternalLinkIcon width={10} color={undockedViews.explorer ? '#38bdf8' : color.textDim} />
+                      <Text fontSize={9} color={undockedViews.explorer ? '#38bdf8' : color.textDim}>
+                        {cleanText(undockedViews.explorer ? 'Acoplar' : 'Desacoplar ↗')}
+                      </Text>
+                    </Container>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={4}
+                      paddingLeft={6}
+                      paddingRight={6}
+                      height={20}
+                      borderTopLeftRadius={4}
+                      borderTopRightRadius={4}
+                      borderBottomLeftRadius={4}
+                      borderBottomRightRadius={4}
                       backgroundColor="rgba(255,255,255,0.08)"
                       onClick={() => {
                         const newName = `module-${files.length + 1}.js`
@@ -509,49 +536,102 @@ export function SpatialCodeStudio({
                   </Container>
                 </Container>
 
-                <Container flexDirection="column" gapRow={4} flexGrow={1}>
-                  {files.map((p) => {
-                    const isSel = p === activeFile
-                    const name = p.replace('/project/', '')
-                    return (
-                      <Container
-                        key={p}
-                        cursor="pointer"
-                        flexDirection="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        paddingLeft={8}
-                        paddingRight={8}
-                        height={26}
-                        borderTopLeftRadius={6}
-                        borderTopRightRadius={6}
-                        borderBottomLeftRadius={6}
-                        borderBottomRightRadius={6}
-                        backgroundColor={isSel ? 'rgba(124, 58, 237, 0.22)' : 'rgba(255, 255, 255, 0.04)'}
-                        borderColor={isSel ? color.purple : 'rgba(255, 255, 255, 0.06)'}
-                        borderTopWidth={1}
-                        borderBottomWidth={1}
-                        borderLeftWidth={1}
-                        borderRightWidth={1}
-                        onClick={() => {
-                          setActiveFile(p)
-                          if (!openTabs.includes(p)) setOpenTabs([...openTabs, p])
-                          setView('editor')
-                        }}
-                      >
-                        <Container flexDirection="row" alignItems="center" gapColumn={6}>
-                          <FileCodeIcon width={12} color={isSel ? color.purple : color.textDim} />
-                          <Text fontSize={10} fontWeight={isSel ? 700 : 400} color={isSel ? '#ffffff' : color.textDim}>
-                            {cleanText(name)}
+                {undockedViews.explorer ? (
+                  <Container
+                    flexDirection="column"
+                    flexGrow={1}
+                    alignItems="center"
+                    justifyContent="center"
+                    padding={16}
+                    gapRow={10}
+                    backgroundColor="rgba(56, 189, 248, 0.05)"
+                    borderTopLeftRadius={8}
+                    borderTopRightRadius={8}
+                    borderBottomLeftRadius={8}
+                    borderBottomRightRadius={8}
+                    borderColor="rgba(56, 189, 248, 0.2)"
+                    borderTopWidth={1}
+                    borderBottomWidth={1}
+                    borderLeftWidth={1}
+                    borderRightWidth={1}
+                  >
+                    <FolderIcon width={28} color="#38bdf8" />
+                    <Text fontSize={11} fontWeight={700} color="#38bdf8">
+                      {cleanText('Explorador desacoplado en el espacio')}
+                    </Text>
+                    <Text fontSize={9} color={color.textDim} textAlign="center">
+                      {cleanText('Esta vista está flotando como panel independiente. Puedes moverla y manipularla libremente.')}
+                    </Text>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={6}
+                      paddingLeft={10}
+                      paddingRight={10}
+                      height={24}
+                      borderTopLeftRadius={12}
+                      borderTopRightRadius={12}
+                      borderBottomLeftRadius={12}
+                      borderBottomRightRadius={12}
+                      backgroundColor="rgba(56, 189, 248, 0.2)"
+                      borderColor="#38bdf8"
+                      borderTopWidth={1}
+                      borderBottomWidth={1}
+                      borderLeftWidth={1}
+                      borderRightWidth={1}
+                      onClick={() => dockView('explorer')}
+                    >
+                      <Text fontSize={9} fontWeight={700} color="#38bdf8">
+                        {cleanText('Volver a acoplar')}
+                      </Text>
+                    </Container>
+                  </Container>
+                ) : (
+                  <Container flexDirection="column" gapRow={4} flexGrow={1}>
+                    {files.map((p) => {
+                      const isSel = p === activeFile
+                      const name = p.replace('/project/', '')
+                      return (
+                        <Container
+                          key={p}
+                          cursor="pointer"
+                          flexDirection="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          paddingLeft={8}
+                          paddingRight={8}
+                          height={26}
+                          borderTopLeftRadius={6}
+                          borderTopRightRadius={6}
+                          borderBottomLeftRadius={6}
+                          borderBottomRightRadius={6}
+                          backgroundColor={isSel ? 'rgba(124, 58, 237, 0.22)' : 'rgba(255, 255, 255, 0.04)'}
+                          borderColor={isSel ? color.purple : 'rgba(255, 255, 255, 0.06)'}
+                          borderTopWidth={1}
+                          borderBottomWidth={1}
+                          borderLeftWidth={1}
+                          borderRightWidth={1}
+                          onClick={() => {
+                            setActiveFile(p)
+                            if (!openTabs.includes(p)) setOpenTabs([...openTabs, p])
+                            setView('editor')
+                          }}
+                        >
+                          <Container flexDirection="row" alignItems="center" gapColumn={6}>
+                            <FileCodeIcon width={12} color={isSel ? color.purple : color.textDim} />
+                            <Text fontSize={10} fontWeight={isSel ? 700 : 400} color={isSel ? '#ffffff' : color.textDim}>
+                              {cleanText(name)}
+                            </Text>
+                          </Container>
+                          <Text fontSize={8} color="rgba(255,255,255,0.25)">
+                            {cleanText(p.endsWith('.js') ? 'JS' : p.endsWith('.json') ? 'JSON' : 'TXT')}
                           </Text>
                         </Container>
-                        <Text fontSize={8} color="rgba(255,255,255,0.25)">
-                          {cleanText(p.endsWith('.js') ? 'JS' : p.endsWith('.json') ? 'JSON' : 'TXT')}
-                        </Text>
-                      </Container>
-                    )
-                  })}
-                </Container>
+                      )
+                    })}
+                  </Container>
+                )}
               </Container>
             )}
 
@@ -562,71 +642,148 @@ export function SpatialCodeStudio({
                   <Text fontSize={10} fontWeight={700} color={color.accent}>
                     {cleanText('TERMINAL INTERACTIVO · WZED IN-BROWSER')}
                   </Text>
-                  <Container
-                    cursor="pointer"
-                    flexDirection="row"
-                    alignItems="center"
-                    gapColumn={4}
-                    paddingLeft={6}
-                    paddingRight={6}
-                    height={20}
-                    borderTopLeftRadius={4}
-                    borderTopRightRadius={4}
-                    borderBottomLeftRadius={4}
-                    borderBottomRightRadius={4}
-                    backgroundColor="rgba(255,255,255,0.08)"
-                    onClick={() => spatialRuntime.clear()}
-                  >
-                    <Trash2Icon width={10} color={color.textDim} />
-                    <Text fontSize={9} color={color.textDim}>
-                      {cleanText('Limpiar')}
-                    </Text>
+                  <Container flexDirection="row" gapColumn={6}>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={4}
+                      paddingLeft={6}
+                      paddingRight={6}
+                      height={20}
+                      borderTopLeftRadius={4}
+                      borderTopRightRadius={4}
+                      borderBottomLeftRadius={4}
+                      borderBottomRightRadius={4}
+                      backgroundColor={undockedViews.terminal ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255,255,255,0.08)'}
+                      onClick={() => toggleDockView('terminal')}
+                    >
+                      <ExternalLinkIcon width={10} color={undockedViews.terminal ? '#34d399' : color.textDim} />
+                      <Text fontSize={9} color={undockedViews.terminal ? '#34d399' : color.textDim}>
+                        {cleanText(undockedViews.terminal ? 'Acoplar' : 'Desacoplar ↗')}
+                      </Text>
+                    </Container>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={4}
+                      paddingLeft={6}
+                      paddingRight={6}
+                      height={20}
+                      borderTopLeftRadius={4}
+                      borderTopRightRadius={4}
+                      borderBottomLeftRadius={4}
+                      borderBottomRightRadius={4}
+                      backgroundColor="rgba(255,255,255,0.08)"
+                      onClick={() => spatialRuntime.clear()}
+                    >
+                      <Trash2Icon width={10} color={color.textDim} />
+                      <Text fontSize={9} color={color.textDim}>
+                        {cleanText('Limpiar')}
+                      </Text>
+                    </Container>
                   </Container>
                 </Container>
 
-                <Container flexDirection="column" gapRow={4} flexGrow={1} overflow="hidden">
-                  {logs.slice(-9).map((l) => (
-                    <TerminalRow key={l.id} line={l} />
-                  ))}
-                </Container>
-
-                <Container
-                  flexDirection="row"
-                  alignItems="center"
-                  gapColumn={6}
-                  paddingTop={6}
-                  borderColor="rgba(255,255,255,0.08)"
-                  borderTopWidth={1}
-                >
-                  <Text fontSize={10} fontWeight={700} color={color.success}>
-                    {cleanText('pico-os:~/project$')}
-                  </Text>
-                  <Text fontSize={10} color={color.textPrimary}>
-                    {cleanText(`node ${activeFile.replace('/project/', '')}`)}
-                  </Text>
-                  <Container flexGrow={1} />
+                {undockedViews.terminal ? (
                   <Container
-                    cursor="pointer"
-                    paddingLeft={8}
-                    paddingRight={8}
-                    height={22}
-                    borderTopLeftRadius={11}
-                    borderTopRightRadius={11}
-                    borderBottomLeftRadius={11}
-                    borderBottomRightRadius={11}
-                    backgroundColor="rgba(14, 165, 233, 0.18)"
-                    borderColor={color.accent}
+                    flexDirection="column"
+                    flexGrow={1}
+                    alignItems="center"
+                    justifyContent="center"
+                    padding={16}
+                    gapRow={10}
+                    backgroundColor="rgba(52, 211, 153, 0.05)"
+                    borderTopLeftRadius={8}
+                    borderTopRightRadius={8}
+                    borderBottomLeftRadius={8}
+                    borderBottomRightRadius={8}
+                    borderColor="rgba(52, 211, 153, 0.2)"
                     borderTopWidth={1}
                     borderBottomWidth={1}
                     borderLeftWidth={1}
                     borderRightWidth={1}
-                    onClick={() => handleRun()}
                   >
-                    <Text fontSize={9} fontWeight={600} color={color.accent}>
-                      {cleanText('Re-ejecutar')}
+                    <TerminalIcon width={28} color="#34d399" />
+                    <Text fontSize={11} fontWeight={700} color="#34d399">
+                      {cleanText('Terminal desacoplada en el espacio')}
                     </Text>
+                    <Text fontSize={9} color={color.textDim} textAlign="center">
+                      {cleanText('La consola está activa en una ventana flotante 3D independiente.')}
+                    </Text>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={6}
+                      paddingLeft={10}
+                      paddingRight={10}
+                      height={24}
+                      borderTopLeftRadius={12}
+                      borderTopRightRadius={12}
+                      borderBottomLeftRadius={12}
+                      borderBottomRightRadius={12}
+                      backgroundColor="rgba(52, 211, 153, 0.2)"
+                      borderColor="#34d399"
+                      borderTopWidth={1}
+                      borderBottomWidth={1}
+                      borderLeftWidth={1}
+                      borderRightWidth={1}
+                      onClick={() => dockView('terminal')}
+                    >
+                      <Text fontSize={9} fontWeight={700} color="#34d399">
+                        {cleanText('Volver a acoplar')}
+                      </Text>
+                    </Container>
                   </Container>
-                </Container>
+                ) : (
+                  <>
+                    <Container flexDirection="column" gapRow={4} flexGrow={1} overflow="hidden">
+                      {logs.slice(-9).map((l) => (
+                        <TerminalRow key={l.id} line={l} />
+                      ))}
+                    </Container>
+
+                    <Container
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={6}
+                      paddingTop={6}
+                      borderColor="rgba(255,255,255,0.08)"
+                      borderTopWidth={1}
+                    >
+                      <Text fontSize={10} fontWeight={700} color={color.success}>
+                        {cleanText('pico-os:~/project$')}
+                      </Text>
+                      <Text fontSize={10} color={color.textPrimary}>
+                        {cleanText(`node ${activeFile.replace('/project/', '')}`)}
+                      </Text>
+                      <Container flexGrow={1} />
+                      <Container
+                        cursor="pointer"
+                        paddingLeft={8}
+                        paddingRight={8}
+                        height={22}
+                        borderTopLeftRadius={11}
+                        borderTopRightRadius={11}
+                        borderBottomLeftRadius={11}
+                        borderBottomRightRadius={11}
+                        backgroundColor="rgba(14, 165, 233, 0.18)"
+                        borderColor={color.accent}
+                        borderTopWidth={1}
+                        borderBottomWidth={1}
+                        borderLeftWidth={1}
+                        borderRightWidth={1}
+                        onClick={() => handleRun()}
+                      >
+                        <Text fontSize={9} fontWeight={600} color={color.accent}>
+                          {cleanText('Re-ejecutar')}
+                        </Text>
+                      </Container>
+                    </Container>
+                  </>
+                )}
               </Container>
             )}
 
@@ -640,10 +797,86 @@ export function SpatialCodeStudio({
                       {cleanText('ASISTENTE IA WZED & AZURE FOUNDRY')}
                     </Text>
                   </Container>
-                  <Text fontSize={9} color={aiStatus === 'working' ? '#fbbf24' : color.success} fontWeight={600}>
-                    {cleanText(aiStatus === 'working' ? '⏳ Procesando...' : '⚡ Conectado')}
-                  </Text>
+                  <Container flexDirection="row" gapColumn={6} alignItems="center">
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={4}
+                      paddingLeft={6}
+                      paddingRight={6}
+                      height={20}
+                      borderTopLeftRadius={4}
+                      borderTopRightRadius={4}
+                      borderBottomLeftRadius={4}
+                      borderBottomRightRadius={4}
+                      backgroundColor={undockedViews.ai ? 'rgba(192, 132, 252, 0.25)' : 'rgba(255,255,255,0.08)'}
+                      onClick={() => toggleDockView('ai')}
+                    >
+                      <ExternalLinkIcon width={10} color={undockedViews.ai ? '#c084fc' : color.textDim} />
+                      <Text fontSize={9} color={undockedViews.ai ? '#c084fc' : color.textDim}>
+                        {cleanText(undockedViews.ai ? 'Acoplar' : 'Desacoplar ↗')}
+                      </Text>
+                    </Container>
+                    <Text fontSize={9} color={aiStatus === 'working' ? '#fbbf24' : color.success} fontWeight={600}>
+                      {cleanText(aiStatus === 'working' ? '⏳ Procesando...' : '⚡ Conectado')}
+                    </Text>
+                  </Container>
                 </Container>
+
+                {undockedViews.ai ? (
+                  <Container
+                    flexDirection="column"
+                    flexGrow={1}
+                    alignItems="center"
+                    justifyContent="center"
+                    padding={16}
+                    gapRow={10}
+                    backgroundColor="rgba(192, 132, 252, 0.05)"
+                    borderTopLeftRadius={8}
+                    borderTopRightRadius={8}
+                    borderBottomLeftRadius={8}
+                    borderBottomRightRadius={8}
+                    borderColor="rgba(192, 132, 252, 0.2)"
+                    borderTopWidth={1}
+                    borderBottomWidth={1}
+                    borderLeftWidth={1}
+                    borderRightWidth={1}
+                  >
+                    <BotIcon width={28} color="#c084fc" />
+                    <Text fontSize={11} fontWeight={700} color="#c084fc">
+                      {cleanText('Asistente IA desacoplado en el espacio')}
+                    </Text>
+                    <Text fontSize={9} color={color.textDim} textAlign="center">
+                      {cleanText('El chat con wZed y Azure AI Foundry está abierto en un panel 3D independiente.')}
+                    </Text>
+                    <Container
+                      cursor="pointer"
+                      flexDirection="row"
+                      alignItems="center"
+                      gapColumn={6}
+                      paddingLeft={10}
+                      paddingRight={10}
+                      height={24}
+                      borderTopLeftRadius={12}
+                      borderTopRightRadius={12}
+                      borderBottomLeftRadius={12}
+                      borderBottomRightRadius={12}
+                      backgroundColor="rgba(192, 132, 252, 0.2)"
+                      borderColor="#c084fc"
+                      borderTopWidth={1}
+                      borderBottomWidth={1}
+                      borderLeftWidth={1}
+                      borderRightWidth={1}
+                      onClick={() => dockView('ai')}
+                    >
+                      <Text fontSize={9} fontWeight={700} color="#c084fc">
+                        {cleanText('Volver a acoplar')}
+                      </Text>
+                    </Container>
+                  </Container>
+                ) : (
+                  <>
 
                 {/* AI Chat History */}
                 <Container flexDirection="column" gapRow={6} flexGrow={1} overflow="hidden">
@@ -729,6 +962,8 @@ export function SpatialCodeStudio({
                     </Text>
                   </Container>
                 </Container>
+                  </>
+                )}
               </Container>
             )}
 

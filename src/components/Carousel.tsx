@@ -17,6 +17,8 @@ import { color, layout, radius, type as typeScale } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
+import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
+import { SpatialAffordancePill } from './SpatialAffordancePill'
 
 /** Radius of the carousel arc. */
 const ARC_R = 1.85
@@ -66,6 +68,7 @@ function CardItem({
   const [hovered, setHovered] = useState(false)
   const [barHovered, setBarHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
+  const affordance = useSpatialAffordance(groupRef)
   const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
   const detachCard = useWorkspace((s) => s.detachCard)
 
@@ -442,29 +445,46 @@ function CardItem({
           </Container>
         </UiRoot>
 
-        {/* Generous Grab target for XR Hands & Laser Raycast */}
+        {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+        <SpatialAffordancePill
+          label="MOVER TARJETA"
+          visible={affordance.visible}
+          isDragging={affordance.isDragging}
+          dwellProgress={affordance.dwellProgress}
+          yOffset={-layout.cardH / 2 - 0.035}
+          width={0.16}
+        />
+
+        {/* Two-Handed Generous Grab target for XR Hands & Laser Raycast */}
         <group position={[0, -layout.cardH / 2 + 0.025, 0.025]}>
           <Handle
             targetRef={groupRef}
             translate
-            scale={false}
+            scale={true}
             rotate={true}
             multitouch={true}
             apply={(state, target) => {
               if (state.first) {
                 dragging.current = true
+                affordance.setIsDragging(true)
               }
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
+              target.scale.copy(state.current.scale)
               onDragMove(card, state.current.position)
               if (state.last) {
                 dragging.current = false
+                affordance.setIsDragging(false)
                 onDragMove(card, null)
                 onDrop(card, target.position)
               }
             }}
           >
-            <mesh>
+            <mesh
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <planeGeometry args={[layout.cardW + 0.04, 0.08]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
@@ -500,6 +520,7 @@ function DetachedCardItem({
   const [hovered, setHovered] = useState(false)
   const [barHovered, setBarHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
+  const affordance = useSpatialAffordance(groupRef)
   const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
   const reattachCard = useWorkspace((s) => s.reattachCard)
   const updateCardTransform = useWorkspace((s) => s.updateCardTransform)
@@ -697,28 +718,47 @@ function DetachedCardItem({
           </Container>
         </UiRoot>
 
-        {/* Generous Grab Handle for Detached Card (Translate & Rotate) */}
+        {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+        <SpatialAffordancePill
+          label="MOVER TARJETA"
+          visible={affordance.visible}
+          isDragging={affordance.isDragging}
+          dwellProgress={affordance.dwellProgress}
+          yOffset={-layout.cardH / 2 - 0.035}
+          width={0.16}
+        />
+
+        {/* Two-Handed Generous Grab Handle for Detached Card (Translate, Rotate & Scale) */}
         <group position={[0, -layout.cardH / 2 + 0.025, 0.025]}>
           <Handle
             targetRef={groupRef}
             translate
-            scale={false}
+            scale={true}
             rotate={true}
             multitouch={true}
             apply={(state, target) => {
-              if (state.first) dragging.current = true
+              if (state.first) {
+                dragging.current = true
+                affordance.setIsDragging(true)
+              }
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
+              target.scale.copy(state.current.scale)
               onDragMove(card, state.current.position)
               if (state.last) {
                 dragging.current = false
+                affordance.setIsDragging(false)
                 onDragMove(card, null)
                 onDrop(card, target.position)
                 updateCardTransform(card.id, [target.position.x, target.position.y, target.position.z], [target.rotation.x, target.rotation.y, target.rotation.z])
               }
             }}
           >
-            <mesh>
+            <mesh
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <planeGeometry args={[layout.cardW + 0.04, 0.08]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
@@ -786,6 +826,7 @@ export function Carousel() {
   const trashPosition = useWorkspace((s) => s.trashPosition)
 
   const carouselGroupRef = useRef<Group>(null)
+  const carouselAffordance = useSpatialAffordance(carouselGroupRef)
   const [carouselBarHovered, setCarouselBarHovered] = useState(false)
   const [carouselCapsuleVisible, setCarouselCapsuleVisible] = useState(false)
 
@@ -908,19 +949,36 @@ export function Carousel() {
               />
             </group>
 
-            {/* Carousel Rail Grab Handle (Translate & Rotate whole arc) */}
+            {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+            <SpatialAffordancePill
+              label="MOVER CARRUSEL (GRUPO)"
+              visible={carouselAffordance.visible}
+              isDragging={carouselAffordance.isDragging}
+              dwellProgress={carouselAffordance.dwellProgress}
+              yOffset={0.05}
+              width={0.24}
+            />
+
+            {/* Carousel Rail Grab Handle (Two-Handed Translate, Rotate & Scale whole arc) */}
             <Handle
               targetRef={carouselGroupRef}
               translate
               rotate={true}
-              scale={false}
+              scale={true}
               multitouch={true}
               apply={(state, target) => {
+                if (state.first) carouselAffordance.setIsDragging(true)
                 target.position.copy(state.current.position)
                 target.rotation.copy(state.current.rotation)
+                target.scale.copy(state.current.scale)
+                if (state.last) carouselAffordance.setIsDragging(false)
               }}
             >
-              <mesh>
+              <mesh
+                onPointerEnter={carouselAffordance.onPointerEnter}
+                onPointerLeave={carouselAffordance.onPointerLeave}
+                onPointerDown={carouselAffordance.onPointerDown}
+              >
                 <planeGeometry args={[0.42, 0.06]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
