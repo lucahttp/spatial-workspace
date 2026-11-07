@@ -16,7 +16,8 @@
 | Remote git URL                        | https://github.com/lucahttp/spatial-workspace          |
 | Power Apps URL                        | https://make.powerapps.com/environments/2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d/home |
 | Created Date                          | 2026-11-07                                             |
-| Status                                | Prepared for Deployment to Managed App                 |
+| Status                                | Successfully Deployed to Managed App Runtime           |
+| Play URL                              | https://play.preview.managedapps.cloud.microsoft/apps/eb2d1edb-9945-4b58-91e9-a13d76db02af |
 
 ## User Preferences
 
@@ -28,20 +29,21 @@
 - Runtime: Microsoft Copilot Managed Runtime (`@microsoft/cmr-apps`)
 - Environment ID: `2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d`
 - AI Supervisor: Azure AI Foundry GPT Live Voice Agent with wZed Coding Subagent Delegation
-- Wake Word Engine: Hey-Buddy ONNX Web & Hands-Free Speech Spotting
+- Wake Word Engine: Hey-Buddy ONNX Web (Silero VAD + Speech-Embedding + Wake-Word ONNX pipeline) - acts strictly as the wake trigger for GPT Live without local TTS/STT/LLM.
 
 ## Completed Steps
 
-### /create-app & /init
+### /create-app, /init & /deploy
 - [x] Prerequisites validated (Node.js v22+, git, ms CLI v0.33.0)
-- [x] `ms.config.json` configured with schema, valid GUID, and environmentId `2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d`
+- [x] `ms.config.json` configured with schema, valid GUID `eb2d1edb-9945-4b58-91e9-a13d76db02af`, and environmentId `2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d`
 - [x] `@microsoft/cmr-apps` and `@microsoft/cmr-apps-vite-plugin` configured in `vite.config.ts`
-- [x] `npx @microsoft/cmr-cli app pack` validated and passing locally
-- [x] `npm install && npm run build` succeeded with 0 errors
-- [x] Git repository synced with remote `https://github.com/lucahttp/spatial-workspace`
+- [x] `AllowExternalArtifactDeployment` enabled in Power Platform environment
+- [x] Hey-Buddy ONNX wake-word detection ported from `mortimer-js` into `src/services/heybuddy/` and `src/hooks/useHeyBuddy.ts`
+- [x] Zero external TTS/STT/LLM used: HeyBuddy triggers GPT Live from Azure Foundry, which handles audio streaming and wZed subagent delegation
+- [x] `npx ms app pack` and `npx ms app deploy` executed successfully
+- [x] Deployed live to Microsoft Managed Apps: `https://play.preview.managedapps.cloud.microsoft/apps/eb2d1edb-9945-4b58-91e9-a13d76db02af`
+- [x] Git repository clean and synced with remote `https://github.com/lucahttp/spatial-workspace`
 
 ## Current Status
 
-**Last Action**: Configured `environmentId: "2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d"` in `ms.config.json` and generated `memory-bank.md` for Copilot Managed Runtime deployment.
-
-**Next Step**: Authenticate with Microsoft Entra ID (`ms auth login`) to connect the target environment `2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d` and run `ms app deploy`.
+**Last Action**: Successfully deployed artifact to Power Apps Copilot Managed Runtime environment `2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d`. App play URL: `https://play.preview.managedapps.cloud.microsoft/apps/eb2d1edb-9945-4b58-91e9-a13d76db02af`.
