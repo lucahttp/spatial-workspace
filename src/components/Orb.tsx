@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Handle, HandleTarget } from '@react-three/handle'
 import { Container, Text } from '@react-three/uikit'
+import { CheckIcon, MicIcon, SparklesIcon, XIcon } from '@react-three/uikit-lucide'
 import {
   AdditiveBlending,
   BufferAttribute,
@@ -19,6 +20,7 @@ import { radius as themeRadius, color } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
+import { wakeWordService } from '../services/wakeWordService'
 
 /**
  * Hand-tuned color accents for the 9 states of Thinking Orbs (Libraries.dev)
@@ -266,10 +268,162 @@ export function Orb({ radius = 0.065, level = 0 }: { radius?: number; level?: nu
   )
 }
 
+function TranscriptBubble({
+  isListening,
+  transcript,
+  response,
+  hovered,
+  onDone,
+  onCancel,
+  onDismissResponse,
+}: {
+  isListening: boolean
+  transcript: string
+  response: string | null
+  hovered: boolean
+  onDone: () => void
+  onCancel: () => void
+  onDismissResponse: () => void
+}) {
+  if (!isListening && !response && !hovered) return null
+
+  return (
+    <UiRoot width={px(0.38)} height={px(0.12)} anchorY="bottom" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+      <Container
+        flexDirection="column"
+        width={px(0.38)}
+        padding={8}
+        gapRow={4}
+        borderTopLeftRadius={12}
+        borderTopRightRadius={12}
+        borderBottomLeftRadius={12}
+        borderBottomRightRadius={12}
+        backgroundColor={
+          isListening
+            ? 'rgba(15, 23, 42, 0.92)'
+            : response
+            ? 'rgba(30, 27, 75, 0.92)'
+            : 'rgba(15, 23, 42, 0.80)'
+        }
+        borderColor={
+          isListening
+            ? 'rgba(56, 189, 248, 0.75)'
+            : response
+            ? 'rgba(192, 132, 252, 0.75)'
+            : 'rgba(255, 255, 255, 0.16)'
+        }
+        borderTopWidth={1.5}
+        borderBottomWidth={1.5}
+        borderLeftWidth={1.5}
+        borderRightWidth={1.5}
+      >
+        {isListening ? (
+          <>
+            <Container flexDirection="row" alignItems="center" justifyContent="space-between" width="100%">
+              <Container flexDirection="row" alignItems="center" gapColumn={6}>
+                <Container
+                  width={18}
+                  height={18}
+                  borderTopLeftRadius={9}
+                  borderTopRightRadius={9}
+                  borderBottomLeftRadius={9}
+                  borderBottomRightRadius={9}
+                  backgroundColor="rgba(56, 189, 248, 0.25)"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <MicIcon width={11} color="#38bdf8" />
+                </Container>
+                <Text fontSize={10} fontWeight={700} color="#38bdf8">
+                  {cleanText('ESCUCHANDO ORBE · EN VIVO')}
+                </Text>
+              </Container>
+              <Container flexDirection="row" gapColumn={4}>
+                <Container
+                  cursor="pointer"
+                  paddingLeft={6}
+                  paddingRight={6}
+                  height={18}
+                  borderTopLeftRadius={4}
+                  borderTopRightRadius={4}
+                  borderBottomLeftRadius={4}
+                  borderBottomRightRadius={4}
+                  backgroundColor="rgba(52, 211, 153, 0.25)"
+                  alignItems="center"
+                  justifyContent="center"
+                  onClick={onDone}
+                >
+                  <CheckIcon width={10} color="#34d399" />
+                  <Text fontSize={9} fontWeight={600} color="#34d399">
+                    {cleanText('Listo')}
+                  </Text>
+                </Container>
+                <Container
+                  cursor="pointer"
+                  paddingLeft={4}
+                  paddingRight={4}
+                  height={18}
+                  borderTopLeftRadius={4}
+                  borderTopRightRadius={4}
+                  borderBottomLeftRadius={4}
+                  borderBottomRightRadius={4}
+                  backgroundColor="rgba(248, 113, 113, 0.20)"
+                  alignItems="center"
+                  justifyContent="center"
+                  onClick={onCancel}
+                >
+                  <XIcon width={10} color="#f87171" />
+                </Container>
+              </Container>
+            </Container>
+            <Text fontSize={10} color="#f1f5f9" lineHeight={1.3} fontWeight={500}>
+              {cleanText(transcript || 'Di tu comando o pregunta...')}
+            </Text>
+          </>
+        ) : response ? (
+          <>
+            <Container flexDirection="row" alignItems="center" justifyContent="space-between" width="100%">
+              <Container flexDirection="row" alignItems="center" gapColumn={5}>
+                <SparklesIcon width={11} color="#c084fc" />
+                <Text fontSize={10} fontWeight={700} color="#c084fc">
+                  {cleanText('RESPUESTA AZURE FOUNDRY')}
+                </Text>
+              </Container>
+              <Container
+                cursor="pointer"
+                padding={2}
+                alignItems="center"
+                justifyContent="center"
+                onClick={onDismissResponse}
+              >
+                <XIcon width={11} color="rgba(255,255,255,0.4)" />
+              </Container>
+            </Container>
+            <Text fontSize={10} color="#e2e8f0" lineHeight={1.3}>
+              {cleanText(response)}
+            </Text>
+          </>
+        ) : (
+          <Container flexDirection="row" alignItems="center" gapColumn={6} justifyContent="center" width="100%">
+            <MicIcon width={11} color={color.accent} />
+            <Text fontSize={9} color={color.textDim} fontWeight={600}>
+              {cleanText('Toca el Orbe para hablar o di "Hey Buddy"')}
+            </Text>
+          </Container>
+        )}
+      </Container>
+    </UiRoot>
+  )
+}
+
 export function MovableOrb({ level = 0 }: { level?: number }) {
   const orbPosition = useWorkspace((s) => s.orbPosition)
   const setOrbPosition = useWorkspace((s) => s.setOrbPosition)
   const orbState = useWorkspace((s) => s.orb)
+  const voiceListening = useWorkspace((s) => s.voiceListening)
+  const voiceTranscript = useWorkspace((s) => s.voiceTranscript)
+  const voiceResponse = useWorkspace((s) => s.voiceResponse)
+  const setVoiceResponse = useWorkspace((s) => s.setVoiceResponse)
 
   const groupRef = useRef<Group>(null)
   const [hovered, setHovered] = useState(false)
@@ -295,7 +449,7 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
         onPointerOut={() => setHovered(false)}
       >
         {/* Floating Contextual Actions Capsule */}
-        <group position={[0, 0.12, 0.02]}>
+        <group position={[0, 0.22, 0.02]}>
           <SpatialCapsule
             targetRef={groupRef}
             title={`ORBE · ${orbState.toUpperCase()}`}
@@ -304,8 +458,44 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
           />
         </group>
 
+        {/* Floating 3D Speech & Response Bubble Directly Above Orb */}
+        <group position={[0, 0.14, 0]}>
+          <TranscriptBubble
+            isListening={voiceListening}
+            transcript={voiceTranscript}
+            response={voiceResponse}
+            hovered={hovered}
+            onDone={() => wakeWordService.stopCommandMode()}
+            onCancel={() => {
+              const { setVoiceListening, setOrb } = useWorkspace.getState()
+              setVoiceListening(false)
+              setOrb('breathing')
+            }}
+            onDismissResponse={() => setVoiceResponse(null)}
+          />
+        </group>
+
         {/* 3D Orb Particle Swarm */}
         <Orb level={level} />
+
+        {/* Touch Target for the Orb: Tapping directly starts voice listening */}
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation()
+            wakeWordService.toggleOrbListening()
+          }}
+          onPointerOver={() => {
+            document.body.style.cursor = 'pointer'
+            setHovered(true)
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = 'auto'
+            setHovered(false)
+          }}
+        >
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+        </mesh>
 
         {/* Tactile Grab Ring Underneath Orb */}
         <group position={[0, -0.065, 0]}>

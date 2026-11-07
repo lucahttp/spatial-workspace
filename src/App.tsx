@@ -11,6 +11,7 @@ import { glRef } from './glRef'
 import { OrbState, useWorkspace } from './store'
 import { initTransformersHandEngine } from './services/handTracking'
 import { azureFoundryVoice } from './services/azureFoundryVoice'
+import { wakeWordService } from './services/wakeWordService'
 
 const store = createXRStore({
   foveation: 0,
@@ -156,6 +157,16 @@ export function App() {
   const spawnSpotlight = useWorkspace((s) => s.spawnSpotlight)
   const status = useWorkspace((s) => s.status)
   const setStatus = useWorkspace((s) => s.setStatus)
+  const wakeWordEnabled = useWorkspace((s) => s.wakeWordEnabled)
+  const setWakeWordEnabled = useWorkspace((s) => s.setWakeWordEnabled)
+
+  useEffect(() => {
+    if (wakeWordEnabled) {
+      wakeWordService.startWakeWordListening()
+    } else {
+      wakeWordService.stopWakeWordListening()
+    }
+  }, [wakeWordEnabled])
 
   const currentOrbCfg = ORB_STATE_OPTIONS.find((o) => o.id === orb) ?? ORB_STATE_OPTIONS[0]
 
@@ -373,6 +384,17 @@ export function App() {
                   title="Orbe de Voz con Azure AI Foundry GPT Live y Delegación a wZed Subagent"
                 >
                   🎙️ Foundry Voice
+                </button>
+                <button
+                  className={`btn icon-btn ml-btn ${wakeWordEnabled ? 'active' : ''}`}
+                  onClick={() => {
+                    const next = !wakeWordEnabled
+                    setWakeWordEnabled(next)
+                    setStatus(next ? 'Wake Word activo: Di "Hey Buddy" o "Oye Orbe"' : 'Wake Word desactivado')
+                  }}
+                  title="Detección de Wake Word manos libres ('Hey Buddy', 'Oye Orbe') inspirado en hey-buddy"
+                >
+                  {wakeWordEnabled ? '👂 Wake Word: ON' : '🔇 Wake Word: OFF'}
                 </button>
                 <button
                   className="btn icon-btn ml-btn"

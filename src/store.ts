@@ -71,6 +71,12 @@ type Workspace = {
   trashPosition: [number, number, number]
   isGripActive: boolean
 
+  /** Voice interaction & Hey-Buddy wake word state */
+  voiceListening: boolean
+  voiceTranscript: string
+  voiceResponse: string | null
+  wakeWordEnabled: boolean
+
   select: (id: string) => void
   toggleFavorite: (id: string) => void
   setRating: (id: string, rating: number) => void
@@ -87,6 +93,10 @@ type Workspace = {
   setArchivePosition: (pos: [number, number, number]) => void
   setTrashPosition: (pos: [number, number, number]) => void
   setIsGripActive: (active: boolean) => void
+  setVoiceListening: (v: boolean) => void
+  setVoiceTranscript: (t: string) => void
+  setVoiceResponse: (r: string | null) => void
+  setWakeWordEnabled: (v: boolean) => void
   removeDroplet: (id: string) => void
   setOrb: (s: OrbState) => void
   setTranscript: (lines: string[]) => void
@@ -164,6 +174,10 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   archivePosition: [-layout.padX, layout.padY, layout.padZ],
   trashPosition: [layout.padX, layout.padY, layout.padZ],
   isGripActive: false,
+  voiceListening: false,
+  voiceTranscript: '',
+  voiceResponse: null,
+  wakeWordEnabled: true,
 
   select: (id) => {
     playClickSound()
@@ -319,6 +333,10 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   setArchivePosition: (archivePosition) => set({ archivePosition }),
   setTrashPosition: (trashPosition) => set({ trashPosition }),
   setIsGripActive: (isGripActive) => set({ isGripActive }),
+  setVoiceListening: (voiceListening) => set({ voiceListening }),
+  setVoiceTranscript: (voiceTranscript) => set({ voiceTranscript }),
+  setVoiceResponse: (voiceResponse) => set({ voiceResponse }),
+  setWakeWordEnabled: (wakeWordEnabled) => set({ wakeWordEnabled }),
 
   removeDroplet: (id) => {
     set({ droplets: get().droplets.filter((d) => d.id !== id) })

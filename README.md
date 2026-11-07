@@ -55,18 +55,30 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
 * **En el Dock espacial**: Botón rojo/rosa esmerilado con icono `LogOut` para finalizar la sesión inmersiva y volver a la navegación plana normal.
 * **En el HUD superior**: Botón visible `Salir de XR ✕` mientras una sesión WebXR se encuentre en ejecución.
 
-### 8. 💻 Estudio de Código Espacial & Terminal en Navegador (Inspirado en wZed)
-* **Adaptación de la arquitectura de [wZed](https://github.com/ScelarOrg/wZed)**:
-  * Integramos la lógica de ejecución en cliente, sistema de archivos virtual (**VFS**) y streaming de terminal de wZed adaptados al entorno 3D espacial de **WebXR**:
-    * **Sistema de Archivos Virtual (`/project/...`)**: Árbol de archivos en memoria con persistencia de instantáneas (*snapshots*), soporte para crear, editar y eliminar archivos de código (`index.js`, `shader.js`, `package.json`, `card.jsx`).
-    * **Plantillas de Proyecto**: Plantilla de servidor/script Node.js simulado, generador de visualizaciones espaciales 3D, y algoritmos matemáticos en tiempo real.
-    * **Motor de Ejecución en Navegador**: Ejecuta código JavaScript/Node en un entorno seguro en el cliente, capturando transmisiones de `console.log`, `console.info`, `console.warn` y errores en tiempo real.
-    * **Terminal Espacial 3D**: Visor de terminal tridimensional con salida coloreada (estilo pastel ANSI), timestamp de ejecución, botón **`▶ Ejecutar`** y limpieza de buffer.
-    * **Sincronización con Web Preview**: Las salidas y componentes generados se reflejan directamente en la tarjeta tridimensional de **Previsualización Web**.
-    * **Puente de Herramientas IA (wZed AI SDK)**: Implementación del conjunto de herramientas de wZed (`read_file`, `write_file`, `list_directory`, `execute_command`) enlazado al Orbe Cognitivo y comandos de voz.
-    * **Ventana 3D Móvil**: Integrada con la cápsula contextual (`SpatialCapsule`), permitiendo orientarla hacia el usuario (`Mirar a mí`), rotarla y reposicionarla libremente en la sala virtual.
+### 8. 💻 Suite Completa de Pantallas wZed en 3D (Paridad Total con wZed)
+* **Adaptación integral de las vistas y módulos de [wZed](https://github.com/ScelarOrg/wZed)**:
+  * **📁 Explorador de Proyecto (`ProjectPanel` / `FileTree`)**: Árbol jerárquico de archivos en memoria (`/project`), creación de archivos y carpetas, eliminación, renombramiento e iconos según extensión (`.js`, `.json`, `.css`, `.jsx`).
+  * **📝 Editor de Código Multi-Pestaña (`EditorPane` / `CodeEditor` / `TabBar`)**: Pestañas de archivos abiertos, barra de migas de pan (*Breadcrumbs*), números de línea y resaltado sintáctico pastel.
+  * **📟 Terminal Interactivo (`TerminalPanel`)**: Transmisión en tiempo real de `stdout` y `stderr`, prompt interactivo `pico-os:~/project$ node index.js`, botones de limpieza y re-ejecución.
+  * **🤖 Panel Asistente IA (`AIPanel`)**: Chat con el subagente de desarrollo, sugerencias rápidas, trazabilidad de llamadas a herramientas (`read_file`, `write_file`, `execute_command`) y aplicación de diffs.
+  * **🌿 Control de Versiones Git (`GitPanel`)**: Estado de cambios del VFS, indicador de rama (`main`), lista de archivos modificados con insignias de estado y botón para confirmar (*Commit*).
+  * **🔍 Búsqueda Global (`SearchPanel`)**: Búsqueda textual y reemplazo transversal en todos los archivos del espacio de trabajo.
+  * **⚡ Cliente HTTP / Emisor de Peticiones (`RequestSender`)**: Herramienta de pruebas de API REST integrada en 3D (métodos `GET`, `POST`, `PUT`, `DELETE`), cabeceras y visualizador de respuestas JSON.
+  * **📊 Monitor de Rendimiento (`PerfMonitor`)**: Medición de FPS en tiempo real, consumo estimado de memoria, latencia de audio y conteo de nodos del VFS.
+  * **🧭 Barra de Estado Espacial (`StatusBar`)**: Indicadores inferiores de rama git, línea/columna activa, codificación UTF-8, estado del runtime Node y estado de conexión IA.
 
-### 9. ☁️ Despliegue en Microsoft Copilot Managed Runtime (CMR Managed App)
+### 9. 🔮 Orbe Táctil & Detección de Wake Word ("Hey Buddy" / "Oye Orbe")
+* **Toque directo sobre el Orbe 3D**:
+  * Tocar o hacer clic en el Orbe de Pensamiento (Thinking Orb) activa de inmediato la escucha por voz.
+  * El orbe transiciona instantáneamente al estado luminoso `'listening'`, emite un tono espacial de confirmación y proyecta una **burbuja de voz flotante 3D** (*Floating Speech Bubble*) sobre él con la transcripción en vivo.
+  * Al finalizar la frase o pulsar nuevamente, la consulta se envía a Azure AI Foundry y al subagente de código wZed, reproduciendo la respuesta con síntesis vocal.
+* **Integración del Detector de Palabra de Activación con [Hey-Buddy](https://github.com/painebenjamin/hey-buddy/tree/main/src/js)**:
+  * Motor híbrido de detección de palabras clave en el navegador:
+    * Detección continua de frases de activación: `"Hey Buddy"`, `"Hello Buddy"`, `"Okay Buddy"`, `"Oye Orbe"`, `"Computer"`.
+    * Basado en la arquitectura de red neuronal ONNX y Web Audio de **Hey-Buddy** (Benjamin Paine) para detección local en cliente sin enviar audio continuo a la red.
+    * Al pronunciar la palabra de activación, el orbe se ilumina, vibra con un destello reactivo y comienza a escuchar el comando del usuario con manos libres.
+
+### 10. ☁️ Despliegue en Microsoft Copilot Managed Runtime (CMR Managed App)
 * **Arquitectura de Managed App (`@microsoft/cmr-apps`)**:
   * Configuración oficial mediante [`ms.config.json`](file:///Users/luca/Documents/spatial-workspace/ms.config.json) acorde al esquema de Microsoft Copilot Managed Runtime (`schemas/ms.config.schema.json`).
   * Integración con el plugin de empaquetado para Vite (`@microsoft/cmr-apps-vite-plugin`), permitiendo que la aplicación espacial se despliegue y aloje como una Managed Application en el ecosistema de Microsoft 365 y Copilot con gobernanza y seguridad de nivel empresarial.
@@ -92,7 +104,10 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
 1. **[Microsoft Copilot Managed Runtime (microsoft/Copilot-Managed-Runtime)](https://github.com/microsoft/Copilot-Managed-Runtime)**:
    * **SDK y Esquemas de Managed Apps**: Configuración `ms.config.json` y empaquetado para despliegue en entornos gobernados de Copilot Managed Runtime.
 
-2. **[Azure AI Foundry (Microsoft)](https://ai.azure.com/)**:
+2. **[Hey-Buddy (painebenjamin/hey-buddy)](https://github.com/painebenjamin/hey-buddy)**:
+   * **Detector de Wake Words en Navegador**: Modelos ONNX y arquitectura de extracción de audio en Web Audio para detección de frases de activación como "Hey Buddy", "Hello Buddy" y palabras clave personalizadas en tiempo real sin dependencias externas.
+
+3. **[Azure AI Foundry (Microsoft)](https://ai.azure.com/)**:
    * **GPT Live & Invocations Protocol**: Servicios de agentes de voz en tiempo real con delegación jerárquica a subagentes de desarrollo.
 
 3. **[wZed (ScelarOrg/wZed)](https://github.com/ScelarOrg/wZed)**:
