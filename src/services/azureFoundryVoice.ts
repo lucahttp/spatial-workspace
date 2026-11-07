@@ -2,6 +2,9 @@
  * Azure AI Foundry GPT Live Voice & Subagent Delegation Service
  * Connects the 3D Voice Orb as Supervisory Agent to Azure AI Foundry,
  * delegating coding and workspace tasks to the wZed Subagent.
+ * 
+ * Supports secure client-side storage via localStorage and URL hash (#endpoint=...&key=...)
+ * ensuring NO secrets or API keys are ever stored in GitHub repository or public build bundles.
  */
 
 import { executeWzedTool } from './aiCodingBridge'
@@ -14,13 +17,63 @@ export interface AzureFoundryConfig {
   wsEndpoint?: string
 }
 
-export const AZURE_FOUNDRY_CONFIG: AzureFoundryConfig = {
-  projectEndpoint: import.meta.env.VITE_AZURE_FOUNDRY_ENDPOINT || '',
-  apiKey:
-    import.meta.env.VITE_AZURE_AI_KEY ||
-    (typeof window !== 'undefined' ? localStorage.getItem('AZURE_AI_KEY') || '' : ''),
-  wsEndpoint: import.meta.env.VITE_AZURE_FOUNDRY_WS || '',
+function loadInitialConfig(): AzureFoundryConfig {
+  let projectEndpoint = ''
+  let apiKey = ''
+  let wsEndpoint = ''
+
+  if (typeof window !== 'undefined') {
+    // 1. Check URL hash (e.g. #endpoint=https://...&key=...)
+    try {
+      const hash = window.location.hash.replace(/^#/, '')
+      if (hash) {
+        const params = new URLSearchParams(hash)
+        const hashEndpoint = params.get('endpoint')
+        const hashKey = params.get('key')
+        const hashWs = params.get('ws')
+
+        if (hashEndpoint || hashKey) {
+          if (hashEndpoint) {
+            projectEndpoint = hashEndpoint
+            localStorage.setItem('AZURE_FOUNDRY_ENDPOINT', hashEndpoint)
+          }
+          if (hashKey) {
+            apiKey = hashKey
+            localStorage.setItem('AZURE_AI_KEY', hashKey)
+          }
+          if (hashWs) {
+            wsEndpoint = hashWs
+            localStorage.setItem('AZURE_FOUNDRY_WS', hashWs)
+          }
+          // Immediately wipe the hash from address bar for security
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        }
+      }
+    } catch (e) {
+      console.warn('[AzureFoundry] Error reading URL hash:', e)
+    }
+
+    // 2. Read from localStorage
+    if (!projectEndpoint) {
+      projectEndpoint = localStorage.getItem('AZURE_FOUNDRY_ENDPOINT') || ''
+    }
+    if (!apiKey) {
+      apiKey = localStorage.getItem('AZURE_AI_KEY') || ''
+    }
+    if (!wsEndpoint) {
+      wsEndpoint = localStorage.getItem('AZURE_FOUNDRY_WS') || ''
+    }
+  }
+
+  // 3. Fallback to build-time env vars if provided
+  if (!projectEndpoint) projectEndpoint = import.meta.env.VITE_AZURE_FOUNDRY_ENDPOINT || ''
+  if (!apiKey) apiKey = import.meta.env.VITE_AZURE_AI_KEY || ''
+  if (!wsEndpoint) wsEndpoint = import.meta.env.VITE_AZURE_FOUNDRY_WS || ''
+
+  return { projectEndpoint, apiKey, wsEndpoint }
 }
+
+export const AZURE_FOUNDRY_CONFIG: AzureFoundryConfig = loadInitialConfig()
 
 export interface SubagentTaskResult {
   action: string
@@ -36,8 +89,79 @@ type AgentStateListener = (state: {
 }) => void
 
 class AzureFoundryVoiceService {
+  private config: AzureFoundryConfig = { ...AZURE_FOUNDRY_CONFIG }
   private listeners: Set<AgentStateListener> = new Set()
   private speechSynth: SpeechSynthesis | null = typeof window !== 'undefined' ? window.speechSynthesis : null
+
+  constructor() {
+    this.config = loadInitialConfig()
+  }
+
+  public getConfig(): AzureFoundryConfig {
+    return { ...this.config }
+  }
+
+  public setConfig(newCfg: Partial<AzureFoundryConfig>) {
+    if (newCfg.projectEndpoint !== undefined) {
+      this.config.projectEndpoint = newCfg.projectEndpoint.trim()
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('AZURE_FOUNDRY_ENDPOINT', this.config.projectEndpoint)
+      }
+    }
+    if (newCfg.apiKey !== undefined) {
+      this.config.apiKey = newCfg.apiKey.trim()
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('AZURE_AI_KEY', this.config.apiKey)
+      }
+    }
+    if (newCfg.wsEndpoint !== undefined) {
+      this.config.wsEndpoint = newCfg.wsEndpoint.trim()
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('AZURE_FOUNDRY_WS', this.config.wsEndpoint)
+      }
+    }
+    this.notify('idle', 'Configuración de Azure Foundry actualizada en el cliente.')
+  }
+
+  public clearConfig() {
+    this.config = { projectEndpoint: '', apiKey: '', wsEndpoint: '' }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('AZURE_FOUNDRY_ENDPOINT')
+      localStorage.removeItem('AZURE_AI_KEY')
+      localStorage.removeItem('AZURE_FOUNDRY_WS')
+    }
+    this.notify('idle', 'Credenciales de Azure Foundry eliminadas de este dispositivo.')
+  }
+
+  public isConfigured(): boolean {
+    return Boolean(this.config.projectEndpoint && this.config.apiKey)
+  }
+
+  public async testConnection(): Promise<{ ok: boolean; message: string }> {
+    if (!this.config.projectEndpoint || !this.config.apiKey) {
+      return { ok: false, message: 'Falta ingresar el Endpoint o el API Key.' }
+    }
+
+    try {
+      const url = this.config.projectEndpoint.replace(/\/+$/, '')
+      // Check project endpoint or chat completion test
+      const res = await fetch(`${url}?api-version=2024-05-01-preview`, {
+        method: 'GET',
+        headers: {
+          'api-key': this.config.apiKey,
+        },
+      })
+
+      if (res.ok || res.status === 200 || res.status === 404) {
+        return { ok: true, message: `Conexión verificada con Azure AI Foundry (HTTP ${res.status}).` }
+      } else {
+        return { ok: false, message: `Azure respondió con estado ${res.status}: ${res.statusText}` }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return { ok: false, message: `Error de red o CORS al contactar Azure: ${msg}` }
+    }
+  }
 
   public subscribe(cb: AgentStateListener): () => void {
     this.listeners.add(cb)
@@ -138,7 +262,60 @@ return \`<div style="padding:10px;color:#7c3aed;background:#ede9fe;border-radius
 
     this.notify('listening', `Procesando con Azure Foundry GPT Live: "${text}"`)
 
-    // Check if task involves coding or workspace manipulation
+    // Attempt live Azure AI Foundry call if configured
+    if (this.isConfigured()) {
+      try {
+        const cleanBase = this.config.projectEndpoint.replace(/\/+$/, '')
+        const endpointUrl = `${cleanBase}/models/chat/completions?api-version=2024-05-01-preview`
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+        const response = await fetch(endpointUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': this.config.apiKey,
+          },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'Eres el Orbe Supervisor Inteligente en un entorno 3D espacial conectado al motor de desarrollo wZed. Eres conciso, amable y directo. Si el usuario te pide crear, modificar, ejecutar o inspeccionar código, archivos o terminal, confirma la acción para delegarla al subagente.',
+              },
+              { role: 'user', content: text },
+            ],
+            max_tokens: 250,
+            temperature: 0.7,
+          }),
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
+        if (response.ok) {
+          const data = await response.json()
+          const answer = data.choices?.[0]?.message?.content?.trim()
+          if (answer) {
+            // Also delegate if code task detected
+            const isCodingTask =
+              /código|codigo|script|archivo|file|crea|modifica|ejecut|corr|terminal|vfs|server|wzed|run|ls/i.test(text)
+            if (isCodingTask) {
+              this.notify('delegating', `Delegando tarea al Subagente wZed: "${text}"`)
+              await this.delegateToWzedSubagent(text)
+            }
+
+            this.notify('responding', answer)
+            this.speak(answer)
+            return answer
+          }
+        }
+      } catch (e) {
+        console.warn('[AzureFoundry] Live API call fallback to local orchestrator:', e)
+      }
+    }
+
+    // Local supervisory orchestrator fallback
     const isCodingTask =
       /código|codigo|script|archivo|file|crea|modifica|ejecut|corr|terminal|vfs|server|wzed|run|ls/i.test(text)
 

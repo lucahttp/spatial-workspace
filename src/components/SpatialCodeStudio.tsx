@@ -1038,8 +1038,8 @@ export function SpatialCodeStudio({
                     <Text fontSize={10} color="#e2e8f0">
                       {cleanText('Motor de Inferencia de Voz')}
                     </Text>
-                    <Text fontSize={9} color={color.accent} fontWeight={700}>
-                      {cleanText('Azure AI Foundry + Hey-Buddy')}
+                    <Text fontSize={9} color={azureFoundryVoice.isConfigured() ? '#34d399' : color.accent} fontWeight={700}>
+                      {cleanText(azureFoundryVoice.isConfigured() ? '⚡ Foundry Conectado' : 'Azure AI Foundry + Hey-Buddy')}
                     </Text>
                   </Container>
                   <Container flexDirection="row" justifyContent="space-between" alignItems="center">

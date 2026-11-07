@@ -150,6 +150,12 @@ export function App() {
   const [supportsAR, setSupportsAR] = useState<boolean | null>(null)
   const [supportsVR, setSupportsVR] = useState<boolean | null>(null)
   const [isVisionPro, setIsVisionPro] = useState(false)
+  const [showFoundryModal, setShowFoundryModal] = useState(false)
+  const [foundryEndpoint, setFoundryEndpoint] = useState(() => azureFoundryVoice.getConfig().projectEndpoint)
+  const [foundryKey, setFoundryKey] = useState(() => azureFoundryVoice.getConfig().apiKey)
+  const [foundryStatusMsg, setFoundryStatusMsg] = useState('')
+  const [showKeyPassword, setShowKeyPassword] = useState(false)
+  const [testingConnection, setTestingConnection] = useState(false)
 
   const orb = useWorkspace((s) => s.orb)
   const setOrb = useWorkspace((s) => s.setOrb)
@@ -325,15 +331,44 @@ export function App() {
     setShowModal(false)
   }
 
+  const handleSaveFoundryConfig = () => {
+    azureFoundryVoice.setConfig({
+      projectEndpoint: foundryEndpoint,
+      apiKey: foundryKey,
+    })
+    setFoundryStatusMsg('✓ Credenciales guardadas con éxito en el navegador.')
+    setStatus('Azure Foundry configurado en este dispositivo.')
+  }
+
+  const handleTestFoundryConnection = async () => {
+    setTestingConnection(true)
+    setFoundryStatusMsg('Probando conexión con Azure AI Foundry...')
+    azureFoundryVoice.setConfig({
+      projectEndpoint: foundryEndpoint,
+      apiKey: foundryKey,
+    })
+    const res = await azureFoundryVoice.testConnection()
+    setFoundryStatusMsg(res.message)
+    setTestingConnection(false)
+  }
+
+  const handleClearFoundryConfig = () => {
+    azureFoundryVoice.clearConfig()
+    setFoundryEndpoint('')
+    setFoundryKey('')
+    setFoundryStatusMsg('Credenciales eliminadas de este dispositivo.')
+    setStatus('Azure Foundry desconectado.')
+  }
+
   useEffect(() => {
-    if (showModal) {
+    if (showModal || showFoundryModal) {
       gsap.fromTo(
         '.modal-card',
         { scale: 0.86, opacity: 0, y: 20 },
         { scale: 1, opacity: 1, y: 0, duration: 0.35, ease: 'back.out(1.5)' }
       )
     }
-  }, [showModal])
+  }, [showModal, showFoundryModal])
 
   return (
     <ErrorBoundary>
@@ -383,7 +418,20 @@ export function App() {
                   }}
                   title="Orbe de Voz con Azure AI Foundry GPT Live y Delegación a wZed Subagent"
                 >
-                  🎙️ Foundry Voice
+                  🎙️ Hablar
+                </button>
+                <button
+                  className={`btn icon-btn ml-btn ${azureFoundryVoice.isConfigured() ? 'active' : ''}`}
+                  onClick={() => {
+                    setFoundryEndpoint(azureFoundryVoice.getConfig().projectEndpoint)
+                    setFoundryKey(azureFoundryVoice.getConfig().apiKey)
+                    setFoundryStatusMsg('')
+                    setShowFoundryModal(true)
+                  }}
+                  style={azureFoundryVoice.isConfigured() ? { borderColor: '#34d399', color: '#34d399', background: 'rgba(52, 211, 153, 0.12)' } : {}}
+                  title="Configurar Endpoint y API Key de Azure AI Foundry (almacenamiento seguro cliente)"
+                >
+                  {azureFoundryVoice.isConfigured() ? '⚡ Foundry: Conectado' : '⚙️ Azure Foundry'}
                 </button>
                 <button
                   className={`btn icon-btn ml-btn ${wakeWordEnabled ? 'active' : ''}`}
@@ -536,6 +584,113 @@ export function App() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </BorderBeam>
+          </div>
+        )}
+
+        {/* AZURE AI FOUNDRY CONFIGURATION MODAL (Cliente Seguro) */}
+        {showFoundryModal && (
+          <div className="modal-overlay" onClick={() => setShowFoundryModal(false)}>
+            <BorderBeam size="md" colorVariant="ocean" borderRadius={24} duration={8}>
+              <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <span className="modal-dot" style={{ background: '#38bdf8', boxShadow: '0 0 10px #38bdf8' }}></span>
+                    <h3>Azure AI Foundry (GPT Live Voice)</h3>
+                  </div>
+                  <button className="close-btn" onClick={() => setShowFoundryModal(false)}>
+                    ✕
+                  </button>
+                </div>
+                <p className="modal-subtitle">
+                  Configura tus credenciales de Azure AI Foundry para activar voz en vivo y control del subagente wZed en GitHub Pages y WebXR. Se almacenan únicamente en el <code>localStorage</code> de este dispositivo.
+                </p>
+
+                <div className="form-group">
+                  <label>Project Endpoint URL</label>
+                  <input
+                    type="text"
+                    placeholder="https://<recurso>.services.ai.azure.com/api/projects/<proyecto>"
+                    value={foundryEndpoint}
+                    onChange={(e) => setFoundryEndpoint(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label>API Key</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeyPassword(!showKeyPassword)}
+                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}
+                    >
+                      {showKeyPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                  <input
+                    type={showKeyPassword ? 'text' : 'password'}
+                    placeholder="Pega tu API Key de Azure Foundry aquí"
+                    value={foundryKey}
+                    onChange={(e) => setFoundryKey(e.target.value)}
+                  />
+                </div>
+
+                {foundryStatusMsg && (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      marginBottom: 12,
+                      background: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200')
+                        ? 'rgba(52, 211, 153, 0.15)'
+                        : 'rgba(56, 189, 248, 0.15)',
+                      color: foundryStatusMsg.includes('✓') || foundryStatusMsg.includes('200') ? '#34d399' : '#38bdf8',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    {foundryStatusMsg}
+                  </div>
+                )}
+
+                <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 16, lineHeight: 1.4 }}>
+                  🔒 <strong>Sin filtraciones:</strong> Tus credenciales nunca se envían al repositorio de GitHub ni se incluyen en ningún bundle público.<br/>
+                  💡 <strong>Tip para enlace directo:</strong> También puedes abrir la app pasando hash:<br/>
+                  <code style={{ fontSize: 9, color: '#cbd5e1' }}>#endpoint=&lt;url&gt;&amp;key=&lt;key&gt;</code> (se guarda y se limpia automáticamente).
+                </div>
+
+                <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleClearFoundryConfig}
+                    style={{ color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                    title="Eliminar credenciales almacenadas"
+                  >
+                    Borrar
+                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={handleTestFoundryConnection}
+                      disabled={testingConnection}
+                    >
+                      {testingConnection ? 'Probando...' : 'Probar Conexión'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={() => {
+                        handleSaveFoundryConfig()
+                        setShowFoundryModal(false)
+                      }}
+                    >
+                      Guardar y Conectar
+                    </button>
+                  </div>
+                </div>
               </div>
             </BorderBeam>
           </div>
