@@ -1,92 +1,87 @@
 # PICO OS — Spatial Workspace XR
 
-Un espacio de trabajo espacial multi-ventana interactivo para la web inmersiva (**WebXR**), optimizado para **PICO 4 Ultra** (Passthrough AR), **PICO Neo / Meta Quest** (VR inmersivo) y navegadores de escritorio.
+Un espacio de trabajo espacial multi-ventana interactivo para la web inmersiva (**WebXR**), optimizado para **Apple Vision Pro** (Safari visionOS 2+), **PICO 4 Ultra** (Passthrough AR), **PICO Neo / Meta Quest** (VR inmersivo) y navegadores de escritorio.
 
-Inspirado en la estética de **Apple Vision OS** y **PICO OS 5**, con un diseño **Flat Design Pastel** (generous whitespace, paleta pastel azul cielo `#e0f2fe`, lavanda `#ede9fe`, menta `#d1fae5`, acentos púrpura `#7c3aed`), física cinemática de **GSAP UI**, efectos perimetrales de **Border Beam** y el motor matemático de **Thinking Orbs** de Jakub Antalik.
+Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, con un diseño **Flat Design Pastel** (generous whitespace, paleta pastel azul cielo `#e0f2fe`, lavanda `#ede9fe`, menta `#d1fae5`, acentos púrpura `#7c3aed`), física cinemática de **GSAP UI**, efectos perimetrales de **Border Beam**, motor matemático de **Thinking Orbs** de Jakub Antalik, y reconocimiento cinemático/ML de manos con **Transformers.js & ONNX Runtime Web**.
 
 ---
 
-## 🌟 Características Principales
+## 🌟 Nuevas Características y Ergonomía Espacial
 
-* **Estética Flat Design Pastel & Apple Vision OS**:
-  * Principios de diseño visual limpio: el espacio en blanco guía la atención del usuario, cada elemento tiene un propósito claro y se evitan detalles innecesarios.
-  * Tarjetas con esquinas suaves redondeadas, barra de acento cian/violeta y tipografía de alto contraste legible en 3D.
-  * Sombras de profundidad realistas (visionOS depth shadows) en lugar de brillos cegadores o saturación excesiva.
-* **Orbe de Voz 3D Cognitivo**:
-  * Motor matemático de partículas en 3D (`thinking-orbs`) evaluando los 9 estados en tiempo real (`breathing`, `listening`, `searching`, `working`, `solving`, `connecting`, `weaving`, `composing`, `shaping`).
-  * Conexiones vectoriales dinámicas en 3D para el estado `connecting`.
-  * *Voice Ring / Voice Glow* reactivo a la amplitud del micrófono.
-* **Ventanas de Cristal Líquido (*Liquid Frosted Glass*)**:
-  * Borde superior con reflejo especular (*specular glint*).
-  * Encabezados con *traffic lights* interactivos de visionOS y barra de agarre inferior (*grab handle*).
-* **Carrusel Curvo Ergonómico**:
-  * Distribución angular en arco que respeta el cono de confort visual PICO (±33.5° horizontal).
-  * Tarjetas pasteles con botón de favorito interactivo (corazón púrpura `#7c3aed`), subrayado de acento y botón píldora sólido de acción principal.
-  * Controles de ventana discretos integrados en la barra de arrastre (minimizar/archivar y cerrar/descartar).
-  * Deslizamiento cinemático con resortes y controles de navegación esmerilados `<` y `>`.
-* **Dock Espacial Flotante**:
-  * Barra de herramientas inferior inspirada en la navegación visionOS: iconos contorneados limpios (Inicio, Favoritos, Agenda, Voz), botón circular flotante `+` en violeta pastel y píldora `Centrar`.
-* **Navegador Espacial / Web Preview**:
-  * Vista previa editorial con barra de direcciones segura, selector de favorito, calificación interactiva de 5 estrellas, control deslizante (*reading progress slider*) interactivo con thumb violeta y etiquetas de fuentes interconectadas.
-* **Bandejas 3D Físicas de Archivar y Descartar**:
-  * Plinto minimalista de hojas documentales apiladas en verde pastel (*Archivar*) y cilindro mate de grafito con aro coral (*Basura*).
-  * Soporte de arrastre espacial con física y detección de colisión.
-* **Microinteracciones GSAP & Border Beam**:
-  * Perímetros de luz animados en el HUD superior y la ventana modal de *+ Spotlight*.
-  * Transición de apertura con desaceleración elástica `back.out(1.5)`.
+### 1. 🖐️ Hand Tracking & Kinemática ML (Transformers.js / ONNX Runtime Web)
+* **Arquitectura de modelos locales Hugging Face & Xenova**:
+  * Integración de `@huggingface/transformers` y **ONNX Runtime Web** (WebAssembly / SIMD / WebGPU) para análisis de visión y gestos local en el navegador sin dependencias de servidores externos.
+  * **Clasificador cinemático de 25 articulaciones WebXR (`classifyHandKinematics`)**:
+    * **`pinch`**: Distancia microscópica entre la yema del pulgar y el índice (< 3.5 cm) para clics y selección precisa.
+    * **`grip` (puño)**: Factor de flexión palmar de 4 dedos (> 0.68) para tomar y mover objetos tridimensionales de forma natural.
+    * **`point` (apuntar)**: Extensión aislada del índice con dedos flexionados para apuntar y previsualizar.
+    * **`open`**: Palma abierta y relajada.
+  * Botón en el HUD superior **`🖐️ Hand ML`** para verificar y activar el motor ONNX local.
+
+### 2. 🪟 Ventanas Desprendibles y Carrusel Móvil en Grupo
+* **Manipulación del carrusel completo**: Toda la estructura en arco de tarjetas posee su propio riel superior de agarre (**`CARRUSEL DE FUENTES`**), permitiendo trasladar y rotar toda la colección de referencias al unísono.
+* **Extracción de tarjetas a ventanas libres (*Detached Floating Windows*)**:
+  * Al arrastrar cualquier tarjeta del carrusel hacia el espacio abierto (> 0.45 m), o al pulsar **`Extraer Tarjeta`** en su cápsula contextual, la tarjeta se desprende del arco.
+  * Se convierte en una **ventana 3D independiente y flotante**, que puedes colocar en cualquier lugar de tu habitación virtual, rotar y leer en paralelo.
+  * Cada ventana libre cuenta con la opción de **`Acoplar al Carrusel`** para devolverla a su ranura en cualquier momento, o arrastrarla a **Archivar** o **Basura**.
+
+### 3. 🧠 Mapa Mental (IdeaGraph) y Orbe de Voz 3D Totalmente Móviles
+* **Idea & Fuentes 3D**: El cristal central de ideas y su constelación de fuentes ahora cuentan con una píldora táctil inferior y mango espacial `<Handle translate rotate multitouch={true}>`. Puedes colocar tu mapa mental en cualquier rincón del espacio.
+* **Orbe de Voz Flotante (`MovableOrb`)**: El orbe cognitivo de partículas ahora es un objeto espacial autónomo con halo táctil. Puedes tomarlo y situarlo flotando junto a tus documentos o sobre tu escritorio virtual.
+
+### 4. 💊 Cápsula Contextual Universal (`SpatialCapsule`) con Auto-Hide
+* **Aparición inteligente al apuntar o tocar**: Al pasar el rayo láser o tocar cualquier ventana, tarjeta, mapa de ideas o pedestal, se despliega una elegante cápsula flotante estilo visionOS con opciones:
+  * ✋ **Mover / Arrastrar**: Indica zona de agarre cinemático.
+  * 👁️ **Mirar a mí (`faceUser`)**: Calcula el vector angular relativo a tu visor/cámara y rota la ventana inmediatamente hacia tu mirada.
+  * 🔄 **Girar 15°**: Ajuste de ángulo fino en el plano XZ.
+  * ➖ **Minimizar**: Colapsa u oculta temporalmente el objeto.
+  * ✕ **Cerrar**: Descarta o elimina el panel.
+* **Temporizador de auto-ocultado**: Si no interactúas con la cápsula tras 2.8 segundos, se desvanece suavemente para mantener un campo visual despejado y zen. Si pasas el cursor por encima, el temporizador se pausa para permitirte accionar con calma.
+
+### 5. 🗑️ Bandejas Físicas Móviles y Subtítulos por Presión Prolongada (*Long-Press*)
+* **Diseño ultra-minimalista**: Ni la bandeja de **Archivar** ni el tacho de **Basura** muestran rótulos de texto permanentes. La affordance visual la da su diseño físico 3D (bandeja con hojas de papel pastel y cilindro de grafito con aro coral).
+* **Revelación por presión mantenida**: Solamente al mantener apuntado o presionado el objeto durante más de 650 ms, se despliega suavemente el subtítulo descriptivo y su cápsula de ajustes.
+* **Reubicación libre**: Ambas bandejas son móviles en 3D. Al cambiarlas de lugar, las zonas de drop y las líneas elásticas magnéticas se recalculan automáticamente en base a su nueva posición en tiempo real.
+
+### 6. ⚡ Rayo Destellante con Gatillo Lateral (Grip) y Clic con Gatillo Frontal (Trigger)
+* **Grip Button (Gatillo lateral / Squeeze)**:
+  * Al mantener presionado el Grip, los controles destellan un **rayo láser animado y brillante** con partículas eléctricas, aro de impacto (*reticle*) y haz luminoso cian/púrpura.
+  * Permite agarrar y desplazar objetos espaciales cómodamente.
+  * Al soltar el Grip, el rayo se vuelve sutil o invisible para no estorbar la inmersión.
+* **Trigger Button (Gatillo frontal / Select)**:
+  * Los botones, controles deslizantes y enlaces reaccionan y ejecutan acciones **exclusivamente cuando se presiona el Trigger frontal**, evitando accionamientos involuntarios al apuntar.
+
+### 7. 🚪 Botón de Salida Inmersiva (*Exit Button*)
+* **En el Dock espacial**: Botón rojo/rosa esmerilado con icono `LogOut` para finalizar la sesión inmersiva y volver a la navegación plana normal.
+* **En el HUD superior**: Botón visible `Salir de XR ✕` mientras una sesión WebXR se encuentre en ejecución.
 
 ---
 
 ## 📚 Librerías, Referencias y Ejemplos Utilizados
 
-Para la concepción, diseño y construcción de este workspace espacial se integraron las siguientes tecnologías, librerías y patrones de diseño:
+1. **[Libraries.dev](https://libraries.dev/)**:
+   * **Thinking Orbs** (*Jakub Antalik & Alexandr Brinza*): Modelo matemático de 9 estados cognitivos (`thinking-orbs`), implementado en el HUD 2D y en un enjambre de partículas 3D WebGL con líneas de conexión vectoriales (`connecting`).
+   * **Border Beam**: Iluminación perimetral animada sobre bordes de vidrio esmerilado en HUD y ventana emergente de Spotlight.
+   * **Voice Ring / Voice Glow**: Halo reactivo a la voz en tiempo real con Web Audio API.
+   * **Magnetic UI**: Tensión elástica y tethers conectores al arrastrar elementos a las bandejas.
 
-### 1. UI Effects & Models for AI Interfaces ([Libraries.dev](https://libraries.dev/))
-* **[Thinking Orbs](https://libraries.dev/orbs)** (*creado por Jakub Antalik con ayuda de Alexandr Brinza*):
-  * **9 estados cognitivos animados a mano**: `breathing`, `listening`, `searching`, `working`, `solving`, `connecting`, `weaving`, `composing` y `shaping`.
-  * **Integración dual 2D/3D**:
-    * **HUD 2D**: Componente React `<ThinkingOrb state={orb} size={20} theme="dark" />` que muestra el estado mental activo del agente en tiempo real.
-    * **Espacio 3D WebGL**: Mapeo tridimensional en Three.js con nube de partículas matemáticas animadas (`points`), órbitas dinámicas y líneas vectoriales interconectadas en tiempo real para el estado `connecting`.
-* **[Border Beam](https://libraries.dev/)**:
-  * Efecto de borde luminoso perimetral viajero sobre cápsulas de vidrio esmerilado. Utilizado en la píldora superior del HUD (`colorVariant="ocean"`) y en la ventana emergente de Spotlight (`colorVariant="forest"`).
-* **Conceptos espaciales adaptados de Libraries.dev**:
-  * **Voice Ring / Voice Glow**: Ondas de pulso visual reactivas a la amplitud vocal capturada mediante el micrófono.
-  * **Magnetic UI**: Tensión física y acoplamiento elástico al aproximar tarjetas a las bandejas inferiores de *Archivar* y *Basura*.
+2. **[GSAP UI](https://gsap.com/ui/)**:
+   * Entrada dimensional elástica con `back.out(1.5)` en modales y cápsulas.
+   * Amortiguación cinemática por fotograma con `delta * 7` para auto-centrado del carrusel y retorno de objetos.
 
-### 2. Animación Cinemática & Físicas ([GSAP UI](https://gsap.com/ui/))
-* **Curvas elásticas de movimiento**: Uso de `gsap.fromTo` con flexibilización `back.out(1.5)` para la entrada dimensional de ventanas modales y paneles espaciales.
-* **Interpolación temporal suave (lerp)**: Cálculo cinemático por fotograma (`delta * 7`) para la navegación angular en arco del carrusel, la elevación de tarjetas en hover y la amortiguación del retorno elástico tras el arrastre.
-
-### 3. Principios de Diseño: Flat Design Pastel & Apple Vision OS
-* **Bocetos conceptuales en libreta**:
-  * **Boceto 1**: Disposición del orbe cognitivo a la izquierda (con transcripción debajo) y gran ventana de navegación/previsualización web a la derecha.
-  * **Boceto 2**: Carrusel curvo de documentos en el plano medio, atajo *+ Spotlight* para añadir Google Docs / búsquedas, mapa de constelación de *Idea y Fuentes*, y pedestales físicos inferiores para *Archivar* y *Basura*.
-* **Guía de Estilo Flat Design Pastel**:
-  * *Paleta cromática*: Azul cielo suave (`#e0f2fe`), lavanda tenue (`#ede9fe`), menta fresca (`#d1fae5`), ámbar pastel (`#fef3c7`), combinados con acentos sólidos en púrpura (`#7c3aed`) y cian espacial (`#0ea5e9`).
-  * *Tipografía y contraste*: Texto en grafito/pizarra oscura (`#0f172a`, `#334155`) sobre las tarjetas pastel para máxima legibilidad óptica en entornos XR, con barras de subrayado de acento para guiar la atención.
-  * *Elementos interactivos*:
-    * **Toggle de Favorito**: Corazón púrpura interactivo (`HeartIcon`) en la esquina superior de cada tarjeta y en la barra de URL del navegador.
-    * **Calificación interactiva**: Componente de 5 estrellas con selección al vuelo.
-    * **Reading Progress Slider**: Barra de progreso de lectura con cursor circular púrpura y doble pista.
-    * **Dock Flotante**: Barra de herramientas con iconos contorneados (`HouseIcon`, `BookmarkIcon`, `CalendarIcon`, `MicIcon`), botón circular flotante `+` en `#7c3aed` y píldora `Centrar` con lápiz.
-    * **Sombras de profundidad visionOS**: Planos de oclusión suave (`opacity={0.32}`) que anclan visualmente las tarjetas en el espacio tridimensional sin recurrir a brillos saturados invasivos.
-
-### 4. Ecosistema WebXR, Three.js & React
-* **[Three.js](https://threejs.org/)** & **[@react-three/fiber](https://r3f.docs.pmnd.rs/)**: Motor de renderizado WebGL/WebXR con pipelines de sombreado suave, transparencia alpha y buffer de dibujo persistente.
-* **[@react-three/xr](https://pmndrs.github.io/xr/)**: Gestión avanzada de sesiones inmersivas WebXR para `immersive-ar` (Passthrough en PICO 4 Ultra) y `immersive-vr` (PICO Neo y Meta Quest) con seguimiento de manos (*hand tracking*).
-* **[@react-three/uikit](https://uikit.pmnd.rs/)** & **[@react-three/uikit-lucide](https://uikit.pmnd.rs/)**: Motor de maquetación Flexbox en espacio tridimensional con renderizado de texto mediante MSDF (Signed Distance Fields) e iconografía vectorial espacial.
-* **[@react-three/handle](https://github.com/pmndrs/handle)**: Sistema de manipuladores y gizmos espaciales para mover ventanas y tarjetas mediante rayos de puntero o dedos en seguimiento de manos.
-* **[@iwer/extension-bridge](https://www.npmjs.com/package/@iwer/extension-bridge)** & **[@iwer/sem](https://www.npmjs.com/package/@iwer/sem)**: Emulación y depuración de entornos WebXR para pruebas precisas desde navegadores de escritorio.
-
-### 5. Estado Global y Audio Reactivo
-* **[Zustand](https://github.com/pmndrs/zustand)**: Store reactivo y desacoplado para gestionar tarjetas, filtros del dock, estado del orbe, documentos archivados/descartados, ratings y progreso de lectura.
-* **Web Audio API (`AudioContext` + `AnalyserNode`)**: Monitoreo en vivo de la frecuencia y amplitud del micrófono para modular el orbe cognitivo en modo escucha.
+3. **Ecosistema WebXR, Three.js & React**:
+   * **[Three.js](https://threejs.org/)** & **[@react-three/fiber](https://r3f.docs.pmnd.rs/)**: Motor WebGL/WebXR.
+   * **[@react-three/xr](https://pmndrs.github.io/xr/)**: Soporte nativo para sesiones `immersive-vr` (Apple Vision Pro, Meta Quest, PICO Neo) y `immersive-ar` (PICO 4 Ultra Passthrough), gestión de mandos y seguimiento de manos.
+   * **[@react-three/uikit](https://uikit.pmnd.rs/)** & **[@react-three/uikit-lucide](https://uikit.pmnd.rs/)**: Maquetación 3D Flexbox con fuentes MSDF e iconografía vectorial.
+   * **[@react-three/handle](https://github.com/pmndrs/handle)**: Sistema de traslación y rotación espacial bimanual (`translate rotate multitouch`).
+   * **[@huggingface/transformers](https://huggingface.co/docs/transformers.js)**: Modelos locales ONNX Web en navegador basados en los desarrollos de Xenova para inferencia de manos y gestos en WebAssembly.
 
 ---
 
 ## 🚀 Despliegue en GitHub Pages
 
-Este proyecto incluye un flujo de integración y despliegue continuo con GitHub Actions (`.github/workflows/deploy.yml`). Cada `push` a la rama `main` construye y publica automáticamente la aplicación en GitHub Pages.
+Cada commit en `main` se valida y despliega automáticamente a producción mediante GitHub Actions (`.github/workflows/deploy.yml`):
+* **Demo en vivo**: [https://lucahttp.github.io/spatial-workspace/](https://lucahttp.github.io/spatial-workspace/)
 
 ---
 
@@ -96,21 +91,6 @@ Este proyecto incluye un flujo de integración y despliegue continuo con GitHub 
 # Instalar dependencias
 npm install
 
-# Iniciar servidor de desarrollo con acceso en red local (para visores)
+# Iniciar servidor de desarrollo en red local (accesible desde tu visor o teléfono)
 npm run dev
-
-# Compilar para producción
-npm run build
-
-# Previsualizar compilación
-npm run preview
 ```
-
----
-
-## 👓 Probar en Visores XR (PICO / Quest / Wolvic)
-
-1. Abre el navegador del visor (PICO Browser o Wolvic).
-2. Ingresa a la URL de GitHub Pages (o a tu IP local si estás en desarrollo: `http://<tu-ip>:5173/`).
-3. Haz clic en **Passthrough AR (Pico 4 Ultra)** o **VR (Pico Neo)** en la barra superior.
-4. Interactúa con las tarjetas mediante raycasting o seguimiento de manos (*hand tracking*).

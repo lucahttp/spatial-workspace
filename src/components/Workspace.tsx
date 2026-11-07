@@ -12,10 +12,11 @@ import { color, layout, radius, type as typeScale } from '../theme'
 import { Carousel } from './Carousel'
 import { Dock } from './Dock'
 import { IdeaGraph } from './IdeaGraph'
-import { Orb } from './Orb'
+import { MovableOrb } from './Orb'
 import { Pads } from './Pads'
 import { Panel } from './Panel'
 import { Preview } from './Preview'
+import { SparklingControllerRay } from './SparklingControllerRay'
 import { cleanText, FontProvider } from './Ui'
 
 function GLBridge() {
@@ -313,10 +314,8 @@ function TranscriptPanel() {
         </Container>
       </Panel>
 
-      {/* 3D Voice Orb floating directly atop Transcript panel (Boceto 1) */}
-      <group position={[layout.leftX, layout.orbY, layout.orbZ]}>
-        <Orb level={mic.enabled ? mic.level : listening ? 0.3 : 0} />
-      </group>
+      {/* 3D Voice Orb: Fully movable anywhere in space with SpatialCapsule */}
+      <MovableOrb level={mic.enabled ? mic.level : listening ? 0.3 : 0} />
     </>
   )
 }
@@ -330,6 +329,7 @@ export function Workspace() {
   const recenter = useWorkspace((s) => s.recenter)
   const droplets = useWorkspace((s) => s.droplets)
   const removeDroplet = useWorkspace((s) => s.removeDroplet)
+  const session = useXR((s) => s.session)
   const mode = useXR((s) => s.mode)
   const blend = useXR((s) => s.session?.environmentBlendMode)
   const isAR = mode === 'immersive-ar' || blend === 'alpha-blend' || blend === 'additive'
@@ -376,6 +376,14 @@ export function Workspace() {
         recenter()
         setStatus('Workspace recentrado frente a tu vista')
         break
+      case 'exit':
+        if (session) {
+          session.end()
+          setStatus('Sesión XR finalizada. Regresando a vista normal.')
+        } else {
+          setStatus('Workspace reiniciado')
+        }
+        break
     }
   }
 
@@ -419,6 +427,9 @@ export function Workspace() {
           {!isAR && (
             <ContactShadows position={[0, 0.05, -0.6]} opacity={0.38} scale={18} far={3.5} blur={2.2} frames={1} />
           )}
+
+          {/* Controller Sparkling Ray & Hand Kinematics System */}
+          <SparklingControllerRay />
 
           <Dock onAction={onDock} />
         </SpatialRig>

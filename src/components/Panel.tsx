@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Group } from 'three'
 import { color, radius, type as typeScale } from '../theme'
 import { cleanText, UiRoot } from './Ui'
+import { SpatialCapsule } from './SpatialCapsule'
 
 export const PIXEL = 0.0014
 export const px = (metres: number) => Math.round(metres / PIXEL)
@@ -41,6 +42,7 @@ export function Panel({
   const groupRef = useRef<Group>(null)
   const [barHovered, setBarHovered] = useState(false)
   const [panelHovered, setPanelHovered] = useState(false)
+  const [capsuleVisible, setCapsuleVisible] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   // Initialize group transform once on mount to avoid R3F resetting position on re-renders
@@ -91,7 +93,11 @@ export function Panel({
             paddingBottom={bar ? 44 : 14}
             paddingLeft={18}
             paddingRight={18}
-            onHoverChange={setPanelHovered}
+            onHoverChange={(h) => {
+              setPanelHovered(h)
+              if (h) setCapsuleVisible(true)
+            }}
+            onClick={() => setCapsuleVisible(true)}
           >
             {/* Top Specular Edge Glint (Refractive Glass Highlight) */}
             <Container
@@ -241,6 +247,18 @@ export function Panel({
           )}
         </UiRoot>
 
+        {/* Auto-Hiding Contextual Actions Capsule (Cerrar, Minimizar, Mover, Orientar) */}
+        <group position={[0, height / 2 + 0.05, 0.02]}>
+          <SpatialCapsule
+            targetRef={groupRef}
+            title={title}
+            visible={capsuleVisible || panelHovered}
+            onClose={onClose}
+            onMinimize={onMinimize}
+            onDismiss={() => setCapsuleVisible(false)}
+          />
+        </group>
+
         {/* Generous Bottom Grab Handle Mesh for XR Hands & Laser Raycast */}
         {bar && (
           <group position={[0, -height / 2 + BAR_OFFSET, 0.025]}>
@@ -248,11 +266,12 @@ export function Panel({
               targetRef={groupRef}
               translate
               scale={false}
-              rotate={false}
+              rotate={true}
               multitouch={true}
               apply={(state, target) => {
                 if (state.first) setIsDragging(true)
                 target.position.copy(state.current.position)
+                target.rotation.copy(state.current.rotation)
                 if (state.last) setIsDragging(false)
               }}
             >
@@ -264,18 +283,19 @@ export function Panel({
           </group>
         )}
 
-        {/* Generous Top Header Grab Handle Mesh for natural window moving */}
+        {/* Generous Top Header Grab Handle Mesh for natural window moving and rotation */}
         {title && (
           <group position={[0, height / 2 - 0.025, 0.025]}>
             <Handle
               targetRef={groupRef}
               translate
               scale={false}
-              rotate={false}
+              rotate={true}
               multitouch={true}
               apply={(state, target) => {
                 if (state.first) setIsDragging(true)
                 target.position.copy(state.current.position)
+                target.rotation.copy(state.current.rotation)
                 if (state.last) setIsDragging(false)
               }}
             >

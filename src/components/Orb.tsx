@@ -1,17 +1,24 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Handle, HandleTarget } from '@react-three/handle'
+import { Container, Text } from '@react-three/uikit'
 import {
   AdditiveBlending,
   BufferAttribute,
   BufferGeometry,
   Color,
   DynamicDrawUsage,
+  Group,
   LineSegments,
   Points,
   ShaderMaterial,
 } from 'three'
 import { MODE_FRAMES, resolvePreset } from 'thinking-orbs'
 import { OrbState, useWorkspace } from '../store'
+import { radius as themeRadius, color } from '../theme'
+import { px, PIXEL } from './Panel'
+import { cleanText, UiRoot } from './Ui'
+import { SpatialCapsule } from './SpatialCapsule'
 
 /**
  * Hand-tuned color accents for the 9 states of Thinking Orbs (Libraries.dev)
@@ -256,5 +263,100 @@ export function Orb({ radius = 0.065, level = 0 }: { radius?: number; level?: nu
       {/* Ambient Point Light Casting State-Reactive Radiance */}
       <pointLight color={ORB_COLORS[state]} intensity={1.2 + level * 1.5} distance={1.2} />
     </group>
+  )
+}
+
+export function MovableOrb({ level = 0 }: { level?: number }) {
+  const orbPosition = useWorkspace((s) => s.orbPosition)
+  const setOrbPosition = useWorkspace((s) => s.setOrbPosition)
+  const orbState = useWorkspace((s) => s.orb)
+
+  const groupRef = useRef<Group>(null)
+  const [hovered, setHovered] = useState(false)
+  const [capsuleVisible, setCapsuleVisible] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Initialize transform once on mount
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(orbPosition[0], orbPosition[1], orbPosition[2])
+    }
+  }, [])
+
+  return (
+    <HandleTarget targetRef={groupRef}>
+      <group
+        ref={groupRef}
+        position={orbPosition}
+        onPointerOver={() => {
+          setHovered(true)
+          setCapsuleVisible(true)
+        }}
+        onPointerOut={() => setHovered(false)}
+      >
+        {/* Floating Contextual Actions Capsule */}
+        <group position={[0, 0.12, 0.02]}>
+          <SpatialCapsule
+            targetRef={groupRef}
+            title={`ORBE · ${orbState.toUpperCase()}`}
+            visible={capsuleVisible || hovered}
+            onDismiss={() => setCapsuleVisible(false)}
+          />
+        </group>
+
+        {/* 3D Orb Particle Swarm */}
+        <Orb level={level} />
+
+        {/* Tactile Grab Ring Underneath Orb */}
+        <group position={[0, -0.065, 0]}>
+          <UiRoot width={px(0.16)} height={px(0.04)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+            <Container
+              cursor="grab"
+              width={px(0.16)}
+              height={px(0.04)}
+              borderTopLeftRadius={themeRadius.pill}
+              borderTopRightRadius={themeRadius.pill}
+              borderBottomLeftRadius={themeRadius.pill}
+              borderBottomRightRadius={themeRadius.pill}
+              backgroundColor={isDragging ? 'rgba(56, 189, 248, 0.35)' : hovered ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.12)'}
+              borderColor={ORB_COLORS[orbState] || color.accent}
+              borderTopWidth={1}
+              borderBottomWidth={1}
+              borderLeftWidth={1}
+              borderRightWidth={1}
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Text fontSize={9} fontWeight={700} color={ORB_COLORS[orbState] || color.accent} letterSpacing={0.5}>
+                {cleanText('MOVER ORBE')}
+              </Text>
+            </Container>
+          </UiRoot>
+
+          {/* Generous Grab Handle for Orb */}
+          <Handle
+            targetRef={groupRef}
+            translate
+            rotate={true}
+            scale={false}
+            multitouch={true}
+            apply={(state, target) => {
+              if (state.first) setIsDragging(true)
+              target.position.copy(state.current.position)
+              target.rotation.copy(state.current.rotation)
+              if (state.last) {
+                setIsDragging(false)
+                setOrbPosition([target.position.x, target.position.y, target.position.z])
+              }
+            }}
+          >
+            <mesh>
+              <sphereGeometry args={[0.09, 16, 16]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+          </Handle>
+        </group>
+      </group>
+    </HandleTarget>
   )
 }

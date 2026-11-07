@@ -9,6 +9,7 @@ import { gsap } from 'gsap'
 import { Workspace } from './components/Workspace'
 import { glRef } from './glRef'
 import { OrbState, useWorkspace } from './store'
+import { initTransformersHandEngine } from './services/handTracking'
 
 const store = createXRStore({
   foveation: 0,
@@ -153,6 +154,7 @@ export function App() {
   const recenter = useWorkspace((s) => s.recenter)
   const spawnSpotlight = useWorkspace((s) => s.spawnSpotlight)
   const status = useWorkspace((s) => s.status)
+  const setStatus = useWorkspace((s) => s.setStatus)
 
   const currentOrbCfg = ORB_STATE_OPTIONS.find((o) => o.id === orb) ?? ORB_STATE_OPTIONS[0]
 
@@ -356,6 +358,19 @@ export function App() {
 
               {/* Global Actions */}
               <div className="actions">
+                <button
+                  className="btn icon-btn ml-btn"
+                  onClick={async () => {
+                    setStatus('Iniciando Transformers.js ONNX Hand Engine...')
+                    const ok = await initTransformersHandEngine()
+                    if (ok) {
+                      setStatus('Transformers.js ONNX Hand Engine: Activo!')
+                    }
+                  }}
+                  title="Activar motor local de tracking de manos (Transformers.js ONNX Runtime Web)"
+                >
+                  🖐️ Hand ML
+                </button>
                 <button className="btn icon-btn" onClick={recenter} title="Recentrar espacio visual">
                   Recentrar
                 </button>
@@ -363,7 +378,19 @@ export function App() {
                   + Spotlight
                 </button>
                 <div className="divider">|</div>
-                {isVisionPro || (supportsVR && !supportsAR) ? (
+                {inXR ? (
+                  <button
+                    className="btn primary xr-exit"
+                    onClick={() => {
+                      const session = store.getState().session
+                      if (session) session.end()
+                    }}
+                    style={{ background: 'rgba(244, 63, 94, 0.35)', borderColor: '#fb7185', color: '#ffffff' }}
+                    title="Salir de la sesión inmersiva WebXR (Exit Space)"
+                  >
+                    Salir de XR ✕
+                  </button>
+                ) : isVisionPro || (supportsVR && !supportsAR) ? (
                   <>
                     <button
                       className="btn primary xr-vp"

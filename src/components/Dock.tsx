@@ -3,6 +3,7 @@ import {
   BookmarkIcon,
   CalendarIcon,
   HouseIcon,
+  LogOutIcon,
   MicIcon,
   PencilIcon,
   PlusIcon,
@@ -71,6 +72,7 @@ export function Dock({
 }) {
   const [plusHovered, setPlusHovered] = useState(false)
   const [editHovered, setEditHovered] = useState(false)
+  const [exitHovered, setExitHovered] = useState(false)
 
   return (
     <group position={[0, layout.dockY, layout.dockZ]} rotation={[-0.42, 0, 0]}>
@@ -182,6 +184,35 @@ export function Dock({
               {cleanText('Centrar')}
             </Text>
             <PencilIcon width={13} color="#ffffff" />
+          </Container>
+
+          {/* Dedicated Exit XR Button (User request: tendria que tener un exit button para salir) */}
+          <Container
+            cursor="pointer"
+            flexDirection="row"
+            alignItems="center"
+            justifyContent="center"
+            gapColumn={6}
+            height={40}
+            paddingLeft={12}
+            paddingRight={12}
+            borderTopLeftRadius={20}
+            borderTopRightRadius={20}
+            borderBottomLeftRadius={20}
+            borderBottomRightRadius={20}
+            backgroundColor={exitHovered ? 'rgba(244, 63, 94, 0.40)' : 'rgba(244, 63, 94, 0.22)'}
+            borderColor={exitHovered ? color.danger : 'rgba(251, 113, 133, 0.40)'}
+            borderTopWidth={1.5}
+            borderBottomWidth={1}
+            borderLeftWidth={1}
+            borderRightWidth={1}
+            onClick={() => onAction('exit')}
+            onHoverChange={setExitHovered}
+          >
+            <LogOutIcon width={13} color="#fca5a5" />
+            <Text fontSize={11} fontWeight={700} color="#fca5a5">
+              {cleanText('Salir')}
+            </Text>
           </Container>
         </Container>
       </UiRoot>

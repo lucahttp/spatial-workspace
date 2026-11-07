@@ -24,6 +24,10 @@ export type Card = {
   favorite?: boolean
   rating?: number
   readProgress?: number
+  /** When detached, card floats independently in 3D space outside carousel */
+  detached?: boolean
+  position?: [number, number, number]
+  rotation?: [number, number, number]
 }
 
 export type Source = {
@@ -57,6 +61,16 @@ type Workspace = {
   /** active animated droplets travelling to IdeaGraph */
   droplets: Droplet[]
 
+  /** Spatial transforms for movable groups & objects */
+  carouselPosition: [number, number, number]
+  carouselRotation: [number, number, number]
+  graphPosition: [number, number, number]
+  graphRotation: [number, number, number]
+  orbPosition: [number, number, number]
+  archivePosition: [number, number, number]
+  trashPosition: [number, number, number]
+  isGripActive: boolean
+
   select: (id: string) => void
   toggleFavorite: (id: string) => void
   setRating: (id: string, rating: number) => void
@@ -64,6 +78,15 @@ type Workspace = {
   spawnSpotlight: (custom?: { title: string; summary: string; badge: string; url: string }) => void
   archive: (id: string, startPos?: [number, number, number]) => void
   discard: (id: string) => void
+  detachCard: (id: string, position?: [number, number, number]) => void
+  reattachCard: (id: string) => void
+  updateCardTransform: (id: string, pos: [number, number, number], rot?: [number, number, number]) => void
+  setCarouselTransform: (pos: [number, number, number], rot?: [number, number, number]) => void
+  setGraphTransform: (pos: [number, number, number], rot?: [number, number, number]) => void
+  setOrbPosition: (pos: [number, number, number]) => void
+  setArchivePosition: (pos: [number, number, number]) => void
+  setTrashPosition: (pos: [number, number, number]) => void
+  setIsGripActive: (active: boolean) => void
   removeDroplet: (id: string) => void
   setOrb: (s: OrbState) => void
   setTranscript: (lines: string[]) => void
@@ -133,6 +156,14 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   status: 'Apuntá a una tarjeta, al dock o arrastrá a las bandejas',
   recenterTick: 0,
   droplets: [],
+  carouselPosition: [0, 0, 0],
+  carouselRotation: [0, 0, 0],
+  graphPosition: [layout.graphX, layout.graphY, layout.graphZ],
+  graphRotation: [0, 0, 0],
+  orbPosition: [layout.leftX, layout.orbY, layout.orbZ],
+  archivePosition: [-layout.padX, layout.padY, layout.padZ],
+  trashPosition: [layout.padX, layout.padY, layout.padZ],
+  isGripActive: false,
 
   select: (id) => {
     playClickSound()
@@ -234,6 +265,60 @@ export const useWorkspace = create<Workspace>((set, get) => ({
     })
     setTimeout(() => set({ orb: 'breathing' }), 1400)
   },
+
+  detachCard: (id, position) => {
+    playClickSound()
+    const card = get().cards.find((c) => c.id === id)
+    if (!card) return
+    const defaultPos: [number, number, number] = position || [0, layout.carouselY + 0.1, -0.9]
+    set({
+      cards: get().cards.map((c) =>
+        c.id === id ? { ...c, detached: true, position: defaultPos, rotation: [0, 0, 0] } : c
+      ),
+      status: `Tarjeta desprendida: ${card.title} (flotante)`,
+      transcript: [`"${card.title}" extraída del carrusel. Puedes moverla libremente.`],
+    })
+  },
+
+  reattachCard: (id) => {
+    playClickSound()
+    const card = get().cards.find((c) => c.id === id)
+    if (!card) return
+    set({
+      cards: get().cards.map((c) =>
+        c.id === id ? { ...c, detached: false, position: undefined, rotation: undefined } : c
+      ),
+      status: `Tarjeta re-acoplada al carrusel: ${card.title}`,
+      transcript: [`"${card.title}" devuelta al Carrusel de fuentes.`],
+    })
+  },
+
+  updateCardTransform: (id, pos, rot) => {
+    set({
+      cards: get().cards.map((c) =>
+        c.id === id ? { ...c, position: pos, rotation: rot || c.rotation } : c
+      ),
+    })
+  },
+
+  setCarouselTransform: (carouselPosition, carouselRotation) => {
+    set({
+      carouselPosition,
+      carouselRotation: carouselRotation || get().carouselRotation,
+    })
+  },
+
+  setGraphTransform: (graphPosition, graphRotation) => {
+    set({
+      graphPosition,
+      graphRotation: graphRotation || get().graphRotation,
+    })
+  },
+
+  setOrbPosition: (orbPosition) => set({ orbPosition }),
+  setArchivePosition: (archivePosition) => set({ archivePosition }),
+  setTrashPosition: (trashPosition) => set({ trashPosition }),
+  setIsGripActive: (isGripActive) => set({ isGripActive }),
 
   removeDroplet: (id) => {
     set({ droplets: get().droplets.filter((d) => d.id !== id) })

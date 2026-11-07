@@ -10,12 +10,13 @@ import {
   XIcon,
 } from '@react-three/uikit-lucide'
 import { Line } from '@react-three/drei'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Vector3 } from 'three'
 import { Card as CardType, useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
+import { SpatialCapsule } from './SpatialCapsule'
 
 /** Radius of the carousel arc. */
 const ARC_R = 1.85
@@ -64,7 +65,9 @@ function CardItem({
   const dragging = useRef(false)
   const [hovered, setHovered] = useState(false)
   const [barHovered, setBarHovered] = useState(false)
+  const [capsuleVisible, setCapsuleVisible] = useState(false)
   const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
+  const detachCard = useWorkspace((s) => s.detachCard)
 
   const slot = useMemo(() => arcSlot(index, count, offsetIndex), [index, count, offsetIndex])
   const home = useMemo(
@@ -105,6 +108,30 @@ function CardItem({
           />
         </mesh>
 
+        {/* Auto-Hiding Contextual Actions Capsule (Extraer, Orientar, Descartar) */}
+        {!card.isSpotlight && (
+          <group position={[0, layout.cardH / 2 + 0.045, 0.02]}>
+            <SpatialCapsule
+              targetRef={groupRef}
+              title={card.title.slice(0, 16)}
+              visible={capsuleVisible || hovered}
+              onDetach={() => {
+                if (groupRef.current) {
+                  detachCard(card.id, [
+                    groupRef.current.position.x,
+                    groupRef.current.position.y,
+                    groupRef.current.position.z,
+                  ])
+                } else {
+                  detachCard(card.id)
+                }
+              }}
+              onClose={() => onDiscard(card)}
+              onDismiss={() => setCapsuleVisible(false)}
+            />
+          </group>
+        )}
+
         <UiRoot
           width={CARD_W}
           height={CARD_H}
@@ -143,8 +170,14 @@ function CardItem({
             paddingBottom={36}
             paddingLeft={18}
             paddingRight={18}
-            onClick={onSelect}
-            onHoverChange={setHovered}
+            onClick={() => {
+              setCapsuleVisible(true)
+              onSelect()
+            }}
+            onHoverChange={(h) => {
+              setHovered(h)
+              if (h) setCapsuleVisible(true)
+            }}
             cursor="pointer"
           >
             {/* Top Specular Edge Glint */}
@@ -157,7 +190,7 @@ function CardItem({
               backgroundColor={card.isSpotlight ? color.purple : selected ? color.accent : 'rgba(255, 255, 255, 0.9)'}
             />
 
-            {/* Header: Category Badge (Left) & Favorite Heart (Right, uploaded_media_2/3) */}
+            {/* Header: Category Badge (Left) & Favorite Heart (Right) */}
             <Container
               flexDirection="row"
               alignItems="center"
@@ -202,7 +235,7 @@ function CardItem({
                 </Text>
               </Container>
 
-              {/* Heart Favorite Toggle (User reference: uploaded_media_2 & uploaded_media_3) */}
+              {/* Heart Favorite Toggle */}
               {!card.isSpotlight && (
                 <Container
                   cursor="pointer"
@@ -292,7 +325,6 @@ function CardItem({
               </Container>
             ) : (
               <Container flexDirection="column" width="100%" flexGrow={1} alignItems="flex-start">
-                {/* Title */}
                 <Text
                   fontSize={14}
                   fontWeight={700}
@@ -303,7 +335,6 @@ function CardItem({
                   {cleanText(card.title)}
                 </Text>
 
-                {/* Blue Horizontal Accent Underline (User reference: uploaded_media_3) */}
                 <Container
                   width={36}
                   height={3.5}
@@ -315,7 +346,6 @@ function CardItem({
                   marginBottom={8}
                 />
 
-                {/* Summary with whitespace */}
                 <Container width="100%" flexGrow={1} marginBottom={8}>
                   <Text
                     fontSize={11}
@@ -326,7 +356,6 @@ function CardItem({
                   </Text>
                 </Container>
 
-                {/* Primary Pill Button (User reference: uploaded_media_3) */}
                 <Container
                   cursor="pointer"
                   width="100%"
@@ -419,18 +448,273 @@ function CardItem({
             targetRef={groupRef}
             translate
             scale={false}
-            rotate={false}
+            rotate={true}
             multitouch={true}
             apply={(state, target) => {
               if (state.first) {
                 dragging.current = true
               }
               target.position.copy(state.current.position)
+              target.rotation.copy(state.current.rotation)
               onDragMove(card, state.current.position)
               if (state.last) {
                 dragging.current = false
                 onDragMove(card, null)
                 onDrop(card, target.position)
+              }
+            }}
+          >
+            <mesh>
+              <planeGeometry args={[layout.cardW + 0.04, 0.08]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+          </Handle>
+        </group>
+      </group>
+    </HandleTarget>
+  )
+}
+
+/**
+ * DetachedCardItem: An independent, floating 3D document window in spatial room
+ */
+function DetachedCardItem({
+  card,
+  selected,
+  onSelect,
+  onDrop,
+  onArchive,
+  onDiscard,
+  onDragMove,
+}: {
+  card: CardType
+  selected: boolean
+  onSelect: () => void
+  onDrop: (card: CardType, position: Vector3) => void
+  onArchive: (card: CardType) => void
+  onDiscard: (card: CardType) => void
+  onDragMove: (card: CardType, position: Vector3 | null) => void
+}) {
+  const groupRef = useRef<Group>(null)
+  const dragging = useRef(false)
+  const [hovered, setHovered] = useState(false)
+  const [barHovered, setBarHovered] = useState(false)
+  const [capsuleVisible, setCapsuleVisible] = useState(false)
+  const toggleFavorite = useWorkspace((s) => s.toggleFavorite)
+  const reattachCard = useWorkspace((s) => s.reattachCard)
+  const updateCardTransform = useWorkspace((s) => s.updateCardTransform)
+
+  // Initialize detached transform once on mount
+  useEffect(() => {
+    if (groupRef.current && card.position) {
+      groupRef.current.position.set(card.position[0], card.position[1], card.position[2])
+      if (card.rotation) {
+        groupRef.current.rotation.set(card.rotation[0], card.rotation[1], card.rotation[2])
+      }
+    }
+  }, [])
+
+  return (
+    <HandleTarget targetRef={groupRef}>
+      <group ref={groupRef} position={card.position || [0, layout.carouselY, -0.9]}>
+        {/* Spatial Depth Shadow */}
+        <mesh position={[0, -0.01, -0.006]}>
+          <planeGeometry args={[layout.cardW + 0.02, layout.cardH + 0.02]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.28} depthWrite={false} />
+        </mesh>
+
+        {/* Floating Contextual Actions Capsule (Acoplar, Orientar, Cerrar) */}
+        <group position={[0, layout.cardH / 2 + 0.045, 0.02]}>
+          <SpatialCapsule
+            targetRef={groupRef}
+            title={card.title.slice(0, 16)}
+            visible={capsuleVisible || hovered}
+            isDetached={true}
+            onReattach={() => reattachCard(card.id)}
+            onClose={() => onDiscard(card)}
+            onDismiss={() => setCapsuleVisible(false)}
+          />
+        </group>
+
+        <UiRoot width={CARD_W} height={CARD_H} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+          <Container
+            width={CARD_W}
+            height={CARD_H}
+            overflow="hidden"
+            backgroundColor="rgba(15, 23, 42, 0.92)"
+            borderColor={selected ? color.borderActive : hovered ? color.borderHover : 'rgba(14, 165, 233, 0.5)'}
+            borderTopWidth={2}
+            borderBottomWidth={2}
+            borderLeftWidth={2}
+            borderRightWidth={2}
+            borderBend={0.4}
+            borderTopLeftRadius={radius.card}
+            borderTopRightRadius={radius.card}
+            borderBottomLeftRadius={radius.card}
+            borderBottomRightRadius={radius.card}
+            panelMaterialClass="glass"
+            flexDirection="column"
+            alignItems="flex-start"
+            paddingTop={16}
+            paddingBottom={36}
+            paddingLeft={18}
+            paddingRight={18}
+            onClick={() => {
+              setCapsuleVisible(true)
+              onSelect()
+            }}
+            onHoverChange={(h) => {
+              setHovered(h)
+              if (h) setCapsuleVisible(true)
+            }}
+            cursor="pointer"
+          >
+            {/* Top Specular Edge Glint */}
+            <Container
+              positionType="absolute"
+              positionTop={0}
+              positionLeft={14}
+              positionRight={14}
+              height={1}
+              backgroundColor={color.accent}
+            />
+
+            {/* Header: Detached Badge + Favorite Heart */}
+            <Container flexDirection="row" alignItems="center" justifyContent="space-between" width="100%" marginBottom={12}>
+              <Container
+                flexDirection="row"
+                alignItems="center"
+                gapColumn={6}
+                paddingTop={3}
+                paddingBottom={3}
+                paddingLeft={10}
+                paddingRight={10}
+                borderTopLeftRadius={999}
+                borderTopRightRadius={999}
+                borderBottomLeftRadius={999}
+                borderBottomRightRadius={999}
+                backgroundColor="rgba(14, 165, 233, 0.18)"
+              >
+                <Container width={6} height={6} borderTopLeftRadius={3} borderTopRightRadius={3} borderBottomLeftRadius={3} borderBottomRightRadius={3} backgroundColor={color.accent} />
+                <Text fontSize={typeScale.micro} fontWeight={700} color={color.accent} letterSpacing={0.8}>
+                  {cleanText(`VENTANA LIBRE · ${card.badge}`)}
+                </Text>
+              </Container>
+
+              <Container
+                cursor="pointer"
+                width={28}
+                height={28}
+                borderTopLeftRadius={14}
+                borderTopRightRadius={14}
+                borderBottomLeftRadius={14}
+                borderBottomRightRadius={14}
+                backgroundColor={card.favorite ? 'rgba(124, 58, 237, 0.18)' : 'rgba(0, 0, 0, 0.05)'}
+                alignItems="center"
+                justifyContent="center"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleFavorite(card.id)
+                }}
+              >
+                <HeartIcon width={14} color={card.favorite ? color.purple : '#94a3b8'} />
+              </Container>
+            </Container>
+
+            <Text fontSize={14} fontWeight={700} color={color.cardTextPrimary} lineHeight={1.3} marginBottom={4}>
+              {cleanText(card.title)}
+            </Text>
+
+            <Container width={36} height={3.5} borderTopLeftRadius={2} borderTopRightRadius={2} borderBottomLeftRadius={2} borderBottomRightRadius={2} backgroundColor={color.accent} marginBottom={8} />
+
+            <Container width="100%" flexGrow={1} marginBottom={8}>
+              <Text fontSize={11} color={color.cardTextSecondary} lineHeight={1.4}>
+                {cleanText(card.summary)}
+              </Text>
+            </Container>
+
+            {/* Bottom Actions Bar */}
+            <Container
+              positionType="absolute"
+              positionBottom={8}
+              width="100%"
+              height={24}
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="center"
+              gapColumn={8}
+              cursor="grab"
+              onHoverChange={setBarHovered}
+            >
+              <Container
+                cursor="pointer"
+                width={20}
+                height={20}
+                borderTopLeftRadius={10}
+                borderTopRightRadius={10}
+                borderBottomLeftRadius={10}
+                borderBottomRightRadius={10}
+                backgroundColor={barHovered ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.08)'}
+                alignItems="center"
+                justifyContent="center"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onArchive(card)
+                }}
+              >
+                <MinusIcon width={10} color={color.cardTextPrimary} />
+              </Container>
+
+              <Container
+                cursor="pointer"
+                width={20}
+                height={20}
+                borderTopLeftRadius={10}
+                borderTopRightRadius={10}
+                borderBottomLeftRadius={10}
+                borderBottomRightRadius={10}
+                backgroundColor={barHovered ? 'rgba(244,63,94,0.22)' : 'rgba(0,0,0,0.08)'}
+                alignItems="center"
+                justifyContent="center"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDiscard(card)
+                }}
+              >
+                <XIcon width={10} color={color.danger} />
+              </Container>
+
+              <Container
+                width={barHovered ? 72 : 46}
+                height={5}
+                borderTopLeftRadius={2.5}
+                borderTopRightRadius={2.5}
+                borderBottomLeftRadius={2.5}
+                borderBottomRightRadius={2.5}
+                backgroundColor={barHovered ? color.accent : 'rgba(255,255,255,0.35)'}
+              />
+            </Container>
+          </Container>
+        </UiRoot>
+
+        {/* Generous Grab Handle for Detached Card (Translate & Rotate) */}
+        <group position={[0, -layout.cardH / 2 + 0.025, 0.025]}>
+          <Handle
+            targetRef={groupRef}
+            translate
+            scale={false}
+            rotate={true}
+            multitouch={true}
+            apply={(state, target) => {
+              if (state.first) dragging.current = true
+              target.position.copy(state.current.position)
+              target.rotation.copy(state.current.rotation)
+              onDragMove(card, state.current.position)
+              if (state.last) {
+                dragging.current = false
+                onDragMove(card, null)
+                onDrop(card, target.position)
+                updateCardTransform(card.id, [target.position.x, target.position.y, target.position.z], [target.rotation.x, target.rotation.y, target.rotation.z])
               }
             }}
           >
@@ -497,19 +781,52 @@ export function Carousel() {
   const spawn = useWorkspace((s) => s.spawnSpotlight)
   const archive = useWorkspace((s) => s.archive)
   const discard = useWorkspace((s) => s.discard)
+  const detachCard = useWorkspace((s) => s.detachCard)
+  const archivePosition = useWorkspace((s) => s.archivePosition)
+  const trashPosition = useWorkspace((s) => s.trashPosition)
+
+  const carouselGroupRef = useRef<Group>(null)
+  const [carouselBarHovered, setCarouselBarHovered] = useState(false)
+  const [carouselCapsuleVisible, setCarouselCapsuleVisible] = useState(false)
 
   const [slideOffset, setSlideOffset] = useState(0)
   const [activeDragPos, setActiveDragPos] = useState<Vector3 | null>(null)
 
-  const archivePos = useMemo(() => new Vector3(-layout.padX, layout.padY, layout.padZ), [])
-  const trashPos = useMemo(() => new Vector3(layout.padX, layout.padY, layout.padZ), [])
+  const archivePos = useMemo(
+    () => new Vector3(archivePosition[0], archivePosition[1], archivePosition[2]),
+    [archivePosition]
+  )
+  const trashPos = useMemo(
+    () => new Vector3(trashPosition[0], trashPosition[1], trashPosition[2]),
+    [trashPosition]
+  )
+
+  const arcCards = useMemo(() => cards.filter((c) => !c.detached), [cards])
+  const detachedCards = useMemo(() => cards.filter((c) => c.detached), [cards])
 
   const handleDrop = (card: CardType, position: Vector3) => {
     if (card.isSpotlight) return
+
+    // Check if dropped near Archive
     if (position.distanceTo(archivePos) < 0.38) {
       archive(card.id, [position.x, position.y, position.z])
-    } else if (position.distanceTo(trashPos) < 0.38) {
+      return
+    }
+
+    // Check if dropped near Trash
+    if (position.distanceTo(trashPos) < 0.38) {
       discard(card.id)
+      return
+    }
+
+    // Check if card was dragged far out of the carousel arc into free space
+    const slotIdx = arcCards.findIndex((c) => c.id === card.id)
+    if (slotIdx >= 0) {
+      const slot = arcSlot(slotIdx, arcCards.length, slideOffset)
+      const slotPos = new Vector3(slot.x, layout.carouselY, slot.z)
+      if (position.distanceTo(slotPos) > 0.45) {
+        detachCard(card.id, [position.x, position.y, position.z])
+      }
     }
   }
 
@@ -541,6 +858,135 @@ export function Carousel() {
 
   return (
     <group>
+      {/* Movable Arc Group (Entire Collection) */}
+      <HandleTarget targetRef={carouselGroupRef}>
+        <group ref={carouselGroupRef}>
+          {/* Top Header Rail for Movable Carousel Group */}
+          <group position={[0, layout.carouselY + layout.cardH / 2 + 0.08, ARC_Z + 0.12]}>
+            <UiRoot width={px(0.42)} height={px(0.055)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+              <Container
+                flexDirection="row"
+                alignItems="center"
+                justifyContent="center"
+                gapColumn={8}
+                paddingLeft={14}
+                paddingRight={14}
+                paddingTop={4}
+                paddingBottom={4}
+                borderTopLeftRadius={radius.pill}
+                borderTopRightRadius={radius.pill}
+                borderBottomLeftRadius={radius.pill}
+                borderBottomRightRadius={radius.pill}
+                backgroundColor={carouselBarHovered ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.88)'}
+                borderColor={carouselBarHovered ? color.borderHover : 'rgba(255, 255, 255, 0.22)'}
+                borderTopWidth={1.5}
+                borderBottomWidth={1}
+                borderLeftWidth={1}
+                borderRightWidth={1}
+                panelMaterialClass="glass"
+                cursor="grab"
+                onHoverChange={(h) => {
+                  setCarouselBarHovered(h)
+                  if (h) setCarouselCapsuleVisible(true)
+                }}
+                onClick={() => setCarouselCapsuleVisible(true)}
+              >
+                <Container width={6} height={6} borderTopLeftRadius={3} borderTopRightRadius={3} borderBottomLeftRadius={3} borderBottomRightRadius={3} backgroundColor={color.accent} />
+                <Text fontSize={typeScale.micro} fontWeight={700} color={color.textPrimary} letterSpacing={0.8}>
+                  {cleanText(`CARRUSEL DE FUENTES (${arcCards.length})`)}
+                </Text>
+              </Container>
+            </UiRoot>
+
+            {/* Contextual Capsule for Carousel Rail */}
+            <group position={[0, 0.05, 0.02]}>
+              <SpatialCapsule
+                targetRef={carouselGroupRef}
+                title="CARRUSEL"
+                visible={carouselCapsuleVisible || carouselBarHovered}
+                onDismiss={() => setCarouselCapsuleVisible(false)}
+              />
+            </group>
+
+            {/* Carousel Rail Grab Handle (Translate & Rotate whole arc) */}
+            <Handle
+              targetRef={carouselGroupRef}
+              translate
+              rotate={true}
+              scale={false}
+              multitouch={true}
+              apply={(state, target) => {
+                target.position.copy(state.current.position)
+                target.rotation.copy(state.current.rotation)
+              }}
+            >
+              <mesh>
+                <planeGeometry args={[0.42, 0.06]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+            </Handle>
+          </group>
+
+          {/* Cards in arc */}
+          {arcCards.map((card, i) => (
+            <CardItem
+              key={card.id}
+              card={card}
+              index={i}
+              count={arcCards.length}
+              offsetIndex={slideOffset}
+              selected={card.id === selectedId}
+              onSelect={() => {
+                if (card.isSpotlight) {
+                  spawn()
+                } else {
+                  select(card.id)
+                  // Smoothly bring selected card to center of the arc
+                  const mid = (arcCards.length - 1) / 2
+                  setSlideOffset(mid - i)
+                }
+              }}
+              onDrop={handleDrop}
+              onArchive={(c) => archive(c.id)}
+              onDiscard={(c) => discard(c.id)}
+              onDragMove={(_, pos) => setActiveDragPos(pos ? pos.clone() : null)}
+            />
+          ))}
+
+          {/* Modern Frosted Glass Navigation Chevrons `<` and `>` */}
+          {arcCards.length > 2 && (
+            <>
+              <CarouselChevron
+                direction="left"
+                position={[-0.58, layout.carouselY, -1.16]}
+                rotation={[0, 0.35, 0]}
+                onClick={() => setSlideOffset((o) => o + 1)}
+              />
+              <CarouselChevron
+                direction="right"
+                position={[0.58, layout.carouselY, -1.16]}
+                rotation={[0, -0.35, 0]}
+                onClick={() => setSlideOffset((o) => o - 1)}
+              />
+            </>
+          )}
+        </group>
+      </HandleTarget>
+
+      {/* Detached Floating Cards (Independent 3D Windows outside Carousel) */}
+      {detachedCards.map((card) => (
+        <DetachedCardItem
+          key={card.id}
+          card={card}
+          selected={card.id === selectedId}
+          onSelect={() => select(card.id)}
+          onDrop={handleDrop}
+          onArchive={(c) => archive(c.id)}
+          onDiscard={(c) => discard(c.id)}
+          onDragMove={(_, pos) => setActiveDragPos(pos ? pos.clone() : null)}
+        />
+      ))}
+
       {/* Magnetic Gooey Elastic Tether */}
       {tether && (
         <Line
@@ -551,50 +997,6 @@ export function Carousel() {
           opacity={0.88}
           raycast={() => null}
         />
-      )}
-
-      {/* Cards in arc */}
-      {cards.map((card, i) => (
-        <CardItem
-          key={card.id}
-          card={card}
-          index={i}
-          count={cards.length}
-          offsetIndex={slideOffset}
-          selected={card.id === selectedId}
-          onSelect={() => {
-            if (card.isSpotlight) {
-              spawn()
-            } else {
-              select(card.id)
-              // Smoothly bring selected card to center of the arc
-              const mid = (cards.length - 1) / 2
-              setSlideOffset(mid - i)
-            }
-          }}
-          onDrop={handleDrop}
-          onArchive={(c) => archive(c.id)}
-          onDiscard={(c) => discard(c.id)}
-          onDragMove={(_, pos) => setActiveDragPos(pos ? pos.clone() : null)}
-        />
-      ))}
-
-      {/* Modern Frosted Glass Navigation Chevrons `<` and `>` */}
-      {cards.length > 2 && (
-        <>
-          <CarouselChevron
-            direction="left"
-            position={[-0.58, layout.carouselY, -1.16]}
-            rotation={[0, 0.35, 0]}
-            onClick={() => setSlideOffset((o) => o + 1)}
-          />
-          <CarouselChevron
-            direction="right"
-            position={[0.58, layout.carouselY, -1.16]}
-            rotation={[0, -0.35, 0]}
-            onClick={() => setSlideOffset((o) => o - 1)}
-          />
-        </>
       )}
     </group>
   )
