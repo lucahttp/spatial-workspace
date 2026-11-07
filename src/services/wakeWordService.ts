@@ -9,6 +9,8 @@
 import { useWorkspace } from '../store'
 import { azureFoundryVoice } from './azureFoundryVoice'
 import { playClickSound, playSpotlightSound } from '../sound'
+import { HeyBuddy } from './heybuddy/HeyBuddy'
+import { samplesToBlob } from '../hooks/useHeyBuddy'
 
 // Supported Wake Phrases
 export const WAKE_WORDS = [
@@ -22,6 +24,8 @@ export const WAKE_WORDS = [
   'hey copilot',
   'spatial',
 ]
+
+const HF_BASE_URL = 'https://huggingface.co/benjamin-paine/hey-buddy/resolve/main'
 
 // Browser SpeechRecognition types
 interface SpeechRecognitionResultItem {
@@ -67,6 +71,7 @@ class WakeWordService {
   private isWakeWordActive = false
   private isCommandActive = false
   private recognition: SpeechRecognitionInstance | null = null
+  private heyBuddy: HeyBuddy | null = null
   private wakeWordCallbacks: Set<WakeWordCallback> = new Set()
   private transcriptCallbacks: Set<TranscriptCallback> = new Set()
   private silenceTimer: number | null = null
@@ -74,6 +79,37 @@ class WakeWordService {
 
   constructor() {
     this.initRecognition()
+    this.initHeyBuddy()
+  }
+
+  private initHeyBuddy() {
+    if (typeof window === 'undefined') return
+
+    try {
+      this.heyBuddy = new HeyBuddy({
+        debug: false,
+        modelPath: ['hey-buddy', 'buddy'].map((word) => `${HF_BASE_URL}/models/${word}.onnx`),
+        vadModelPath: `${HF_BASE_URL}/pretrained/silero-vad.onnx`,
+        spectrogramModelPath: `${HF_BASE_URL}/pretrained/mel-spectrogram.onnx`,
+        embeddingModelPath: `${HF_BASE_URL}/pretrained/speech-embedding.onnx`,
+      })
+
+      this.heyBuddy.onDetected(['hey-buddy', 'buddy'], () => {
+        console.log('[Hey-Buddy ONNX] Wake word detected!')
+        this.onWakeWordDetected('hey buddy')
+      })
+
+      this.heyBuddy.onRecording((samples: Float32Array) => {
+        console.log(`[Hey-Buddy ONNX] Audio batch captured: ${samples.length} samples`)
+        const blob = samplesToBlob(samples)
+        if (this.isCommandActive) {
+          // If in command mode, notify audio blob readiness
+          console.log('[Hey-Buddy ONNX] WAV blob generated:', blob.size, 'bytes')
+        }
+      })
+    } catch (err) {
+      console.warn('[Hey-Buddy ONNX] Fallback to SpeechRecognition (initialization deferred):', err)
+    }
   }
 
   private initRecognition() {
@@ -196,6 +232,7 @@ class WakeWordService {
 
     // Resume background wake word listening if enabled
     const { wakeWordEnabled } = useWorkspace.getState()
+    this.heyBuddy?.resume()
     if (wakeWordEnabled) {
       this.startWakeWordListening()
     }
@@ -207,6 +244,9 @@ class WakeWordService {
   public startWakeWordListening() {
     this.isWakeWordActive = true
     this.isCommandActive = false
+    this.heyBuddy?.start().catch((err) => {
+      console.warn('[HeyBuddy] Start error (falling back to SpeechRecognition):', err)
+    })
     if (!this.recognition) return
 
     try {
@@ -222,6 +262,7 @@ class WakeWordService {
   public stopWakeWordListening() {
     this.isWakeWordActive = false
     this.isCommandActive = false
+    this.heyBuddy?.stop()
     if (this.silenceTimer) {
       window.clearTimeout(this.silenceTimer)
       this.silenceTimer = null
@@ -238,6 +279,7 @@ class WakeWordService {
    */
   public startCommandMode() {
     playClickSound()
+    this.heyBuddy?.pause()
     this.isCommandActive = true
     this.accumulatedCommand = ''
     const { setOrb, setVoiceListening, setVoiceTranscript, setVoiceResponse } = useWorkspace.getState()

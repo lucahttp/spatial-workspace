@@ -21,6 +21,7 @@
     "@types/gsap": "^1.20.2",
     "border-beam": "^1.4.1",
     "gsap": "^3.15.1",
+    "onnxruntime-web": "^1.31.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "thinking-orbs": "^0.3.2",
