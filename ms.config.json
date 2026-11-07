@@ -4,6 +4,7 @@
   "appId": "ed477751-29ae-4f39-83ab-8a0dd0adac86",
   "appDisplayName": "Spatial Workspace XR",
   "description": "Spatial Workspace with WebXR, 3D Hand Tracking, wZed In-Browser Code Studio and Azure AI Foundry Voice Agent",
+  "environmentId": "2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d",
   "buildType": "build",
   "buildCommand": "npm run build",
   "buildPath": "dist",
