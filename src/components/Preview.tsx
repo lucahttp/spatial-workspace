@@ -10,7 +10,8 @@ import {
   SparklesIcon,
   StarIcon,
 } from '@react-three/uikit-lucide'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { spatialRuntime } from '../services/spatialRuntime'
 import { useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
 import { Panel } from './Panel'
@@ -121,6 +122,13 @@ export function Preview() {
   const [favHovered, setFavHovered] = useState(false)
   const [reloadHovered, setReloadHovered] = useState(false)
   const [shareHovered, setShareHovered] = useState(false)
+  const [runtimePreview, setRuntimePreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    return spatialRuntime.onPreview((html) => {
+      setRuntimePreview(html)
+    })
+  }, [])
 
   return (
     <Panel
@@ -211,7 +219,7 @@ export function Preview() {
             >
               <LockIcon width={10} color={color.success} />
               <Text fontSize={10} color={color.accent} fontWeight={600}>
-                {cleanText(selected.url)}
+                {cleanText(runtimePreview ? 'http://localhost:3000/__preview__/' : selected.url)}
               </Text>
             </Container>
 
@@ -336,6 +344,56 @@ export function Preview() {
                 ))}
               </Container>
             </Container>
+
+            {/* Live Runtime Preview Banner (wZed Output) */}
+            {runtimePreview ? (
+              <Container
+                flexDirection="column"
+                width="100%"
+                padding={10}
+                borderTopLeftRadius={8}
+                borderTopRightRadius={8}
+                borderBottomLeftRadius={8}
+                borderBottomRightRadius={8}
+                backgroundColor="rgba(124, 58, 237, 0.16)"
+                borderColor={color.purple}
+                borderTopWidth={1.5}
+                borderBottomWidth={1}
+                borderLeftWidth={1}
+                borderRightWidth={1}
+                gapRow={6}
+                marginTop={2}
+                marginBottom={4}
+              >
+                <Container flexDirection="row" justifyContent="space-between" alignItems="center" width="100%">
+                  <Container flexDirection="row" alignItems="center" gapColumn={6}>
+                    <SparklesIcon width={12} color={color.purple} />
+                    <Text fontSize={10} fontWeight={700} color={color.purple}>
+                      {cleanText('⚡ SALIDA LIVE WZED PREVIEW')}
+                    </Text>
+                  </Container>
+                  <Container
+                    cursor="pointer"
+                    paddingLeft={8}
+                    paddingRight={8}
+                    height={20}
+                    borderTopLeftRadius={4}
+                    borderTopRightRadius={4}
+                    borderBottomLeftRadius={4}
+                    borderBottomRightRadius={4}
+                    backgroundColor="rgba(255,255,255,0.12)"
+                    onClick={() => setRuntimePreview(null)}
+                  >
+                    <Text fontSize={9} color={color.textDim}>
+                      {cleanText('Volver a doc')}
+                    </Text>
+                  </Container>
+                </Container>
+                <Text fontSize={11} color={color.textPrimary} lineHeight={1.35}>
+                  {cleanText(runtimePreview.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())}
+                </Text>
+              </Container>
+            ) : null}
 
             {/* Document Title */}
             <Text fontSize={typeScale.title} fontWeight={700} color={color.textPrimary} lineHeight={1.25}>

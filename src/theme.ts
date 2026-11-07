@@ -114,7 +114,7 @@ export const layout = {
   // Bottom Base: Floating Glass Launcher Dock
   dockY: 0.54,
   dockZ: -0.92,
-  dockW: 0.82,
+  dockW: 0.88,
 } as const
 
 export const type = {

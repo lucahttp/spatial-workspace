@@ -17,6 +17,7 @@ import { Pads } from './Pads'
 import { Panel } from './Panel'
 import { Preview } from './Preview'
 import { SparklingControllerRay } from './SparklingControllerRay'
+import { SpatialCodeStudio } from './SpatialCodeStudio'
 import { cleanText, FontProvider } from './Ui'
 
 function GLBridge() {
@@ -357,6 +358,10 @@ export function Workspace() {
       case 'voice':
         toggleHidden('voice')
         break
+      case 'code':
+        toggleHidden('code')
+        setStatus('Estudio de Código (wZed VFS) alternado')
+        break
       case 'carousel':
         toggleHidden('carousel')
         break
@@ -414,6 +419,7 @@ export function Workspace() {
           {/* Spatial Modules */}
           {!hidden.voice && <TranscriptPanel />}
           {!hidden.carousel && <Carousel />}
+          {!hidden.code && <SpatialCodeStudio onClose={() => toggleHidden('code')} />}
           {!hidden.preview && <Preview />}
           {!hidden.graph && <IdeaGraph />}
           {!hidden.archive && <Pads />}

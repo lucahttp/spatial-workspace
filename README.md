@@ -55,11 +55,26 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
 * **En el Dock espacial**: Botón rojo/rosa esmerilado con icono `LogOut` para finalizar la sesión inmersiva y volver a la navegación plana normal.
 * **En el HUD superior**: Botón visible `Salir de XR ✕` mientras una sesión WebXR se encuentre en ejecución.
 
+### 8. 💻 Estudio de Código Espacial & Terminal en Navegador (Inspirado en wZed)
+* **Adaptación de la arquitectura de [wZed](https://github.com/ScelarOrg/wZed)**:
+  * Integramos la lógica de ejecución en cliente, sistema de archivos virtual (**VFS**) y streaming de terminal de wZed adaptados al entorno 3D espacial de **WebXR**:
+    * **Sistema de Archivos Virtual (`/project/...`)**: Árbol de archivos en memoria con persistencia de instantáneas (*snapshots*), soporte para crear, editar y eliminar archivos de código (`index.js`, `shader.js`, `package.json`, `card.jsx`).
+    * **Plantillas de Proyecto**: Plantilla de servidor/script Node.js simulado, generador de visualizaciones espaciales 3D, y algoritmos matemáticos en tiempo real.
+    * **Motor de Ejecución en Navegador**: Ejecuta código JavaScript/Node en un entorno seguro en el cliente, capturando transmisiones de `console.log`, `console.info`, `console.warn` y errores en tiempo real.
+    * **Terminal Espacial 3D**: Visor de terminal tridimensional con salida coloreada (estilo pastel ANSI), timestamp de ejecución, botón **`▶ Ejecutar`** y limpieza de buffer.
+    * **Sincronización con Web Preview**: Las salidas y componentes generados se reflejan directamente en la tarjeta tridimensional de **Previsualización Web**.
+    * **Puente de Herramientas IA (wZed AI SDK)**: Implementación del conjunto de herramientas de wZed (`read_file`, `write_file`, `list_directory`, `execute_command`) enlazado al Orbe Cognitivo y comandos de voz.
+    * **Ventana 3D Móvil**: Integrada con la cápsula contextual (`SpatialCapsule`), permitiendo orientarla hacia el usuario (`Mirar a mí`), rotarla y reposicionarla libremente en la sala virtual.
+
 ---
 
 ## 📚 Librerías, Referencias y Ejemplos Utilizados
 
-1. **[Libraries.dev](https://libraries.dev/)**:
+1. **[wZed (ScelarOrg/wZed)](https://github.com/ScelarOrg/wZed)**:
+   * **Arquitectura de WebIDE en cliente**: Conceptos de Nodepod, VFS (/project), ejecución de código y terminal interactivo integrados sin romper el pipeline de renderizado 3D de WebXR.
+   * **Herramientas de Agente IA (`src/lib/ai-sdk.ts`)**: Esquema de llamadas de herramientas (`read_file`, `write_file`, `list_directory`) para manipulación programática de archivos desde el orbe espacial.
+
+2. **[Libraries.dev](https://libraries.dev/)**:
    * **Thinking Orbs** (*Jakub Antalik & Alexandr Brinza*): Modelo matemático de 9 estados cognitivos (`thinking-orbs`), implementado en el HUD 2D y en un enjambre de partículas 3D WebGL con líneas de conexión vectoriales (`connecting`).
    * **Border Beam**: Iluminación perimetral animada sobre bordes de vidrio esmerilado en HUD y ventana emergente de Spotlight.
    * **Voice Ring / Voice Glow**: Halo reactivo a la voz en tiempo real con Web Audio API.
