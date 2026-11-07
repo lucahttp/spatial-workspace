@@ -8,6 +8,6 @@ export type {
   RecordingCallback,
 } from './HeyBuddy'
 export { AudioBatcher } from './AudioBatcher'
-export { ONNX } from './onnx'
+export { ONNX, isWasmSupported } from './onnx'
 export { sleep, isEmpty } from './helpers'
 export * from './models'

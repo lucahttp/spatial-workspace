@@ -22,6 +22,7 @@ import { azureFoundryVoice } from '../services/azureFoundryVoice'
 import { color } from '../theme'
 import { Panel } from './Panel'
 import { cleanText } from './Ui'
+import { isWasmSupported } from '../services/heybuddy'
 
 export type StudioViewKind =
   | 'editor'
@@ -1043,6 +1044,14 @@ export function SpatialCodeStudio({
                   </Container>
                   <Container flexDirection="row" justifyContent="space-between" alignItems="center">
                     <Text fontSize={10} color="#e2e8f0">
+                      {cleanText('Seguridad WebAssembly / CSP')}
+                    </Text>
+                    <Text fontSize={9} color={isWasmSupported() ? '#34d399' : '#38bdf8'} fontWeight={700}>
+                      {cleanText(isWasmSupported() ? 'ONNX Wasm Habilitado' : 'Guardia CSP Activa (VAD Nativo)')}
+                    </Text>
+                  </Container>
+                  <Container flexDirection="row" justifyContent="space-between" alignItems="center">
+                    <Text fontSize={10} color="#e2e8f0">
                       {cleanText('Auto-ejecutar al modificar')}
                     </Text>
                     <Text fontSize={9} color="#34d399" fontWeight={700}>
@@ -1088,6 +1097,9 @@ export function SpatialCodeStudio({
           </Container>
 
           <Container flexDirection="row" alignItems="center" gapColumn={10}>
+            <Text fontSize={8} color={isWasmSupported() ? '#34d399' : '#38bdf8'} fontWeight={600}>
+              {cleanText(isWasmSupported() ? '🧠 ONNX Wasm' : '🛡️ CSP Guard')}
+            </Text>
             <Text fontSize={8} color="#34d399" fontWeight={600}>
               {cleanText('🟢 Node In-Browser')}
             </Text>
