@@ -9,7 +9,7 @@
 | ------------------------------------- | ------------------------------------------------------ |
 | App Name                              | Spatial Workspace XR                                   |
 | App ID (slug)                         | spatial-workspace                                      |
-| App GUID                              | ed477751-29ae-4f39-83ab-8a0dd0adac86                   |
+| App GUID                              | eb2d1edb-9945-4b58-91e9-a13d76db02af                   |
 | Project Path                          | /Users/luca/Documents/spatial-workspace                |
 | Environment Name                      | Power Apps Default Environment                         |
 | Environment ID                        | 2093e5e9-6211-ee23-b4a1-cc9ef49a5f0d                   |
