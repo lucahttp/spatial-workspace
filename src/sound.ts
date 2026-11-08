@@ -101,3 +101,35 @@ export function playSpotlightSound() {
     osc.stop(now + i * 0.06 + 0.45)
   })
 }
+
+// visionOS/PICO glass tick for grabbing an object
+export function playGrabSound() {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  const now = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(700, now)
+  osc.frequency.exponentialRampToValueAtTime(380, now + 0.1)
+  gain.gain.setValueAtTime(0.08, now)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
+  osc.connect(gain); gain.connect(ctx.destination)
+  osc.start(now); osc.stop(now + 0.13)
+}
+
+// soft swoosh for undocking / repositioning a panel
+export function playUndockSound() {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  const now = ctx.currentTime
+  const noise = ctx.createBufferSource()
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate)
+  const data = buffer.getChannelData(0)
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+  noise.buffer = buffer
+  const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(800, now)
+  const gain = ctx.createGain(); gain.gain.setValueAtTime(0.04, now); gain.gain.linearRampToValueAtTime(0, now + 0.25)
+  noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
+  noise.start(now); noise.stop(now + 0.26)
+}

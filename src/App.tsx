@@ -7,6 +7,7 @@ import { BorderBeam } from 'border-beam'
 import { ThinkingOrb } from 'thinking-orbs'
 import { gsap } from 'gsap'
 import { Workspace } from './components/Workspace'
+import { GripRayPointers } from './components/SpatialXRInput'
 import { glRef } from './glRef'
 import { OrbState, useWorkspace } from './store'
 import { initTransformersHandEngine } from './services/handTracking'
@@ -740,6 +741,7 @@ export function App() {
             <Suspense fallback={null}>
               <Workspace />
             </Suspense>
+            <GripRayPointers />
           </XR>
         </Canvas>
       </>

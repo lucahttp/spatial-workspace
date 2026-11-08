@@ -1,6 +1,7 @@
 import { ContactShadows, Environment, Lightformer, SoftShadows } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useXR, XROrigin } from '@react-three/xr'
+import { GripRayPointers } from './SpatialXRInput'
 import { Container, Text } from '@react-three/uikit'
 import { MicIcon, SparklesIcon } from '@react-three/uikit-lucide'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -498,6 +499,7 @@ export function Workspace() {
       <GLBridge />
       <BlendMode />
       <XROrigin />
+      <GripRayPointers />
 
       <FontProvider>
         {/* Soft Studio Environment for Glass Translucency */}

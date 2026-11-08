@@ -55,11 +55,14 @@ export function cleanText(str: string | undefined | null): string {
     .replace(/[^\x20-\x7E\n]/g, '')
 }
 
+/** uikit Root that supports a pointerEventsType filter (used to keep the grip-ray
+ *  pointer from activating buttons while the trigger ray still activates them). */
 export function UiRoot(props: ComponentProps<typeof Root>) {
   return (
     <Root
       fontFamily={FONT_FAMILY}
       fontFamilies={APP_FONT_FAMILIES as never}
+      pointerEventsType={(_id: number, pointerType: string, _state: unknown) => pointerType !== 'grip-ray'}
       {...props}
     />
   )

@@ -23,6 +23,8 @@ import { SpatialCapsule } from './SpatialCapsule'
 import { wakeWordService } from '../services/wakeWordService'
 import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
 import { SpatialAffordancePill } from './SpatialAffordancePill'
+import { canStartDrag, GRAB_USERDATA } from '../interaction'
+import { useXR } from '@react-three/xr'
 
 /**
  * Hand-tuned color accents for the 9 states of Thinking Orbs (Libraries.dev)
@@ -426,16 +428,23 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
   const voiceTranscript = useWorkspace((s) => s.voiceTranscript)
   const voiceResponse = useWorkspace((s) => s.voiceResponse)
   const setVoiceResponse = useWorkspace((s) => s.setVoiceResponse)
+  const xrMode = useXR((s) => s.mode)
+  const xrBlend = useXR((s) => s.session?.environmentBlendMode)
+  const isAR = xrMode === 'immersive-ar' || xrBlend === 'alpha-blend' || xrBlend === 'additive'
+  const showContactRing = !isAR
 
   const groupRef = useRef<Group>(null)
   const [hovered, setHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
-  
-  // Unified 3-second dwell, grip trigger, and hand proximity affordance
+  const [bimanual, setBimanual] = useState(false)
+
+  // Unified 1-second dwell, grip trigger, and hand proximity affordance
   const affordance = useSpatialAffordance(groupRef)
   const isDragging = affordance.isDragging
+  const gripActive = useWorkspace((s) => s.isGripActive)
 
-  // Initialize transform once on mount
+  // Initialize transform once on mount. The transform is imperative afterwards
+  // so React re-renders never snap the orb back to its original position.
   useEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.set(orbPosition[0], orbPosition[1], orbPosition[2])
@@ -446,7 +455,6 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
     <HandleTarget targetRef={groupRef}>
       <group
         ref={groupRef}
-        position={orbPosition}
         onPointerOver={() => {
           setHovered(true)
           setCapsuleVisible(true)
@@ -502,16 +510,31 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
           <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
         </mesh>
 
-        {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
+        {/* Unified Movement Helper Pill (Revealed on 1s dwell hover, grip button squeeze, or proximity) */}
         <SpatialAffordancePill
           label="MOVER ORBE"
-          visible={affordance.visible}
+          visible={affordance.visible || gripActive}
           isDragging={isDragging}
           dwellProgress={affordance.dwellProgress}
           accentColor={ORB_COLORS[orbState] || color.accent}
           yOffset={-0.08}
           width={0.16}
         />
+
+        {/* Two-handed manipulation indicator: a rotating ring shows that both
+            hands are driving the object (scale + rotation). */}
+        {bimanual && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.075, 0]}>
+            <ringGeometry args={[0.1, 0.115, 48, 1, 0, Math.PI * 1.5]} />
+            <meshBasicMaterial
+              color={ORB_COLORS[orbState] || color.accent}
+              transparent
+              opacity={0.9}
+              depthWrite={false}
+              side={2}
+            />
+          </mesh>
+        )}
 
         {/* Generous Grab Handle for Orb with Two-Handed Manipulation */}
         <group position={[0, -0.065, 0]}>
@@ -521,18 +544,23 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
             rotate={true}
             scale={true}
             multitouch={true}
+            filter={canStartDrag}
             apply={(state, target) => {
               if (state.first) affordance.setIsDragging(true)
+              // Two-handed manipulation: both pointers on the same object.
+              setBimanual(state.current.pointerAmount >= 2)
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
               target.scale.copy(state.current.scale)
               if (state.last) {
                 affordance.setIsDragging(false)
+                setBimanual(false)
                 setOrbPosition([target.position.x, target.position.y, target.position.z])
               }
             }}
           >
             <mesh
+              userData={{ [GRAB_USERDATA]: true }}
               onPointerEnter={affordance.onPointerEnter}
               onPointerLeave={affordance.onPointerLeave}
               onPointerDown={affordance.onPointerDown}
@@ -541,6 +569,16 @@ export function MovableOrb({ level = 0 }: { level?: number }) {
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
           </Handle>
+
+          {/* Contact shadow ring under the orb (VR only) */}
+          {showContactRing && (
+            <group position={[0, -0.062, 0]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.1, 0.12, 32, 1, 0, Math.PI * 2]} />
+                <meshBasicMaterial color='#000000' transparent opacity={0.4} depthWrite={false} />
+              </mesh>
+            </group>
+          )}
         </group>
       </group>
     </HandleTarget>

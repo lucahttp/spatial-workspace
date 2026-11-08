@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { playArchiveSound, playClickSound, playSpotlightSound, playTrashSound } from './sound'
+import { playArchiveSound, playClickSound, playGrabSound, playSpotlightSound, playTrashSound, playUndockSound } from './sound'
 import { layout } from './theme'
 
 export type OrbState =
@@ -339,18 +339,20 @@ export const useWorkspace = create<Workspace>((set, get) => ({
   },
 
   setGraphTransform: (graphPosition, graphRotation) => {
+    playGrabSound()
     set({
       graphPosition,
       graphRotation: graphRotation || get().graphRotation,
     })
   },
 
-  setOrbPosition: (orbPosition) => set({ orbPosition }),
-  setArchivePosition: (archivePosition) => set({ archivePosition }),
-  setTrashPosition: (trashPosition) => set({ trashPosition }),
+  setOrbPosition: (orbPosition) => { playGrabSound(); set({ orbPosition }) },
+  setArchivePosition: (archivePosition) => { playGrabSound(); set({ archivePosition }) },
+  setTrashPosition: (trashPosition) => { playGrabSound(); set({ trashPosition }) },
   setIsGripActive: (isGripActive) => set({ isGripActive }),
   undockView: (viewId) => {
     playClickSound()
+    playUndockSound()
     set({
       undockedViews: { ...get().undockedViews, [viewId]: true },
       status: `Vista desacoplada como ventana flotante: ${viewId.toUpperCase()}`,

@@ -3,6 +3,8 @@ import { Container, Text } from '@react-three/uikit'
 import { useEffect, useRef, useState } from 'react'
 import { Group } from 'three'
 import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
+import { canStartDrag, GRAB_USERDATA } from '../interaction'
+import { useWorkspace } from '../store'
 import { color, radius, type as typeScale } from '../theme'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
@@ -11,7 +13,6 @@ import { SpatialAffordancePill } from './SpatialAffordancePill'
 export const PIXEL = 0.0014
 export const px = (metres: number) => Math.round(metres / PIXEL)
 
-const BAR_H = 32
 const BAR_OFFSET = 0.032
 
 export type PanelProps = {
@@ -49,6 +50,7 @@ export function Panel({
   // Unified 3-second dwell, grip trigger, and hand proximity affordance
   const affordance = useSpatialAffordance(groupRef)
   const isDragging = affordance.isDragging
+  const gripActive = useWorkspace((s) => s.isGripActive)
 
   // Initialize group transform once on mount to avoid R3F resetting position on re-renders
   useEffect(() => {
@@ -95,7 +97,7 @@ export function Panel({
             flexDirection="column"
             alignItems="flex-start"
             paddingTop={14}
-            paddingBottom={bar ? 44 : 14}
+            paddingBottom={14}
             paddingLeft={18}
             paddingRight={18}
             onHoverChange={(h) => {
@@ -197,65 +199,78 @@ export function Panel({
                       onClick={onMinimize}
                     />
                   )}
-                  <Container
-                    width={11}
-                    height={11}
-                    borderTopLeftRadius={5.5}
-                    borderTopRightRadius={5.5}
-                    borderBottomLeftRadius={5.5}
-                    borderBottomRightRadius={5.5}
-                    backgroundColor="#34d399"
-                    borderColor="#10b981"
-                    borderTopWidth={1}
-                    borderBottomWidth={1}
-                    borderLeftWidth={1}
-                    borderRightWidth={1}
-                  />
                 </Container>
               </Container>
             )}
 
             {children}
           </Container>
-
-          {/* Floating VisionOS / PICO OS Window Grab Bar (visible on demand) */}
-          {bar && affordance.visible && (
-            <Container
-              positionType="absolute"
-              positionBottom={6}
-              width="100%"
-              height={BAR_H}
-              flexDirection="row"
-              alignItems="center"
-              justifyContent="center"
-              gapColumn={10}
-              cursor="grab"
-              onHoverChange={setBarHovered}
-            >
-              {/* Central Grab Pill */}
-              <Container
-                width={isDragging ? 96 : barHovered ? 78 : 46}
-                height={6}
-                borderTopLeftRadius={3}
-                borderTopRightRadius={3}
-                borderBottomLeftRadius={3}
-                borderBottomRightRadius={3}
-                backgroundColor={
-                  isDragging
-                    ? accent
-                    : barHovered
-                    ? 'rgba(255, 255, 255, 0.95)'
-                    : 'rgba(255, 255, 255, 0.35)'
-                }
-              />
-            </Container>
-          )}
         </UiRoot>
+
+        {/* VisionOS Window Bar: floats BELOW the frame, outside the panel content.
+            A round close button sits to the left of the grab pill. */}
+        {bar && (
+          <group position={[0, -height / 2 - 0.022, 0.03]}>
+            <UiRoot width={px(0.26)} height={px(0.05)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+              <Container
+                flexDirection="row"
+                alignItems="center"
+                justifyContent="center"
+                gapColumn={12}
+                cursor="grab"
+                onHoverChange={setBarHovered}
+              >
+                {/* Round close button (visionOS style, left of the grab bar) */}
+                {onClose && (
+                  <Container
+                    cursor="pointer"
+                    width={18}
+                    height={18}
+                    borderTopLeftRadius={9}
+                    borderTopRightRadius={9}
+                    borderBottomLeftRadius={9}
+                    borderBottomRightRadius={9}
+                    backgroundColor="rgba(244, 63, 94, 0.85)"
+                    borderColor="rgba(255, 255, 255, 0.45)"
+                    borderTopWidth={1}
+                    borderBottomWidth={1}
+                    borderLeftWidth={1}
+                    borderRightWidth={1}
+                    alignItems="center"
+                    justifyContent="center"
+                    onClick={onClose}
+                  >
+                    <Text fontSize={9} fontWeight={700} color="#ffffff">
+                      {cleanText('x')}
+                    </Text>
+                  </Container>
+                )}
+
+                {/* Central Grab Pill */}
+                <Container
+                  width={isDragging ? 84 : barHovered ? 68 : 42}
+                  height={6}
+                  borderTopLeftRadius={3}
+                  borderTopRightRadius={3}
+                  borderBottomLeftRadius={3}
+                  borderBottomRightRadius={3}
+                  backgroundColor={
+                    isDragging
+                      ? accent
+                      : barHovered
+                      ? 'rgba(255, 255, 255, 0.95)'
+                      : 'rgba(255, 255, 255, 0.35)'
+                  }
+                />
+              </Container>
+            </UiRoot>
+          </group>
+        )}
 
         {/* Unified Movement Helper Pill (Revealed on 3s dwell hover, grip button squeeze, or proximity) */}
         <SpatialAffordancePill
           label="MOVER VENTANA"
-          visible={affordance.visible}
+          visible={affordance.visible || gripActive}
           isDragging={isDragging}
           dwellProgress={affordance.dwellProgress}
           accentColor={accent}
@@ -284,6 +299,7 @@ export function Panel({
               scale={true}
               rotate={true}
               multitouch={true}
+              filter={canStartDrag}
               apply={(state, target) => {
                 if (state.first) affordance.setIsDragging(true)
                 target.position.copy(state.current.position)
@@ -293,6 +309,7 @@ export function Panel({
               }}
             >
               <mesh
+                userData={{ [GRAB_USERDATA]: true }}
                 onPointerEnter={affordance.onPointerEnter}
                 onPointerLeave={affordance.onPointerLeave}
                 onPointerDown={affordance.onPointerDown}
@@ -313,6 +330,7 @@ export function Panel({
               scale={true}
               rotate={true}
               multitouch={true}
+              filter={canStartDrag}
               apply={(state, target) => {
                 if (state.first) affordance.setIsDragging(true)
                 target.position.copy(state.current.position)
@@ -322,6 +340,7 @@ export function Panel({
               }}
             >
               <mesh
+                userData={{ [GRAB_USERDATA]: true }}
                 onPointerEnter={affordance.onPointerEnter}
                 onPointerLeave={affordance.onPointerLeave}
                 onPointerDown={affordance.onPointerDown}

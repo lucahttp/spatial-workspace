@@ -11,6 +11,7 @@ import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
 import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
 import { SpatialAffordancePill } from './SpatialAffordancePill'
+import { canStartDrag, GRAB_USERDATA } from '../interaction'
 
 function ArchivePedestal({ count }: { count: number }) {
   const groupRef = useRef<Group>(null)
@@ -27,7 +28,7 @@ function ArchivePedestal({ count }: { count: number }) {
   const affordance = useSpatialAffordance(groupRef)
   const isDragging = affordance.isDragging
 
-  // Initialize position once on mount
+  // Initialize position once on mount (imperative transform afterwards)
   useEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.set(archivePosition[0], archivePosition[1], archivePosition[2])
@@ -63,7 +64,6 @@ function ArchivePedestal({ count }: { count: number }) {
     <HandleTarget targetRef={groupRef}>
       <group
         ref={groupRef}
-        position={archivePosition}
         rotation={[-0.42, 0.12, 0]}
         onPointerOver={handlePointerEnter}
         onPointerOut={handlePointerLeave}
@@ -221,6 +221,7 @@ function ArchivePedestal({ count }: { count: number }) {
             rotate={true}
             scale={true}
             multitouch={true}
+            filter={canStartDrag}
             apply={(state, target) => {
               if (state.first) affordance.setIsDragging(true)
               target.position.copy(state.current.position)
@@ -233,6 +234,7 @@ function ArchivePedestal({ count }: { count: number }) {
             }}
           >
             <mesh
+              userData={{ [GRAB_USERDATA]: true }}
               onPointerEnter={affordance.onPointerEnter}
               onPointerLeave={affordance.onPointerLeave}
               onPointerDown={affordance.onPointerDown}
@@ -295,7 +297,6 @@ function TrashPedestal({ count }: { count: number }) {
     <HandleTarget targetRef={groupRef}>
       <group
         ref={groupRef}
-        position={trashPosition}
         rotation={[-0.42, -0.12, 0]}
         onPointerOver={handlePointerEnter}
         onPointerOut={handlePointerLeave}
@@ -412,6 +413,7 @@ function TrashPedestal({ count }: { count: number }) {
             rotate={true}
             scale={true}
             multitouch={true}
+            filter={canStartDrag}
             apply={(state, target) => {
               if (state.first) affordance.setIsDragging(true)
               target.position.copy(state.current.position)
@@ -424,6 +426,7 @@ function TrashPedestal({ count }: { count: number }) {
             }}
           >
             <mesh
+              userData={{ [GRAB_USERDATA]: true }}
               onPointerEnter={affordance.onPointerEnter}
               onPointerLeave={affordance.onPointerLeave}
               onPointerDown={affordance.onPointerDown}

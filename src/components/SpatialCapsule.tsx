@@ -110,6 +110,7 @@ export function SpatialCapsule({
           borderBottomLeftRadius={radius.pill}
           borderBottomRightRadius={radius.pill}
           backgroundColor="rgba(15, 23, 42, 0.94)"
+      transformTranslateZ={capsuleHovered ? 8 : 0}
           borderColor={capsuleHovered ? color.borderHover : 'rgba(255, 255, 255, 0.28)'}
           borderTopWidth={1.5}
           borderBottomWidth={1}
@@ -140,6 +141,7 @@ export function SpatialCapsule({
             borderBottomLeftRadius={12}
             borderBottomRightRadius={12}
             backgroundColor="rgba(255, 255, 255, 0.08)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
             alignItems="center"
             justifyContent="center"
             onHoverChange={(h) => setActiveTooltip(h ? 'ARRASTRAR' : null)}
@@ -157,6 +159,7 @@ export function SpatialCapsule({
             borderBottomLeftRadius={12}
             borderBottomRightRadius={12}
             backgroundColor="rgba(255, 255, 255, 0.08)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
             alignItems="center"
             justifyContent="center"
             onClick={faceUser}
@@ -175,6 +178,7 @@ export function SpatialCapsule({
             borderBottomLeftRadius={12}
             borderBottomRightRadius={12}
             backgroundColor="rgba(255, 255, 255, 0.08)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
             alignItems="center"
             justifyContent="center"
             onClick={() => rotateNudge(Math.PI / 12)}
@@ -194,6 +198,7 @@ export function SpatialCapsule({
               borderBottomLeftRadius={12}
               borderBottomRightRadius={12}
               backgroundColor="rgba(124, 58, 237, 0.22)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
               alignItems="center"
               justifyContent="center"
               onClick={onDetach}
@@ -213,6 +218,7 @@ export function SpatialCapsule({
               borderBottomLeftRadius={12}
               borderBottomRightRadius={12}
               backgroundColor="rgba(14, 165, 233, 0.22)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
               alignItems="center"
               justifyContent="center"
               onClick={onReattach}
@@ -233,6 +239,7 @@ export function SpatialCapsule({
               borderBottomLeftRadius={12}
               borderBottomRightRadius={12}
               backgroundColor="rgba(251, 191, 36, 0.18)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
               alignItems="center"
               justifyContent="center"
               onClick={onMinimize}
@@ -253,6 +260,7 @@ export function SpatialCapsule({
               borderBottomLeftRadius={12}
               borderBottomRightRadius={12}
               backgroundColor="rgba(244, 63, 94, 0.22)"
+            transformTranslateZ={capsuleHovered ? 8 : 0}
               alignItems="center"
               justifyContent="center"
               onClick={onClose}

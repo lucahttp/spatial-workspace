@@ -9,6 +9,8 @@ import { color, radius } from '../theme'
 import { px, PIXEL } from './Panel'
 import { cleanText, DREI_FONT, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
+import { canStartDrag, GRAB_USERDATA } from '../interaction'
+import { useSpatialAffordance } from '../hooks/useSpatialAffordance'
 
 export function IdeaGraph() {
   const sources = useWorkspace((s) => s.sources)
@@ -24,8 +26,12 @@ export function IdeaGraph() {
   const [hovered, setHovered] = useState(false)
   const [capsuleVisible, setCapsuleVisible] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [bimanual, setBimanual] = useState(false)
 
-  // Initialize transform once on mount
+  const affordance = useSpatialAffordance(groupRef)
+
+  // Initialize transform once on mount. The transform stays imperative so a
+  // React re-render never snaps the graph back to its original position.
   useEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.set(graphPosition[0], graphPosition[1], graphPosition[2])
@@ -65,8 +71,6 @@ export function IdeaGraph() {
     <HandleTarget targetRef={groupRef}>
       <group
         ref={groupRef}
-        position={graphPosition}
-        rotation={graphRotation}
         onPointerOver={() => {
           setHovered(true)
           setCapsuleVisible(true)
@@ -219,6 +223,14 @@ export function IdeaGraph() {
             </Container>
           </UiRoot>
 
+          {/* Two-handed manipulation indicator */}
+          {bimanual && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+              <ringGeometry args={[0.1, 0.112, 48, 1, 0, Math.PI * 1.5]} />
+              <meshBasicMaterial color={color.idea} transparent opacity={0.9} depthWrite={false} side={2} />
+            </mesh>
+          )}
+
           {/* Generous Grab Handle for MindMap */}
           <Handle
             targetRef={groupRef}
@@ -226,12 +238,15 @@ export function IdeaGraph() {
             rotate={true}
             scale={false}
             multitouch={true}
+            filter={canStartDrag}
             apply={(state, target) => {
               if (state.first) setIsDragging(true)
+              setBimanual(state.current.pointerAmount >= 2)
               target.position.copy(state.current.position)
               target.rotation.copy(state.current.rotation)
               if (state.last) {
                 setIsDragging(false)
+                setBimanual(false)
                 setGraphTransform(
                   [target.position.x, target.position.y, target.position.z],
                   [target.rotation.x, target.rotation.y, target.rotation.z]
@@ -239,7 +254,12 @@ export function IdeaGraph() {
               }
             }}
           >
-            <mesh>
+            <mesh
+              userData={{ [GRAB_USERDATA]: true }}
+              onPointerEnter={affordance.onPointerEnter}
+              onPointerLeave={affordance.onPointerLeave}
+              onPointerDown={affordance.onPointerDown}
+            >
               <planeGeometry args={[0.26, 0.08]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>

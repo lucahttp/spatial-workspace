@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Vector3 } from 'three'
 import { Card as CardType, useWorkspace } from '../store'
 import { color, layout, radius, type as typeScale } from '../theme'
+import { canStartDrag, GRAB_USERDATA } from '../interaction'
 import { px, PIXEL } from './Panel'
 import { cleanText, UiRoot } from './Ui'
 import { SpatialCapsule } from './SpatialCapsule'
@@ -527,8 +528,9 @@ function DetachedCardItem({
 
   // Initialize detached transform once on mount
   useEffect(() => {
-    if (groupRef.current && card.position) {
-      groupRef.current.position.set(card.position[0], card.position[1], card.position[2])
+    if (groupRef.current) {
+      const init = card.position || [0, layout.carouselY, -0.9]
+      groupRef.current.position.set(init[0], init[1], init[2])
       if (card.rotation) {
         groupRef.current.rotation.set(card.rotation[0], card.rotation[1], card.rotation[2])
       }
@@ -537,7 +539,7 @@ function DetachedCardItem({
 
   return (
     <HandleTarget targetRef={groupRef}>
-      <group ref={groupRef} position={card.position || [0, layout.carouselY, -0.9]}>
+      <group ref={groupRef}>
         {/* Spatial Depth Shadow */}
         <mesh position={[0, -0.01, -0.006]}>
           <planeGeometry args={[layout.cardW + 0.02, layout.cardH + 0.02]} />
@@ -736,6 +738,7 @@ function DetachedCardItem({
             scale={true}
             rotate={true}
             multitouch={true}
+            filter={canStartDrag}
             apply={(state, target) => {
               if (state.first) {
                 dragging.current = true
@@ -755,6 +758,7 @@ function DetachedCardItem({
             }}
           >
             <mesh
+              userData={{ [GRAB_USERDATA]: true }}
               onPointerEnter={affordance.onPointerEnter}
               onPointerLeave={affordance.onPointerLeave}
               onPointerDown={affordance.onPointerDown}

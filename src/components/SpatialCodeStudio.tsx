@@ -56,6 +56,7 @@ function ActivityButton({ icon, active, onClick }: ActivityButtonProps) {
       borderTopRightRadius={8}
       borderBottomLeftRadius={8}
       borderBottomRightRadius={8}
+      transformTranslateZ={hovered ? 9 : 0}
       backgroundColor={
         active
           ? 'rgba(124, 58, 237, 0.28)'
@@ -400,6 +401,7 @@ export function SpatialCodeStudio({
                     borderTopRightRadius={12}
                     borderBottomLeftRadius={12}
                     borderBottomRightRadius={12}
+                  transformTranslateZ={runHovered ? 9 : 0}
                     backgroundColor={runHovered ? color.purpleDim : color.purple}
                     borderColor="rgba(255, 255, 255, 0.35)"
                     borderTopWidth={1}

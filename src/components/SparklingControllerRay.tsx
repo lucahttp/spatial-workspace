@@ -76,14 +76,13 @@ function SingleControllerRay({
             inputSource.handedness === 'left' ? 'left' : 'right'
           )
           // If hand is making a grip gesture, activate grip state
-          if (handData.gesture === 'grip') {
-            setIsGripActive(true)
-          }
+          setIsGripActive(handData.gesture === 'grip')
         }
       }
     }
 
     // 2. Check Gamepad buttons (Controllers)
+    //    Standard xr gamepad mapping: [0] = trigger (select), [1] = grip (squeeze).
     const gamepad = inputSource.gamepad
     const gripButton = gamepad?.buttons?.[1]
     const triggerButton = gamepad?.buttons?.[0]
