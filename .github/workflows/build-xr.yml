@@ -225,7 +225,7 @@ jobs:
             mkdir -p /tmp/visionos_template
             unzip -q templates/ios.zip -d /tmp/visionos_template
             
-            cd /tmp/visionos_template
+            pushd /tmp/visionos_template > /dev/null
             for F in libgodot.ios.*; do
               if [ -e "$F" ]; then
                 NEW_F=$(echo "$F" | sed 's/libgodot\.ios\./libgodot.visionos./')
@@ -234,11 +234,9 @@ jobs:
               fi
             done
             
-            zip -q -1 -r /tmp/visionos.zip .
-            mv /tmp/visionos.zip "$GITHUB_WORKSPACE/templates_visionos.zip"
-            cp "$GITHUB_WORKSPACE/templates_visionos.zip" templates/visionos.zip
+            zip -q -1 -r "$GITHUB_WORKSPACE/templates/visionos.zip" .
+            popd > /dev/null
             rm -rf /tmp/visionos_template
-            cd "$GITHUB_WORKSPACE"
           fi
 
           for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
@@ -246,7 +244,7 @@ jobs:
             mkdir -p "$TEMPLATE_DIR"
             cp -r templates/* "$TEMPLATE_DIR/"
           done
-          rm -rf templates templates.tpz "$GITHUB_WORKSPACE/templates_visionos.zip"
+          rm -rf templates templates.tpz
 
       - name: Export Apple Vision Pro Project
         run: |
@@ -258,6 +256,7 @@ jobs:
       - name: Archive Xcode Project
         if: always()
         run: |
+          mkdir -p godot-spatial-workspace/builds/visionos
           cd godot-spatial-workspace/builds
           if [ -d "visionos/SpatialWorkspace.xcodeproj" ]; then
             tar -czf SpatialWorkspace_visionOS_xcode.tar.gz -C visionos SpatialWorkspace.xcodeproj
