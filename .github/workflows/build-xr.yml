@@ -38,28 +38,12 @@ env:
 
 jobs:
   # =========================================================================
-  # 1 & 2. Android OpenXR Headsets (PICO 4 Ultra & Meta Quest)
+  # 1. PICO 4 Ultra APK
   # =========================================================================
-  build-android-xr:
-    name: Build Android XR (${{ matrix.name }})
+  build-pico:
+    name: Build PICO 4 Ultra APK
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == matrix.id }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: pico
-            name: "PICO 4 Ultra"
-            preset: "PICO 4 Ultra"
-            output_dir: "builds/pico"
-            apk_filename: "spatial_workspace_pico.apk"
-            artifact_name: "pico4-ultra-apk"
-          - id: quest
-            name: "Meta Quest"
-            preset: "Meta Quest"
-            output_dir: "builds/quest"
-            apk_filename: "spatial_workspace_quest.apk"
-            artifact_name: "meta-quest-apk"
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.target == 'all' || github.event.inputs.target == 'pico' }}
 
     steps:
       - name: Checkout repository
@@ -95,7 +79,6 @@ jobs:
           curl -sL "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_RELEASE_TAG }}/Godot_v${{ env.GODOT_RELEASE_TAG }}_export_templates.tpz" -o templates.tpz
           unzip -q templates.tpz
           
-          # Install to both possible folder formats (4.3.stable and 4.3-stable)
           for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
             TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${DIR_NAME}"
             mkdir -p "$TEMPLATE_DIR"
@@ -106,32 +89,89 @@ jobs:
       - name: Configure Godot Editor Settings for Android
         run: |
           mkdir -p ~/.config/godot
-          cat <<EOF > ~/.config/godot/editor_settings-4.tres
-[godot_resource type="EditorSettings" format=3]
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_HOME" "$HOME" > ~/.config/godot/editor_settings-4.tres
 
-[resource]
-export/android/android_sdk_path = "$ANDROID_HOME"
-export/android/debug_keystore = "$HOME/.android/debug.keystore"
-export/android/debug_keystore_user = "androiddebugkey"
-export/android/debug_keystore_pass = "android"
-EOF
-
-      - name: Export ${{ matrix.name }} APK
+      - name: Export PICO 4 Ultra APK
         run: |
-          mkdir -p "godot-spatial-workspace/${{ matrix.output_dir }}"
+          mkdir -p godot-spatial-workspace/builds/pico
           cd godot-spatial-workspace
-          
-          # First run import in headless mode
           godot --headless --import || true
+          godot --headless --verbose --export-debug "PICO 4 Ultra" builds/pico/spatial_workspace_pico.apk
 
-          # Export debug APK
-          godot --headless --verbose --export-debug "${{ matrix.preset }}" "${{ matrix.output_dir }}/${{ matrix.apk_filename }}"
-
-      - name: Upload ${{ matrix.name }} APK
+      - name: Upload PICO 4 Ultra APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: godot-spatial-workspace/${{ matrix.output_dir }}/*.apk
+          name: pico4-ultra-apk
+          path: godot-spatial-workspace/builds/pico/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  # =========================================================================
+  # 2. Meta Quest APK
+  # =========================================================================
+  build-quest:
+    name: Build Meta Quest APK
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.target == 'all' || github.event.inputs.target == 'quest' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate Android Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Install Godot Engine & Export Templates
+        run: |
+          echo "=== Downloading Godot Engine ${{ env.GODOT_RELEASE_TAG }} ==="
+          curl -sL "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_RELEASE_TAG }}/Godot_v${{ env.GODOT_RELEASE_TAG }}_linux.x86_64.zip" -o godot.zip
+          unzip -q godot.zip
+          sudo mv "Godot_v${{ env.GODOT_RELEASE_TAG }}_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          rm godot.zip
+
+          echo "=== Downloading Export Templates ==="
+          curl -sL "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_RELEASE_TAG }}/Godot_v${{ env.GODOT_RELEASE_TAG }}_export_templates.tpz" -o templates.tpz
+          unzip -q templates.tpz
+          
+          for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
+            TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${DIR_NAME}"
+            mkdir -p "$TEMPLATE_DIR"
+            cp -r templates/* "$TEMPLATE_DIR/"
+          done
+          rm -rf templates templates.tpz
+
+      - name: Configure Godot Editor Settings for Android
+        run: |
+          mkdir -p ~/.config/godot
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_HOME" "$HOME" > ~/.config/godot/editor_settings-4.tres
+
+      - name: Export Meta Quest APK
+        run: |
+          mkdir -p godot-spatial-workspace/builds/quest
+          cd godot-spatial-workspace
+          godot --headless --import || true
+          godot --headless --verbose --export-debug "Meta Quest" builds/quest/spatial_workspace_quest.apk
+
+      - name: Upload Meta Quest APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-quest-apk
+          path: godot-spatial-workspace/builds/quest/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -141,7 +181,7 @@ EOF
   build-visionos:
     name: Build Apple Vision Pro (visionOS)
     runs-on: macos-latest
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'visionos' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.target == 'all' || github.event.inputs.target == 'visionos' }}
 
     steps:
       - name: Checkout repository
@@ -149,7 +189,6 @@ EOF
 
       - name: Set up Xcode
         run: |
-          # Use latest stable Xcode with visionOS SDK
           sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
@@ -166,7 +205,6 @@ EOF
           curl -sL "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_RELEASE_TAG }}/Godot_v${{ env.GODOT_RELEASE_TAG }}_export_templates.tpz" -o templates.tpz
           unzip -q templates.tpz
 
-          # Install in macOS Application Support directory
           for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
             TEMPLATE_DIR="$HOME/Library/Application Support/Godot/export_templates/${DIR_NAME}"
             mkdir -p "$TEMPLATE_DIR"
@@ -178,11 +216,7 @@ EOF
         run: |
           mkdir -p godot-spatial-workspace/builds/visionos
           cd godot-spatial-workspace
-
-          # Import project
           godot --headless --import || true
-
-          # Export visionOS project
           godot --headless --verbose --export-debug "Apple Vision Pro" builds/visionos/SpatialWorkspace.xcodeproj
 
       - name: Archive Xcode Project
