@@ -1,0 +1,107 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/system_bars.gd" id="1_bars"]
+[ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="2_bridge"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_top"]
+size = Vector2(0.46, 0.062)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_top"]
+size = Vector3(0.46, 0.062, 0.02)
+
+[sub_resource type="QuadMesh" id="QuadMesh_dock"]
+size = Vector2(0.34, 0.052)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dock"]
+size = Vector3(0.34, 0.052, 0.02)
+
+[node name="SystemBars" type="Node3D"]
+script = ExtResource("1_bars")
+
+[node name="TopBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, -0.85)
+
+[node name="Surface" type="MeshInstance3D" parent="TopBar"]
+mesh = SubResource("QuadMesh_top")
+
+[node name="TopViewport" type="SubViewport" parent="TopBar"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(760, 100)
+render_target_update_mode = 4
+
+[node name="Root" type="Control" parent="TopBar/TopViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Row" type="HBoxContainer" parent="TopBar/TopViewport/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="TopCollider" type="Area3D" parent="TopBar"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="TopColliderShape" type="CollisionShape3D" parent="TopBar/TopCollider"]
+shape = SubResource("BoxShape3D_top")
+
+[node name="TopBridge" type="Node3D" parent="TopBar"]
+script = ExtResource("2_bridge")
+sub_viewport_path = NodePath("../TopViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../TopCollider")
+
+[node name="Dock" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, -0.95)
+
+[node name="Surface" type="MeshInstance3D" parent="Dock"]
+mesh = SubResource("QuadMesh_dock")
+
+[node name="DockViewport" type="SubViewport" parent="Dock"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(620, 90)
+render_target_update_mode = 4
+
+[node name="Root" type="Control" parent="Dock/DockViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Row" type="HBoxContainer" parent="Dock/DockViewport/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="DockCollider" type="Area3D" parent="Dock"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="DockColliderShape" type="CollisionShape3D" parent="Dock/DockCollider"]
+shape = SubResource("BoxShape3D_dock")
+
+[node name="DockBridge" type="Node3D" parent="Dock"]
+script = ExtResource("2_bridge")
+sub_viewport_path = NodePath("../DockViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../DockCollider")

@@ -1,0 +1,64 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/workspace/document_carousel_3d.gd" id="1_carousel"]
+[ext_resource type="PackedScene" path="res://scenes/ui/spatial_affordance_pill.tscn" id="2_pill"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_add"]
+size = Vector2(0.05, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_add"]
+transparency = 1
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.45, 0.28, 0.85, 0.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_add"]
+size = Vector3(0.05, 0.05, 0.02)
+
+[node name="DocumentCarousel3D" type="Node3D"]
+script = ExtResource("1_carousel")
+
+[node name="Cards" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+
+[node name="Hub" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="HubShape" type="CollisionShape3D" parent="Hub"]
+shape = SubResource("BoxShape3D_add")
+
+[node name="AddButton" type="Node3D" parent="."]
+unique_name_in_owner = true
+visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -0.5)
+
+[node name="Surface" type="MeshInstance3D" parent="AddButton"]
+mesh = SubResource("QuadMesh_add")
+material_override = SubResource("StandardMaterial3D_add")
+
+[node name="Label" type="Label3D" parent="AddButton"]
+billboard = 1
+no_depth_test = true
+double_sided = true
+pixel_size = 0.0007
+font_size = 52
+text = "+"
+modulate = Color(1, 1, 1, 1)
+outline_size = 14
+outline_modulate = Color(0.039215688, 0.047058823, 0.08627451, 1)
+
+[node name="AddCollider" type="Area3D" parent="AddButton"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="AddColliderShape" type="CollisionShape3D" parent="AddButton/AddCollider"]
+shape = SubResource("BoxShape3D_add")
+
+[node name="Affordance" parent="." instance=ExtResource("2_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16, 0)
+label_text = "MOVER CARRUSEL (GRUPO)"
+target_path = NodePath("..")

@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/spatial_affordance_pill.gd" id="1_pill"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_pill"]
+size = Vector2(0.17, 0.042)
+
+[node name="SpatialAffordancePill" type="Node3D"]
+script = ExtResource("1_pill")
+label_text = "MOVER"
+
+[node name="Background" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_pill")
+
+[node name="Label" type="Label3D" parent="."]
+billboard = 1
+no_depth_test = true
+double_sided = true
+render_priority = 1
+pixel_size = 0.00065
+font_size = 42
+text = "MOVER"
+modulate = Color(1, 0.9411765, 1, 1)
+outline_size = 14
+outline_modulate = Color(0.039215688, 0.047058823, 0.08627451, 1)

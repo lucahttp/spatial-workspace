@@ -1,0 +1,108 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/web_preview.gd" id="1_preview"]
+[ext_resource type="Theme" path="res://assets/themes/vaporwave_sunset.tres" id="2_theme"]
+
+[node name="WebPreview2D" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_preview")
+
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TitleBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Root/TitleBar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Root/TitleBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Wolvic & WebXR Layers"
+
+[node name="FavoriteButton" type="Button" parent="Root/TitleBar/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+text = "☆"
+
+[node name="UrlBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Root/UrlBar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LockLabel" type="Label" parent="Root/UrlBar/Row"]
+layout_mode = 2
+text = "🔒"
+
+[node name="UrlEdit" type="LineEdit" parent="Root/UrlBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "https://wolvic.com/webxr-layers"
+
+[node name="ReloadButton" type="Button" parent="Root/UrlBar/Row"]
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+text = "⟳"
+
+[node name="Content" type="PanelContainer" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Column" type="VBoxContainer" parent="Root/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SummaryLabel" type="Label" parent="Root/Content/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Integración de navegador espacial multi-ventana y puente nativo SystemBridge."
+autowrap_mode = 3
+
+[node name="Badges" type="HBoxContainer" parent="Root/Content/Column"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Badge1" type="Label" parent="Root/Content/Column/Badges"]
+layout_mode = 2
+text = "WebXR"
+
+[node name="Badge2" type="Label" parent="Root/Content/Column/Badges"]
+layout_mode = 2
+text = "Hand Kinematics"
+
+[node name="Badge3" type="Label" parent="Root/Content/Column/Badges"]
+layout_mode = 2
+text = "Spatial UI"
+
+[node name="ReadingProgress" type="ProgressBar" parent="Root/Content/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+value = 40.0
+show_percentage = false
+
+[node name="StatusBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Root/StatusBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cargando…"

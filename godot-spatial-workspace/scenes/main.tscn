@@ -1,0 +1,255 @@
+[gd_scene load_steps=24 format=3]
+
+[ext_resource type="Script" path="res://scripts/xr/xr_manager.gd" id="1_xr"]
+[ext_resource type="Script" path="res://scripts/workspace/thinking_orb.gd" id="2_orb"]
+[ext_resource type="Script" path="res://scripts/ui/spatial_panel_3d.gd" id="3_panel"]
+[ext_resource type="PackedScene" path="res://scenes/ui/spatial_affordance_pill.tscn" id="4_pill"]
+[ext_resource type="PackedScene" path="res://scenes/ui/code_studio_2d.tscn" id="5_code"]
+[ext_resource type="PackedScene" path="res://scenes/ui/web_preview_2d.tscn" id="6_preview"]
+[ext_resource type="PackedScene" path="res://scenes/workspace/document_carousel_3d.tscn" id="7_carousel"]
+[ext_resource type="PackedScene" path="res://scenes/ui/system_bars.tscn" id="8_bars"]
+[ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="9_bridge"]
+[ext_resource type="Script" path="res://scripts/workspace/workspace.gd" id="10_workspace"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_code"]
+size = Vector2(0.94, 0.58)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_code"]
+size = Vector3(0.94, 0.58, 0.02)
+
+[sub_resource type="QuadMesh" id="QuadMesh_preview"]
+size = Vector2(0.56, 0.36)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_preview"]
+size = Vector3(0.56, 0.36, 0.02)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_space"]
+sky_top_color = Color(0.07, 0.05, 0.15, 1)
+sky_horizon_color = Color(0.19, 0.09, 0.32, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.05, 1)
+ground_horizon_color = Color(0.19, 0.09, 0.32, 1)
+
+[sub_resource type="Sky" id="Sky_space"]
+sky_material = SubResource("ProceduralSkyMaterial_space")
+
+[sub_resource type="Environment" id="Environment_space"]
+background_mode = 1
+background_color = Color(0.023, 0.031, 0.062, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.55, 0.6, 0.85, 1)
+ambient_light_energy = 1.1
+tonemap_mode = 3
+tonemap_white = 4.0
+sky = SubResource("Sky_space")
+
+[sub_resource type="SphereMesh" id="SphereMesh_core"]
+radius = 0.012
+height = 0.024
+radial_segments = 24
+rings = 12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_core"]
+shading_mode = 0
+albedo_color = Color(0.42, 0.55, 0.95, 1)
+emission_enabled = true
+emission = Color(0.42, 0.55, 0.95, 1)
+emission_energy_multiplier = 1.1
+
+[sub_resource type="TorusMesh" id="TorusMesh_halo"]
+inner_radius = 0.045
+outer_radius = 0.052
+rings = 48
+ring_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_halo"]
+transparency = 1
+shading_mode = 0
+blend_mode = 1
+albedo_color = Color(0.42, 0.55, 0.95, 0.45)
+emission_enabled = true
+emission = Color(0.42, 0.55, 0.95, 1)
+emission_energy_multiplier = 1.1
+
+[node name="Main" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." groups=["xr_environment"]]
+environment = SubResource("Environment_space")
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform3D(0.8, 0.4, 0.4, 0, 0.7, -0.7, -0.5, 0.4, 0.8, 0, 2.5, 0)
+light_energy = 0.8
+
+[node name="XRManager" type="Node" parent="." groups=["xr_manager"]]
+script = ExtResource("1_xr")
+auto_start_session = true
+start_in_ar = false
+
+[node name="Coordinator" type="Node" parent="."]
+script = ExtResource("10_workspace")
+studio_panel_path = NodePath("../XROrigin3D/Workspace/CodeStudioPanel")
+preview_panel_path = NodePath("../XROrigin3D/Workspace/WebPreviewPanel")
+carousel_path = NodePath("../XROrigin3D/Workspace/DocumentCarousel")
+
+[node name="XROrigin3D" type="XROrigin3D" parent="."]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+current = true
+
+[node name="LeftController" type="XRController3D" parent="XROrigin3D" groups=["xr_controller"]]
+tracker = "left_hand"
+pose = "aim"
+
+[node name="RightController" type="XRController3D" parent="XROrigin3D" groups=["xr_controller"]]
+tracker = "right_hand"
+pose = "aim"
+
+[node name="Workspace" type="Node3D" parent="XROrigin3D"]
+
+[node name="ThinkingOrb" type="Node3D" parent="XROrigin3D/Workspace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.42, -0.95)
+script = ExtResource("2_orb")
+particle_count = 220
+particle_radius = 0.055
+affordance_path = NodePath("Affordance")
+
+[node name="Particles" type="CPUParticles3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
+emission_shape = 1
+emission_sphere_radius = 0.055
+spread = 180.0
+gravity = Vector3(0, 0.04, 0)
+initial_velocity_min = 0.07
+initial_velocity_max = 0.16
+angular_velocity_min = -45.0
+angular_velocity_max = 45.0
+scale_amount_min = 0.5
+scale_amount_max = 1.4
+lifetime = 3.2
+amount = 220
+local_coords = true
+
+[node name="Core" type="MeshInstance3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
+mesh = SubResource("SphereMesh_core")
+material_override = SubResource("StandardMaterial3D_core")
+
+[node name="Halo" type="MeshInstance3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0.7, 0, -0.7, 0.7, 0, -0.03, 0)
+mesh = SubResource("TorusMesh_halo")
+material_override = SubResource("StandardMaterial3D_halo")
+
+[node name="Light" type="OmniLight3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
+light_color = Color(0.42, 0.55, 0.95, 1)
+light_energy = 0.9
+omni_range = 1.2
+
+[node name="Affordance" parent="XROrigin3D/Workspace/ThinkingOrb" instance=ExtResource("4_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.09, 0)
+label_text = "MOVER ORBE"
+
+[node name="CodeStudioPanel" type="Node3D" parent="XROrigin3D/Workspace" groups=["spatial_panel"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 1.52, -1.62)
+script = ExtResource("3_panel")
+panel_size = Vector2(0.94, 0.58)
+surface_path = NodePath("Surface")
+collider_path = NodePath("Collider")
+bottom_bar_path = NodePath("BottomBar")
+affordance_path = NodePath("Affordance")
+content_scene = ExtResource("5_code")
+
+[node name="Surface" type="MeshInstance3D" parent="XROrigin3D/Workspace/CodeStudioPanel"]
+mesh = SubResource("QuadMesh_code")
+
+[node name="PanelViewport" type="SubViewport" parent="XROrigin3D/Workspace/CodeStudioPanel"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(940, 580)
+render_target_update_mode = 4
+
+[node name="Content" type="Control" parent="XROrigin3D/Workspace/CodeStudioPanel/PanelViewport"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Collider" type="Area3D" parent="XROrigin3D/Workspace/CodeStudioPanel"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="ColliderShape" type="CollisionShape3D" parent="XROrigin3D/Workspace/CodeStudioPanel/Collider"]
+shape = SubResource("BoxShape3D_code")
+
+[node name="Bridge" type="Node3D" parent="XROrigin3D/Workspace/CodeStudioPanel"]
+script = ExtResource("9_bridge")
+sub_viewport_path = NodePath("../PanelViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../Collider")
+
+[node name="Affordance" parent="XROrigin3D/Workspace/CodeStudioPanel" instance=ExtResource("4_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.34, 0)
+label_text = "MOVER PANEL"
+hover_collider_path = NodePath("../Collider")
+
+[node name="WebPreviewPanel" type="Node3D" parent="XROrigin3D/Workspace"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62, 1.38, -1.18)
+script = ExtResource("3_panel")
+panel_size = Vector2(0.56, 0.36)
+surface_path = NodePath("Surface")
+collider_path = NodePath("Collider")
+bottom_bar_path = NodePath("BottomBar")
+affordance_path = NodePath("Affordance")
+content_scene = ExtResource("6_preview")
+
+[node name="Surface" type="MeshInstance3D" parent="XROrigin3D/Workspace/WebPreviewPanel"]
+mesh = SubResource("QuadMesh_preview")
+
+[node name="PanelViewport" type="SubViewport" parent="XROrigin3D/Workspace/WebPreviewPanel"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(700, 450)
+render_target_update_mode = 4
+
+[node name="Content" type="Control" parent="XROrigin3D/Workspace/WebPreviewPanel/PanelViewport"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Collider" type="Area3D" parent="XROrigin3D/Workspace/WebPreviewPanel"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="ColliderShape" type="CollisionShape3D" parent="XROrigin3D/Workspace/WebPreviewPanel/Collider"]
+shape = SubResource("BoxShape3D_preview")
+
+[node name="Bridge" type="Node3D" parent="XROrigin3D/Workspace/WebPreviewPanel"]
+script = ExtResource("9_bridge")
+sub_viewport_path = NodePath("../PanelViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../Collider")
+
+[node name="Affordance" parent="XROrigin3D/Workspace/WebPreviewPanel" instance=ExtResource("4_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+label_text = "MOVER PANEL"
+hover_collider_path = NodePath("../Collider")
+
+[node name="DocumentCarousel" parent="XROrigin3D/Workspace" instance=ExtResource("7_carousel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 1.16, -0.42)
+
+[node name="SystemBars" parent="XROrigin3D" instance=ExtResource("8_bars")]
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+
+[node name="DebugLabel" type="Label" parent="Overlay"]
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 640.0
+offset_bottom = 60.0
+text = "XR: sin sesion · Grip mueve · Trigger interactua"

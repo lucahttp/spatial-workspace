@@ -1,0 +1,152 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/code_studio.gd" id="1_studio"]
+[ext_resource type="Theme" path="res://assets/themes/vaporwave_sunset.tres" id="2_theme"]
+
+[node name="CodeStudio2D" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_studio")
+
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Root/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Tabs" type="HBoxContainer" parent="Root/TopBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Separator" type="VSeparator" parent="Root/TopBar/Row"]
+layout_mode = 2
+
+[node name="Breadcrumbs" type="Label" parent="Root/TopBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "workspace > project > index.js"
+
+[node name="RunButton" type="Button" parent="Root/TopBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "▶ Ejecutar"
+
+[node name="ViewBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="ViewButtons" type="HBoxContainer" parent="Root/ViewBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ViewStack" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EditorView" type="Control" parent="Root/ViewStack"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CodeEditor" type="CodeEdit" parent="Root/ViewStack/EditorView"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+gutters_draw_line_numbers = true
+gutters_line_numbers_min_digits = 2
+wrap_mode = 0
+
+[node name="ExplorerView" type="Control" parent="Root/ViewStack"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ExplorerList" type="ItemList" parent="Root/ViewStack/ExplorerView"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TerminalView" type="Control" parent="Root/ViewStack"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TerminalOutput" type="RichTextLabel" parent="Root/ViewStack/TerminalView"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+scroll_following = true
+
+[node name="SettingsView" type="Control" parent="Root/ViewStack"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SettingsText" type="Label" parent="Root/ViewStack/SettingsView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Ajustes espaciales
+
+Grip  -> mover el panel
+Trigger -> interactuar con los controles
+Dwell 3s -> mostrar la píldora de acción
+Proximidad 0.38m -> mostrar la píldora de acción"
+autowrap_mode = 3
+
+[node name="StatusBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Root/StatusBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "index.js"

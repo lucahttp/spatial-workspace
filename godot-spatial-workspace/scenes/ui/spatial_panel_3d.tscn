@@ -1,0 +1,172 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/spatial_panel_3d.gd" id="1_panel"]
+[ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="2_bridge"]
+[ext_resource type="Theme" path="res://assets/themes/vaporwave_sunset.tres" id="3_theme"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_panel"]
+viewport_path = NodePath("PanelViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_panel"]
+albedo_texture = SubResource("ViewportTexture_panel")
+transparency = 1
+shading_mode = 0
+cull_mode = 2
+
+[sub_resource type="QuadMesh" id="QuadMesh_panel"]
+size = Vector2(0.94, 0.58)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_collider"]
+size = Vector3(0.94, 0.58, 0.02)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_bar"]
+viewport_path = NodePath("BottomBar/BarViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bar"]
+albedo_texture = SubResource("ViewportTexture_bar")
+transparency = 1
+shading_mode = 0
+cull_mode = 2
+
+[sub_resource type="QuadMesh" id="QuadMesh_bar"]
+size = Vector2(0.36, 0.072)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bar"]
+size = Vector3(0.36, 0.072, 0.02)
+
+[node name="SpatialPanel3D" type="Node3D"]
+script = ExtResource("1_panel")
+panel_size = Vector2(0.94, 0.58)
+surface_path = NodePath("Surface")
+collider_path = NodePath("Collider")
+bottom_bar_path = NodePath("BottomBar")
+
+[node name="Surface" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_panel")
+material_override = SubResource("StandardMaterial3D_panel")
+
+[node name="PanelViewport" type="SubViewport" parent="."]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(940, 580)
+render_target_update_mode = 4
+
+[node name="PanelRoot" type="Control" parent="PanelViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_theme")
+
+[node name="Margin" type="MarginContainer" parent="PanelViewport/PanelRoot"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Column" type="VBoxContainer" parent="PanelViewport/PanelRoot/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="PanelViewport/PanelRoot/Margin/Column"]
+layout_mode = 2
+text = "ESTUDIO ESPACIAL"
+
+[node name="Subtitle" type="Label" parent="PanelViewport/PanelRoot/Margin/Column"]
+layout_mode = 2
+text = "Grip para mover · Trigger para interactuar"
+
+[node name="Body" type="Label" parent="PanelViewport/PanelRoot/Margin/Column"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Este panel es un QuadMesh con un SubViewport. Cualquier Control de Godot funciona en 3D porque los eventos del rayo se convierten en eventos 2D."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="PanelViewport/PanelRoot/Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PrimaryAction" type="Button" parent="PanelViewport/PanelRoot/Margin/Column/Actions"]
+layout_mode = 2
+text = "Accion principal"
+
+[node name="SecondaryAction" type="Button" parent="PanelViewport/PanelRoot/Margin/Column/Actions"]
+layout_mode = 2
+text = "Accion secundaria"
+
+[node name="Collider" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="ColliderShape" type="CollisionShape3D" parent="Collider"]
+shape = SubResource("BoxShape3D_collider")
+
+[node name="Bridge" type="Node3D" parent="."]
+script = ExtResource("2_bridge")
+sub_viewport_path = NodePath("../PanelViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../Collider")
+
+[node name="BottomBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.33, 0.04)
+
+[node name="BarSurface" type="MeshInstance3D" parent="BottomBar"]
+mesh = SubResource("QuadMesh_bar")
+material_override = SubResource("StandardMaterial3D_bar")
+
+[node name="BarViewport" type="SubViewport" parent="BottomBar"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(360, 72)
+render_target_update_mode = 4
+
+[node name="BarRoot" type="Control" parent="BottomBar/BarViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_theme")
+
+[node name="BarRow" type="HBoxContainer" parent="BottomBar/BarViewport/BarRoot"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="CloseButton" type="Button" parent="BottomBar/BarViewport/BarRoot/BarRow"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+text = "X"
+
+[node name="GrabPill" type="Panel" parent="BottomBar/BarViewport/BarRoot/BarRow"]
+custom_minimum_size = Vector2(120, 8)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BarBridge" type="Node3D" parent="BottomBar"]
+script = ExtResource("2_bridge")
+sub_viewport_path = NodePath("../BarViewport")
+surface_path = NodePath("../BarSurface")
+collider_path = NodePath("../BarCollider")
+
+[node name="BarCollider" type="Area3D" parent="BottomBar"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="BarColliderShape" type="CollisionShape3D" parent="BottomBar/BarCollider"]
+shape = SubResource("BoxShape3D_bar")
