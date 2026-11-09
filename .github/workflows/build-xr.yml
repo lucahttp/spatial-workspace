@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -124,7 +124,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -215,10 +215,19 @@ jobs:
           curl -sL "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_RELEASE_TAG }}/Godot_v${{ env.GODOT_RELEASE_TAG }}_export_templates.tpz" -o templates.tpz
           unzip -q templates.tpz
 
+          echo "=== Extracted templates list ==="
+          ls -la templates/
+
           for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
             TEMPLATE_DIR="$HOME/Library/Application Support/Godot/export_templates/${DIR_NAME}"
             mkdir -p "$TEMPLATE_DIR"
             cp -r templates/* "$TEMPLATE_DIR/"
+            
+            # If visionos.zip is missing, create it from ios.zip (shared Apple Embedded base)
+            if [ ! -f "$TEMPLATE_DIR/visionos.zip" ] && [ -f "$TEMPLATE_DIR/ios.zip" ]; then
+              echo "Creating visionos.zip from ios.zip in $TEMPLATE_DIR"
+              cp "$TEMPLATE_DIR/ios.zip" "$TEMPLATE_DIR/visionos.zip"
+            fi
           done
           rm -rf templates templates.tpz
 
@@ -230,9 +239,15 @@ jobs:
           godot --headless --verbose --export-debug "Apple Vision Pro" builds/visionos/SpatialWorkspace.xcodeproj
 
       - name: Archive Xcode Project
+        if: always()
         run: |
           cd godot-spatial-workspace/builds/visionos
-          tar -czf SpatialWorkspace_visionOS_xcode.tar.gz SpatialWorkspace.xcodeproj
+          if [ -d "SpatialWorkspace.xcodeproj" ]; then
+            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz SpatialWorkspace.xcodeproj
+          else
+            echo "No xcodeproj directory created yet, archiving build folder"
+            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz .
+          fi
 
       - name: Upload visionOS Artifacts
         uses: actions/upload-artifact@v4
