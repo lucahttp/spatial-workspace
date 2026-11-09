@@ -218,33 +218,35 @@ jobs:
           echo "=== Extracted templates list ==="
           ls -la templates/
 
+          # Prepare visionos.zip once from ios.zip by mapping xcframework bindings
+          if [ -f "templates/ios.zip" ]; then
+            echo "Creating visionos.zip template with visionos xcframework bindings..."
+            rm -rf /tmp/visionos_template
+            mkdir -p /tmp/visionos_template
+            unzip -q templates/ios.zip -d /tmp/visionos_template
+            
+            cd /tmp/visionos_template
+            for F in libgodot.ios.*; do
+              if [ -e "$F" ]; then
+                NEW_F=$(echo "$F" | sed 's/libgodot\.ios\./libgodot.visionos./')
+                echo "Mapping $F -> $NEW_F"
+                cp -R "$F" "$NEW_F"
+              fi
+            done
+            
+            zip -q -1 -r /tmp/visionos.zip .
+            mv /tmp/visionos.zip "$GITHUB_WORKSPACE/templates_visionos.zip"
+            cp "$GITHUB_WORKSPACE/templates_visionos.zip" templates/visionos.zip
+            rm -rf /tmp/visionos_template
+            cd "$GITHUB_WORKSPACE"
+          fi
+
           for DIR_NAME in "${{ env.GODOT_VERSION }}.stable" "${{ env.GODOT_RELEASE_TAG }}"; do
             TEMPLATE_DIR="$HOME/Library/Application Support/Godot/export_templates/${DIR_NAME}"
             mkdir -p "$TEMPLATE_DIR"
             cp -r templates/* "$TEMPLATE_DIR/"
-            
-            # Prepare visionos.zip from ios.zip by aliasing libgodot.ios.* to libgodot.visionos.*
-            if [ -f "$TEMPLATE_DIR/ios.zip" ]; then
-              echo "Creating visionos.zip template with visionos xcframework bindings..."
-              rm -rf /tmp/visionos_template
-              mkdir -p /tmp/visionos_template
-              unzip -q "$TEMPLATE_DIR/ios.zip" -d /tmp/visionos_template
-              
-              cd /tmp/visionos_template
-              for F in libgodot.ios.*; do
-                if [ -e "$F" ]; then
-                  NEW_F=$(echo "$F" | sed 's/libgodot\.ios\./libgodot.visionos./')
-                  echo "Mapping $F -> $NEW_F"
-                  cp -R "$F" "$NEW_F"
-                fi
-              done
-              
-              zip -q -r "$TEMPLATE_DIR/visionos.zip" .
-              rm -rf /tmp/visionos_template
-              cd -
-            fi
           done
-          rm -rf templates templates.tpz
+          rm -rf templates templates.tpz "$GITHUB_WORKSPACE/templates_visionos.zip"
 
       - name: Export Apple Vision Pro Project
         run: |
