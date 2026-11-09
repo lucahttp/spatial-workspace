@@ -33,8 +33,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GODOT_VERSION: "4.3"
-  GODOT_RELEASE_TAG: "4.3-stable"
+  GODOT_VERSION: "4.7.2"
+  GODOT_RELEASE_TAG: "4.7.2-stable"
 
 jobs:
   # =========================================================================
@@ -55,8 +55,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK Environment
+        run: |
+          ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$ANDROID_PATH" >> $GITHUB_ENV
+          echo "Using Android SDK at $ANDROID_PATH"
 
       - name: Generate Android Debug Keystore
         run: |
@@ -89,7 +92,9 @@ jobs:
       - name: Configure Godot Editor Settings for Android
         run: |
           mkdir -p ~/.config/godot
-          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_HOME" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          cp ~/.config/godot/editor_settings-4.tres ~/.config/godot/editor_settings-4.7.tres
 
       - name: Export PICO 4 Ultra APK
         run: |
@@ -124,8 +129,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK Environment
+        run: |
+          ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$ANDROID_PATH" >> $GITHUB_ENV
+          echo "Using Android SDK at $ANDROID_PATH"
 
       - name: Generate Android Debug Keystore
         run: |
@@ -158,7 +166,9 @@ jobs:
       - name: Configure Godot Editor Settings for Android
         run: |
           mkdir -p ~/.config/godot
-          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_HOME" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          cp ~/.config/godot/editor_settings-4.tres ~/.config/godot/editor_settings-4.7.tres
 
       - name: Export Meta Quest APK
         run: |
