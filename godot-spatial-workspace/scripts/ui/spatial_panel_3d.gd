@@ -21,6 +21,7 @@ const GRIP_MIN_DISTANCE := 0.05
 # Preloaded (not referenced by global class name) so the script also parses in
 # a headless run without the editor's class cache.
 const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
+const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 
 @export var panel_size := Vector2(0.94, 0.58)
 @export var surface_path: NodePath
@@ -53,6 +54,7 @@ var _bimanual_start_distance := 0.0
 var _bimanual_start_angle := 0.0
 var _bimanual_start_scale := Vector3.ONE
 var _bimanual_start_rotation := 0.0
+var _bimanual_mid_offset := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -105,33 +107,76 @@ func _bind_viewport_texture() -> void:
 func _process(_delta: float) -> void:
 	if _xr_manager == null:
 		return
-	var gripping := -1
-	for hand: int in [0, 1]:
-		if _xr_manager.is_grip_pressed(hand):
-			gripping = hand
-			break
-	if gripping < 0:
-		if _dragging:
-			_end_drag()
-		return
+
 	if not _dragging:
-		_start_drag(gripping)
+		# Check if either hand starts gripping the panel
+		for hand: int in [0, 1]:
+			if _xr_manager.is_grip_pressed(hand):
+				var hit := _hit_on_panel(hand)
+				if not hit.is_empty():
+					_start_drag(hand, hit)
+					break
 		return
-	if gripping != _dragging_hand and _second_hand < 0:
-		# Second controller grabbed the same panel -> bimanual manipulation.
-		_second_hand = gripping
-		_begin_bimanual()
-		return
+
+	# We are dragging. Check active grip states for each hand.
+	var hand0_active: bool = _xr_manager.is_grip_pressed(0)
+	var hand1_active: bool = _xr_manager.is_grip_pressed(1)
+
 	if _second_hand >= 0:
-		_update_bimanual()
-	else:
-		_update_single(gripping)
+		# Both hands were engaged.
+		var primary_active: bool = hand0_active if _dragging_hand == 0 else hand1_active
+		var secondary_active: bool = hand0_active if _second_hand == 0 else hand1_active
+
+		if not primary_active and not secondary_active:
+			_end_drag()
+			return
+		elif not primary_active and secondary_active:
+			_transition_to_single(_second_hand)
+			_update_single(_dragging_hand)
+			return
+		elif primary_active and not secondary_active:
+			_transition_to_single(_dragging_hand)
+			_update_single(_dragging_hand)
+			return
+		else:
+			_update_bimanual()
+			return
+
+	# Single-hand dragging
+	var dragging_active: bool = hand0_active if _dragging_hand == 0 else hand1_active
+	if not dragging_active:
+		# Dragging hand was released. Check if the other hand is gripping the panel.
+		var other_hand: int = 1 - _dragging_hand
+		var other_active: bool = hand0_active if other_hand == 0 else hand1_active
+		if other_active:
+			var hit := _hit_on_panel(other_hand)
+			if not hit.is_empty():
+				_start_drag(other_hand, hit)
+				return
+		_end_drag()
+		return
+
+	# Primary hand is still gripping. Check if other hand grips to engage bimanual manipulation.
+	var candidate_second: int = 1 - _dragging_hand
+	var candidate_active: bool = hand0_active if candidate_second == 0 else hand1_active
+	if candidate_active:
+		var second_hit := _hit_on_panel(candidate_second)
+		if not second_hit.is_empty():
+			_second_hand = candidate_second
+			_depth[candidate_second] = _ray_depth(candidate_second)
+			var pos: Vector3 = second_hit["position"]
+			_offset[candidate_second] = global_position - pos
+			_begin_bimanual()
+			return
+
+	_update_single(_dragging_hand)
 
 
 # --- Dragging --------------------------------------------------------------
 
-func _start_drag(hand: int) -> void:
-	var hit := _hit_on_panel(hand)
+func _start_drag(hand: int, hit: Dictionary = {}) -> void:
+	if hit.is_empty():
+		hit = _hit_on_panel(hand)
 	if hit.is_empty():
 		return
 	var position: Vector3 = hit["position"]
@@ -141,6 +186,16 @@ func _start_drag(hand: int) -> void:
 	_depth[hand] = _ray_depth(hand)
 	_offset[hand] = global_position - position
 	_set_affordance_dragging(true)
+	SpatialAudioScript.play_grab(get_tree(), global_position)
+
+
+func _transition_to_single(hand: int) -> void:
+	_dragging_hand = hand
+	_second_hand = -1
+	var point := _point_on_drag_plane(hand)
+	if not point.is_empty():
+		var point_position: Vector3 = point["position"]
+		_offset[hand] = global_position - point_position
 
 
 func _end_drag() -> void:
@@ -150,6 +205,7 @@ func _end_drag() -> void:
 	_depth.clear()
 	_offset.clear()
 	_set_affordance_dragging(false)
+	SpatialAudioScript.play_release(get_tree(), global_position)
 
 
 ## Tells the affordance pill whether the panel is being held.
@@ -181,6 +237,7 @@ func _begin_bimanual() -> void:
 	_bimanual_start_angle = _yaw_between(pa, pb)
 	_bimanual_start_scale = scale
 	_bimanual_start_rotation = rotation.y
+	_bimanual_mid_offset = global_position - (pa + pb) * 0.5
 
 
 func _update_bimanual() -> void:
@@ -195,8 +252,8 @@ func _update_bimanual() -> void:
 	var ratio := distance / maxf(_bimanual_start_distance, GRIP_MIN_DISTANCE)
 	scale = _bimanual_start_scale * ratio
 	rotation.y = _bimanual_start_rotation + (angle - _bimanual_start_angle)
-	# The panel follows the midpoint of both grips.
-	global_position = (pa + pb) * 0.5
+	# The panel follows the midpoint of both grips seamlessly without popping.
+	global_position = ((pa + pb) * 0.5) + _bimanual_mid_offset
 
 
 ## Signed yaw angle of the vector between two grip points.
@@ -253,6 +310,7 @@ func set_bottom_bar_visible(value: bool) -> void:
 
 ## Emits close_requested; the workspace decides what to do with it.
 func request_close() -> void:
+	SpatialAudioScript.play_chime(get_tree(), global_position)
 	close_requested.emit()
 
 

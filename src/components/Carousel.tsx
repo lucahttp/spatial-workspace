@@ -84,10 +84,21 @@ function CardItem({
     if (!g || dragging.current) return
     const targetY = home.y + (selected ? 0.03 : hovered ? 0.018 : 0)
     const targetZ = home.z + (selected ? 0.05 : hovered ? 0.035 : 0)
-    g.position.x += (home.x - g.position.x) * Math.min(1, delta * 7)
-    g.position.y += (targetY - g.position.y) * Math.min(1, delta * 7)
-    g.position.z += (targetZ - g.position.z) * Math.min(1, delta * 8)
-    g.rotation.y += (slot.rotY - g.rotation.y) * Math.min(1, delta * 7)
+
+    const dx = home.x - g.position.x
+    const dy = targetY - g.position.y
+    const dz = targetZ - g.position.z
+    const drot = slot.rotY - g.rotation.y
+
+    // Sleep when resting within sub-millimeter / negligible angular distance
+    if (Math.abs(dx) < 0.0002 && Math.abs(dy) < 0.0002 && Math.abs(dz) < 0.0002 && Math.abs(drot) < 0.0005) {
+      return
+    }
+
+    g.position.x += dx * Math.min(1, delta * 7)
+    g.position.y += dy * Math.min(1, delta * 7)
+    g.position.z += dz * Math.min(1, delta * 8)
+    g.rotation.y += drot * Math.min(1, delta * 7)
   })
 
   const borderColor = card.isSpotlight

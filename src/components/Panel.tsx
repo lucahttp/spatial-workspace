@@ -160,46 +160,6 @@ export function Panel({
                     </Text>
                   )}
                 </Container>
-
-                {/* visionOS / macOS Style Interactive Control Lights */}
-                <Container flexDirection="row" alignItems="center" gapColumn={8}>
-                  {onClose && (
-                    <Container
-                      cursor="pointer"
-                      width={11}
-                      height={11}
-                      borderTopLeftRadius={5.5}
-                      borderTopRightRadius={5.5}
-                      borderBottomLeftRadius={5.5}
-                      borderBottomRightRadius={5.5}
-                      backgroundColor="#fb7185"
-                      borderColor="#f43f5e"
-                      borderTopWidth={1}
-                      borderBottomWidth={1}
-                      borderLeftWidth={1}
-                      borderRightWidth={1}
-                      onClick={onClose}
-                    />
-                  )}
-                  {onMinimize && (
-                    <Container
-                      cursor="pointer"
-                      width={11}
-                      height={11}
-                      borderTopLeftRadius={5.5}
-                      borderTopRightRadius={5.5}
-                      borderBottomLeftRadius={5.5}
-                      borderBottomRightRadius={5.5}
-                      backgroundColor="#fbbf24"
-                      borderColor="#f59e0b"
-                      borderTopWidth={1}
-                      borderBottomWidth={1}
-                      borderLeftWidth={1}
-                      borderRightWidth={1}
-                      onClick={onMinimize}
-                    />
-                  )}
-                </Container>
               </Container>
             )}
 
@@ -211,7 +171,7 @@ export function Panel({
             A round close button sits to the left of the grab pill. */}
         {bar && (
           <group position={[0, -height / 2 - 0.022, 0.03]}>
-            <UiRoot width={px(0.26)} height={px(0.05)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
+            <UiRoot width={px(0.30)} height={px(0.06)} anchorY="center" pixelSize={PIXEL} alignItems="center" justifyContent="center">
               <Container
                 flexDirection="row"
                 alignItems="center"
@@ -224,12 +184,12 @@ export function Panel({
                 {onClose && (
                   <Container
                     cursor="pointer"
-                    width={18}
-                    height={18}
-                    borderTopLeftRadius={9}
-                    borderTopRightRadius={9}
-                    borderBottomLeftRadius={9}
-                    borderBottomRightRadius={9}
+                    width={22}
+                    height={22}
+                    borderTopLeftRadius={11}
+                    borderTopRightRadius={11}
+                    borderBottomLeftRadius={11}
+                    borderBottomRightRadius={11}
                     backgroundColor="rgba(244, 63, 94, 0.85)"
                     borderColor="rgba(255, 255, 255, 0.45)"
                     borderTopWidth={1}
@@ -240,8 +200,34 @@ export function Panel({
                     justifyContent="center"
                     onClick={onClose}
                   >
-                    <Text fontSize={9} fontWeight={700} color="#ffffff">
+                    <Text fontSize={11} fontWeight={700} color="#ffffff">
                       {cleanText('x')}
+                    </Text>
+                  </Container>
+                )}
+
+                {/* Round minimize button (visionOS style) */}
+                {onMinimize && (
+                  <Container
+                    cursor="pointer"
+                    width={22}
+                    height={22}
+                    borderTopLeftRadius={11}
+                    borderTopRightRadius={11}
+                    borderBottomLeftRadius={11}
+                    borderBottomRightRadius={11}
+                    backgroundColor="rgba(251, 191, 36, 0.85)"
+                    borderColor="rgba(255, 255, 255, 0.45)"
+                    borderTopWidth={1}
+                    borderBottomWidth={1}
+                    borderLeftWidth={1}
+                    borderRightWidth={1}
+                    alignItems="center"
+                    justifyContent="center"
+                    onClick={onMinimize}
+                  >
+                    <Text fontSize={11} fontWeight={700} color="#ffffff">
+                      {cleanText('–')}
                     </Text>
                   </Container>
                 )}

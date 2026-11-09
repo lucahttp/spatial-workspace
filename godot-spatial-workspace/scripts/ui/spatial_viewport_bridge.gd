@@ -19,6 +19,7 @@ signal clicked()
 # Preloaded (not referenced by global class name) so the script also parses in
 # a headless run without the editor's class cache.
 const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
+const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 
 @export var sub_viewport_path: NodePath
 @export var surface_path: NodePath
@@ -70,10 +71,8 @@ func _process(_delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# Desktop fallback: a real mouse click activates the 2D Controls.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_push_button(_last_position, true)
-		else:
-			_push_button(_last_position, false)
+		_trigger_down = event.pressed
+		_push_button(_last_position, event.pressed)
 
 
 # --- Pointer resolution ----------------------------------------------------
@@ -113,6 +112,7 @@ func _sync_trigger(hand: int) -> void:
 	_trigger_down = pressed
 	_push_button(_last_position, pressed)
 	if pressed:
+		SpatialAudioScript.play_click(get_tree(), global_position)
 		clicked.emit()
 
 
@@ -137,6 +137,7 @@ func _push_motion(pixels: Vector2) -> void:
 	motion.position = pixels
 	motion.global_position = pixels
 	motion.relative = pixels - _last_position
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT if _trigger_down else 0
 	_last_position = pixels
 	_viewport.push_input(motion, true)
 
@@ -145,6 +146,7 @@ func _push_button(pixels: Vector2, pressed: bool) -> void:
 	var button := InputEventMouseButton.new()
 	button.button_index = MOUSE_BUTTON_LEFT
 	button.pressed = pressed
+	button.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
 	button.position = pixels
 	button.global_position = pixels
 	_viewport.push_input(button, true)

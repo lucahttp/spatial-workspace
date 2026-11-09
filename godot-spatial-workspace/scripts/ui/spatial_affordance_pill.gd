@@ -12,7 +12,7 @@ extends Node3D
 ## cards), so the pill script owns the detection and the hosts only set the
 ## label / accent and the dragging state.
 
-const DWELL_SECONDS := 3.0
+const DWELL_SECONDS := 1.2
 const PROXIMITY_DISTANCE := 0.38
 const RAY_LENGTH := 10.0
 
@@ -65,14 +65,16 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_hovered = _is_hovering()
+	var interaction := _check_pointer_interaction()
+	_hovered = interaction["hovering"]
+	_gripping = interaction["gripping"]
+
 	if _hovered:
 		_dwell += delta
 	else:
 		_dwell = 0.0
 
 	_near = _is_near()
-	_gripping = _is_gripping()
 
 	var dwell_done := _dwell >= DWELL_SECONDS
 	visible = dwell_done or _near or _gripping or _dragging
@@ -82,42 +84,44 @@ func _process(delta: float) -> void:
 
 # --- Detection -------------------------------------------------------------
 
-func _is_hovering() -> bool:
-	if _collider == null:
-		return false
+## Checks hover and grip in a single pass to minimize physics raycasts per frame.
+func _check_pointer_interaction() -> Dictionary:
+	if _collider == null or _xr == null:
+		return {"hovering": false, "gripping": false}
+	var hovering := false
+	var gripping := false
 	for hand: int in [0, 1]:
 		var ray := _controller_ray(hand)
 		if ray.is_empty():
 			continue
 		if not XRManagerScript.ray_hit(get_world_3d(), ray["from"], ray["to"], _collider).is_empty():
-			return true
-	return false
+			hovering = true
+			if _xr.is_grip_pressed(hand):
+				gripping = true
+			break
+	return {"hovering": hovering, "gripping": gripping}
+
+
+func _is_hovering() -> bool:
+	return _hovered
 
 
 func _is_near() -> bool:
 	if _target == null or _xr == null:
 		return false
+	var target_pos := _target.global_position
+	var threshold_sq := PROXIMITY_DISTANCE * PROXIMITY_DISTANCE
 	for hand: int in [0, 1]:
 		var origin := _xr.get_aim_origin(hand)
 		if origin == Vector3.ZERO:
 			continue
-		if origin.distance_to(_target.global_position) < PROXIMITY_DISTANCE:
+		if origin.distance_squared_to(target_pos) < threshold_sq:
 			return true
 	return false
 
 
 func _is_gripping() -> bool:
-	if _collider == null or _xr == null:
-		return false
-	for hand: int in [0, 1]:
-		if not _xr.is_grip_pressed(hand):
-			continue
-		var ray := _controller_ray(hand)
-		if ray.is_empty():
-			continue
-		if not XRManagerScript.ray_hit(get_world_3d(), ray["from"], ray["to"], _collider).is_empty():
-			return true
-	return false
+	return _gripping
 
 
 ## Aim ray of a hand, or an empty Dictionary when that hand has no pose yet.

@@ -13,6 +13,7 @@ signal add_card_requested()
 
 const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
 const PILL_SCENE := preload("res://scenes/ui/spatial_affordance_pill.tscn")
+const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 
 const CARD_RADIUS := 0.42
 const CARD_ANGLE_STEP := 0.42
@@ -202,11 +203,13 @@ func _begin_drag(hand: int) -> void:
 		_drag_depth = _ray_depth(hand)
 		var position: Vector3 = hit["position"]
 		_drag_offset = card.global_position - position
+		SpatialAudioScript.play_grab(get_tree(), position)
 	elif hit["group"]:
 		_dragging_group = true
 		_drag_depth = _ray_depth(hand)
 		var group_position: Vector3 = hit["position"]
 		_drag_offset = global_position - group_position
+		SpatialAudioScript.play_grab(get_tree(), group_position)
 
 
 func _update_drag(hand: int) -> void:
@@ -274,9 +277,10 @@ func _update_add_button() -> void:
 func add_card(title: String, badge: String, summary: String) -> String:
 	_next_id += 1
 	var card_id := "card-%d" % _next_id
-	_add_card(card_id, title, badge, summary)
+	var card := _add_card(card_id, title, badge, summary)
 	_layout_cards()
 	card_added.emit(card_id)
+	SpatialAudioScript.play_chime(get_tree(), card.global_position)
 	return card_id
 
 
