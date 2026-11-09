@@ -3,6 +3,7 @@
 Reimplementación nativa del **Spatial Workspace** en **Godot Engine 4 (4.5+ / 4.7+)** diseñada con arquitectura de **Core Compartido + Adaptadores de Plataforma** para soporte simultáneo en:
 - **Apple Vision Pro** (visionOS nativo vía RealityKit / `apple/plugins-for-godot`).
 - **PICO 4 Ultra** (OpenXR Android `arm64-v8a` vía Godot OpenXR Vendors Plugin).
+- **Meta Quest 2 / 3 / Pro** (OpenXR Android `arm64-v8a` vía Godot OpenXR Vendors Plugin).
 
 ---
 
@@ -70,30 +71,41 @@ godot-spatial-workspace/
 ## 🚀 Instrucciones de Exportación
 
 ### 1. PICO 4 Ultra (OpenXR Android)
-1. Instalar el plugin **Godot OpenXR Vendors** desde el AssetLib o clonar en `addons/godot_openxr_vendors/`.
-2. En Godot Editor:
-   - Ir a **Proyecto > Exportar...**
-   - Seleccionar el preset **PICO 4 Ultra (OpenXR Android)**.
-   - Activar la extensión OpenXR de PICO en las opciones de exportación.
-   - Click en **Exportar Proyecto** para generar el archivo APK `builds/pico4ultra/spatial_workspace.apk`.
+1. Preset: `PICO 4 Ultra`
+2. Genera: `builds/pico/spatial_workspace_pico.apk`
 3. Instalar en el visor vía ADB:
    ```bash
-   adb install -r builds/pico4ultra/spatial_workspace.apk
+   adb install -r builds/pico/spatial_workspace_pico.apk
    ```
 
-### 2. Apple Vision Pro (visionOS)
-1. Requisitos: macOS con Xcode 16+ y visionOS SDK.
-2. Clonar o integrar el plugin oficial de Apple para Godot:
-   - [apple/plugins-for-godot](https://github.com/apple/plugins-for-godot) (`godotrealitykit` y `godotphase`).
-3. En Godot Editor:
-   - Ir a **Proyecto > Exportar...**
-   - Seleccionar el preset **Apple Vision Pro (visionOS)**.
-   - Exportar como proyecto Xcode en `builds/visionos/SpatialWorkspace.xcodeproj`.
+### 2. Meta Quest (OpenXR Android)
+1. Preset: `Meta Quest`
+2. Genera: `builds/quest/spatial_workspace_quest.apk`
+3. Instalar en el visor vía ADB:
+   ```bash
+   adb install -r builds/quest/spatial_workspace_quest.apk
+   ```
+
+### 3. Apple Vision Pro (visionOS)
+1. Preset: `Apple Vision Pro`
+2. Requisitos: macOS con Xcode 16+ y visionOS SDK.
+3. Genera el proyecto Xcode en `builds/visionos/SpatialWorkspace.xcodeproj`.
 4. Abrir en Xcode:
    ```bash
    open builds/visionos/SpatialWorkspace.xcodeproj
    ```
 5. Configurar el Signing & Capabilities con tu cuenta de Apple Developer y desplegar en el visor o simulador de visionOS.
+
+---
+
+## 🤖 GitHub Actions CI/CD (`build-xr.yml`)
+
+El pipeline automatizado en `.github/workflows/build-xr.yml` compila los 3 artefactos en cada push a `feat/godot-native-xr` o `main`:
+- **Job `build-android-xr (PICO 4 Ultra)`**: Compila y sube el artefacto `pico4-ultra-apk`.
+- **Job `build-android-xr (Meta Quest)`**: Compila y sube el artefacto `meta-quest-apk`.
+- **Job `build-visionos (Apple Vision Pro)`**: Exporta y empaqueta el proyecto Xcode listo para compilar/firmar como `visionos-xcode-project`.
+
+También puede dispararse manualmente vía **Workflow Dispatch** seleccionando el target deseado (`all`, `pico`, `quest` o `visionos`).
 
 ---
 
