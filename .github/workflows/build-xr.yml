@@ -241,12 +241,11 @@ jobs:
       - name: Archive Xcode Project
         if: always()
         run: |
-          cd godot-spatial-workspace/builds/visionos
-          if [ -d "SpatialWorkspace.xcodeproj" ]; then
-            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz SpatialWorkspace.xcodeproj
+          cd godot-spatial-workspace/builds
+          if [ -d "visionos/SpatialWorkspace.xcodeproj" ]; then
+            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz -C visionos SpatialWorkspace.xcodeproj
           else
-            echo "No xcodeproj directory created yet, archiving build folder"
-            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz .
+            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz visionos
           fi
 
       - name: Upload visionOS Artifacts
@@ -254,7 +253,7 @@ jobs:
         with:
           name: visionos-xcode-project
           path: |
-            godot-spatial-workspace/builds/visionos/SpatialWorkspace_visionOS_xcode.tar.gz
-            godot-spatial-workspace/builds/visionos/*.xcodeproj
+            godot-spatial-workspace/builds/SpatialWorkspace_visionOS_xcode.tar.gz
+            godot-spatial-workspace/builds/visionos/SpatialWorkspace.xcodeproj
           if-no-files-found: warn
           retention-days: 14
