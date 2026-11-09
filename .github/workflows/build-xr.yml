@@ -223,10 +223,25 @@ jobs:
             mkdir -p "$TEMPLATE_DIR"
             cp -r templates/* "$TEMPLATE_DIR/"
             
-            # If visionos.zip is missing, create it from ios.zip (shared Apple Embedded base)
-            if [ ! -f "$TEMPLATE_DIR/visionos.zip" ] && [ -f "$TEMPLATE_DIR/ios.zip" ]; then
-              echo "Creating visionos.zip from ios.zip in $TEMPLATE_DIR"
-              cp "$TEMPLATE_DIR/ios.zip" "$TEMPLATE_DIR/visionos.zip"
+            # Prepare visionos.zip from ios.zip by aliasing libgodot.ios.* to libgodot.visionos.*
+            if [ -f "$TEMPLATE_DIR/ios.zip" ]; then
+              echo "Creating visionos.zip template with visionos xcframework bindings..."
+              rm -rf /tmp/visionos_template
+              mkdir -p /tmp/visionos_template
+              unzip -q "$TEMPLATE_DIR/ios.zip" -d /tmp/visionos_template
+              
+              cd /tmp/visionos_template
+              for F in libgodot.ios.*; do
+                if [ -e "$F" ]; then
+                  NEW_F=$(echo "$F" | sed 's/libgodot\.ios\./libgodot.visionos./')
+                  echo "Mapping $F -> $NEW_F"
+                  cp -R "$F" "$NEW_F"
+                fi
+              done
+              
+              zip -q -r "$TEMPLATE_DIR/visionos.zip" .
+              rm -rf /tmp/visionos_template
+              cd -
             fi
           done
           rm -rf templates templates.tpz
