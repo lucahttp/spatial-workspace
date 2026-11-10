@@ -113,6 +113,27 @@ jobs:
           godot --headless --import || true
           godot --headless --verbose --export-debug "PICO 4 Ultra" builds/pico/SpatialWorkspace-Pico4Ultra.apk
 
+      - name: Align and Sign APK (Android 11+ & PICO OS Compatibility)
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Using Android Build Tools at $BUILD_TOOLS_DIR"
+          APK="godot-spatial-workspace/builds/pico/SpatialWorkspace-Pico4Ultra.apk"
+          
+          # Zipalign 4-byte boundary
+          $BUILD_TOOLS_DIR/zipalign -f -p 4 "$APK" "${APK}.aligned"
+          mv "${APK}.aligned" "$APK"
+          
+          # Sign with apksigner (V1 + V2 + V3)
+          $BUILD_TOOLS_DIR/apksigner sign \
+            --ks ~/.android/debug.keystore \
+            --ks-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --key-pass pass:android \
+            "$APK"
+          
+          # Verify signature
+          $BUILD_TOOLS_DIR/apksigner verify --verbose "$APK"
+
       - name: Upload PICO 4 Ultra APK
         uses: actions/upload-artifact@v4
         with:
@@ -186,6 +207,27 @@ jobs:
           cd godot-spatial-workspace
           godot --headless --import || true
           godot --headless --verbose --export-debug "Meta Quest" builds/quest/SpatialWorkspace-MetaQuest.apk
+
+      - name: Align and Sign APK (Android 11+ & Meta Horizon OS Compatibility)
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Using Android Build Tools at $BUILD_TOOLS_DIR"
+          APK="godot-spatial-workspace/builds/quest/SpatialWorkspace-MetaQuest.apk"
+          
+          # Zipalign 4-byte boundary
+          $BUILD_TOOLS_DIR/zipalign -f -p 4 "$APK" "${APK}.aligned"
+          mv "${APK}.aligned" "$APK"
+          
+          # Sign with apksigner (V1 + V2 + V3)
+          $BUILD_TOOLS_DIR/apksigner sign \
+            --ks ~/.android/debug.keystore \
+            --ks-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --key-pass pass:android \
+            "$APK"
+          
+          # Verify signature
+          $BUILD_TOOLS_DIR/apksigner verify --verbose "$APK"
 
       - name: Upload Meta Quest APK
         uses: actions/upload-artifact@v4
