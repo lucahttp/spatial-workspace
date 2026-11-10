@@ -4,8 +4,6 @@ Un espacio de trabajo espacial multi-ventana interactivo para la web inmersiva (
 
 Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, con un diseño **Flat Design Pastel** (generous whitespace, paleta pastel azul cielo `#e0f2fe`, lavanda `#ede9fe`, menta `#d1fae5`, acentos púrpura `#7c3aed`), física cinemática de **GSAP UI**, efectos perimetrales de **Border Beam**, motor matemático de **Thinking Orbs** de Jakub Antalik, y reconocimiento cinemático/ML de manos con **Transformers.js & ONNX Runtime Web**.
 
-
-[APK for PICO](https://github.com/lucahttp/spatial-workspace/actions/runs/42612432950/artifacts/13671555418)
 ---
 
 ## 📲 Descargas Públicas de Builds Nativas XR (APKs & visionOS)
