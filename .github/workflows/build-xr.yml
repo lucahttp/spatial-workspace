@@ -122,6 +122,26 @@ jobs:
           echo "${{ env.GODOT_VERSION }}.stable" > godot-spatial-workspace/android/.build_version
           touch godot-spatial-workspace/android/build/.gdignore
 
+          echo "=== Injecting PICO 4 Ultra VR, Hand Tracking & Passthrough Metadata ==="
+          python3 -c "
+          p = 'godot-spatial-workspace/android/build/src/main/AndroidManifest.xml'
+          with open(p, 'r') as f: content = f.read()
+          meta = '''
+                  <!-- PICO 4 Ultra VR, Hand Tracking & Passthrough Support -->
+                  <meta-data android:name=\"pvr.app.type\" android:value=\"vr\" />
+                  <meta-data android:name=\"pvr.sdk.version\" android:value=\"OpenXR\" />
+                  <meta-data android:name=\"pvr.app.inputType\" android:value=\"controller|hand\" />
+                  <meta-data android:name=\"pvr.app.handtrackingSupport\" android:value=\"1\" />
+                  <meta-data android:name=\"handtracking\" android:value=\"1\" />
+                  <meta-data android:name=\"pvr.supportedDevices\" android:value=\"pico_4_ultra|pico_4|pico_neo3|pico_g3\" />
+                  <meta-data android:name=\"com.pvr.see-through.supported\" android:value=\"true\" />
+                  <meta-data android:name=\"pico_advance_interface\" android:value=\"true\" />
+          '''
+          if 'pvr.app.inputType' not in content:
+              content = content.replace('</application>', meta + '\n    </application>')
+              with open(p, 'w') as f: f.write(content)
+          "
+
       - name: Export PICO 4 Ultra APK
         run: |
           mkdir -p godot-spatial-workspace/builds/pico
@@ -232,6 +252,26 @@ jobs:
           unzip -q $HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/android_source.zip -d godot-spatial-workspace/android/build
           echo "${{ env.GODOT_VERSION }}.stable" > godot-spatial-workspace/android/.build_version
           touch godot-spatial-workspace/android/build/.gdignore
+
+          echo "=== Injecting PICO 4 Ultra VR, Hand Tracking & Passthrough Metadata ==="
+          python3 -c "
+          p = 'godot-spatial-workspace/android/build/src/main/AndroidManifest.xml'
+          with open(p, 'r') as f: content = f.read()
+          meta = '''
+                  <!-- PICO 4 Ultra VR, Hand Tracking & Passthrough Support -->
+                  <meta-data android:name=\"pvr.app.type\" android:value=\"vr\" />
+                  <meta-data android:name=\"pvr.sdk.version\" android:value=\"OpenXR\" />
+                  <meta-data android:name=\"pvr.app.inputType\" android:value=\"controller|hand\" />
+                  <meta-data android:name=\"pvr.app.handtrackingSupport\" android:value=\"1\" />
+                  <meta-data android:name=\"handtracking\" android:value=\"1\" />
+                  <meta-data android:name=\"pvr.supportedDevices\" android:value=\"pico_4_ultra|pico_4|pico_neo3|pico_g3\" />
+                  <meta-data android:name=\"com.pvr.see-through.supported\" android:value=\"true\" />
+                  <meta-data android:name=\"pico_advance_interface\" android:value=\"true\" />
+          '''
+          if 'pvr.app.inputType' not in content:
+              content = content.replace('</application>', meta + '\n    </application>')
+              with open(p, 'w') as f: f.write(content)
+          "
 
       - name: Export Meta Quest APK
         run: |
