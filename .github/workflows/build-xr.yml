@@ -103,8 +103,24 @@ jobs:
         run: |
           mkdir -p ~/.config/godot
           ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          JAVA_PATH="${JAVA_HOME:-/usr/lib/jvm/temurin-17-jdk-amd64}"
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$JAVA_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
           cp ~/.config/godot/editor_settings-4.tres ~/.config/godot/editor_settings-4.7.tres
+
+      - name: Install Godot OpenXR Vendors Plugin & Android Build Template
+        run: |
+          echo "=== Downloading Godot OpenXR Vendors Plugin ==="
+          curl -sL "https://github.com/GodotVR/godot_openxr_vendors/releases/download/5.1.0-stable/godotopenxrvendorsaddon.zip" -o /tmp/vendors.zip
+          unzip -q /tmp/vendors.zip -d /tmp/vendors
+          mkdir -p godot-spatial-workspace/addons
+          cp -r /tmp/vendors/asset/addons/godotopenxrvendors godot-spatial-workspace/addons/
+          rm -rf /tmp/vendors /tmp/vendors.zip
+
+          echo "=== Installing Android Build Template ==="
+          mkdir -p godot-spatial-workspace/android/build
+          unzip -q $HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/android_source.zip -d godot-spatial-workspace/android/build
+          echo "${{ env.GODOT_VERSION }}.stable" > godot-spatial-workspace/android/.build_version
+          touch godot-spatial-workspace/android/build/.gdignore
 
       - name: Export PICO 4 Ultra APK
         run: |
@@ -198,8 +214,24 @@ jobs:
         run: |
           mkdir -p ~/.config/godot
           ANDROID_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
+          JAVA_PATH="${JAVA_HOME:-/usr/lib/jvm/temurin-17-jdk-amd64}"
+          printf '[godot_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_PATH" "$JAVA_PATH" "$HOME" > ~/.config/godot/editor_settings-4.tres
           cp ~/.config/godot/editor_settings-4.tres ~/.config/godot/editor_settings-4.7.tres
+
+      - name: Install Godot OpenXR Vendors Plugin & Android Build Template
+        run: |
+          echo "=== Downloading Godot OpenXR Vendors Plugin ==="
+          curl -sL "https://github.com/GodotVR/godot_openxr_vendors/releases/download/5.1.0-stable/godotopenxrvendorsaddon.zip" -o /tmp/vendors.zip
+          unzip -q /tmp/vendors.zip -d /tmp/vendors
+          mkdir -p godot-spatial-workspace/addons
+          cp -r /tmp/vendors/asset/addons/godotopenxrvendors godot-spatial-workspace/addons/
+          rm -rf /tmp/vendors /tmp/vendors.zip
+
+          echo "=== Installing Android Build Template ==="
+          mkdir -p godot-spatial-workspace/android/build
+          unzip -q $HOME/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/android_source.zip -d godot-spatial-workspace/android/build
+          echo "${{ env.GODOT_VERSION }}.stable" > godot-spatial-workspace/android/.build_version
+          touch godot-spatial-workspace/android/build/.gdignore
 
       - name: Export Meta Quest APK
         run: |

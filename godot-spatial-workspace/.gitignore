@@ -4,3 +4,6 @@ builds/
 *.apk
 *.aab
 *.xcodeproj
+extension_api.json
+addons/godotopenxrvendors/
+android/

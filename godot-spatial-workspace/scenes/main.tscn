@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/system_bars.tscn" id="8_bars"]
 [ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="9_bridge"]
 [ext_resource type="Script" path="res://scripts/workspace/workspace.gd" id="10_workspace"]
+[ext_resource type="Script" path="res://scripts/xr/controller_pointer.gd" id="11_pointer"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_code"]
 size = Vector2(0.94, 0.58)
@@ -100,9 +101,21 @@ current = true
 tracker = "left_hand"
 pose = "aim"
 
+[node name="Pointer" type="Node3D" parent="XROrigin3D/LeftController"]
+script = ExtResource("11_pointer")
+hand = 0
+beam_color = Color(0.3, 0.65, 1.0, 0.6)
+reticle_color = Color(0.4, 0.8, 1.0, 0.95)
+
 [node name="RightController" type="XRController3D" parent="XROrigin3D" groups=["xr_controller"]]
 tracker = "right_hand"
 pose = "aim"
+
+[node name="Pointer" type="Node3D" parent="XROrigin3D/RightController"]
+script = ExtResource("11_pointer")
+hand = 1
+beam_color = Color(0.7, 0.45, 1.0, 0.6)
+reticle_color = Color(0.8, 0.6, 1.0, 0.95)
 
 [node name="Workspace" type="Node3D" parent="XROrigin3D"]
 
