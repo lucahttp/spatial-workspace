@@ -8,6 +8,27 @@ Inspirado en la ergonomía y estética de **Apple Vision OS** y **PICO OS 5**, c
 [APK for PICO](https://github.com/lucahttp/spatial-workspace/actions/runs/42612432950/artifacts/13671555418)
 ---
 
+## 📲 Descargas Públicas de Builds Nativas XR (APKs & visionOS)
+
+Los binarios nativos compilados con **Godot 4.7.2** se generan y publican automáticamente en los **[Releases Públicos del Repositorio](https://github.com/lucahttp/spatial-workspace/releases/tag/latest)** con el tag `latest` y por versión:
+
+| Plataforma | Formato / Runtime | Enlace de Descarga Pública (Directo) |
+| :--- | :--- | :--- |
+| **PICO 4 Ultra** | Android APK (arm64 OpenXR) | [⬇️ SpatialWorkspace-Pico4Ultra.apk](https://github.com/lucahttp/spatial-workspace/releases/latest/download/SpatialWorkspace-Pico4Ultra.apk) |
+| **Meta Quest 2 / 3 / 3S / Pro** | Android APK (arm64 OpenXR) | [⬇️ SpatialWorkspace-MetaQuest.apk](https://github.com/lucahttp/spatial-workspace/releases/latest/download/SpatialWorkspace-MetaQuest.apk) |
+| **Apple Vision Pro** | Xcode Project (RealityKit / visionOS) | [⬇️ SpatialWorkspace-visionOS-Xcode.tar.gz](https://github.com/lucahttp/spatial-workspace/releases/latest/download/SpatialWorkspace-visionOS-Xcode.tar.gz) |
+
+> 💡 **Instalación rápida en visor (ADB):**
+> ```bash
+> # PICO 4 Ultra
+> adb install -r SpatialWorkspace-Pico4Ultra.apk
+>
+> # Meta Quest 2/3/3S/Pro
+> adb install -r SpatialWorkspace-MetaQuest.apk
+> ```
+
+---
+
 ## 🌟 Nuevas Características y Ergonomía Espacial
 
 ### 1. 🖐️ Hand Tracking & Kinemática ML (Transformers.js / ONNX Runtime Web)

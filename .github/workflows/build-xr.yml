@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - feat/godot-native-xr
+    tags:
+      - 'v*'
     paths:
       - 'godot-spatial-workspace/**'
       - '.github/workflows/build-xr.yml'
@@ -27,10 +29,18 @@ on:
           - pico
           - quest
           - visionos
+      release_tag:
+        description: 'Release tag (default: latest, or e.g. v0.1.0)'
+        required: false
+        default: 'latest'
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 env:
   GODOT_VERSION: "4.7.2"
@@ -101,7 +111,7 @@ jobs:
           mkdir -p godot-spatial-workspace/builds/pico
           cd godot-spatial-workspace
           godot --headless --import || true
-          godot --headless --verbose --export-debug "PICO 4 Ultra" builds/pico/spatial_workspace_pico.apk
+          godot --headless --verbose --export-debug "PICO 4 Ultra" builds/pico/SpatialWorkspace-Pico4Ultra.apk
 
       - name: Upload PICO 4 Ultra APK
         uses: actions/upload-artifact@v4
@@ -175,7 +185,7 @@ jobs:
           mkdir -p godot-spatial-workspace/builds/quest
           cd godot-spatial-workspace
           godot --headless --import || true
-          godot --headless --verbose --export-debug "Meta Quest" builds/quest/spatial_workspace_quest.apk
+          godot --headless --verbose --export-debug "Meta Quest" builds/quest/SpatialWorkspace-MetaQuest.apk
 
       - name: Upload Meta Quest APK
         uses: actions/upload-artifact@v4
@@ -259,9 +269,9 @@ jobs:
           mkdir -p godot-spatial-workspace/builds/visionos
           cd godot-spatial-workspace/builds
           if [ -d "visionos/SpatialWorkspace.xcodeproj" ]; then
-            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz -C visionos SpatialWorkspace.xcodeproj
+            tar -czf SpatialWorkspace-visionOS-Xcode.tar.gz -C visionos SpatialWorkspace.xcodeproj
           else
-            tar -czf SpatialWorkspace_visionOS_xcode.tar.gz visionos
+            tar -czf SpatialWorkspace-visionOS-Xcode.tar.gz visionos
           fi
 
       - name: Upload visionOS Artifacts
@@ -269,7 +279,131 @@ jobs:
         with:
           name: visionos-xcode-project
           path: |
-            godot-spatial-workspace/builds/SpatialWorkspace_visionOS_xcode.tar.gz
+            godot-spatial-workspace/builds/SpatialWorkspace-visionOS-Xcode.tar.gz
             godot-spatial-workspace/builds/visionos/SpatialWorkspace.xcodeproj
           if-no-files-found: warn
           retention-days: 14
+
+  # =========================================================================
+  # 4. Public GitHub Release (latest & version tags)
+  # =========================================================================
+  publish-release:
+    name: Publish Public XR Release (latest / version)
+    runs-on: ubuntu-latest
+    needs: [build-pico, build-quest, build-visionos]
+    if: |
+      always() &&
+      github.event_name != 'pull_request' &&
+      (needs.build-pico.result == 'success' || needs.build-quest.result == 'success' || needs.build-visionos.result == 'success')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-files
+          echo "=== Collected Artifacts ==="
+          ls -la release-artifacts
+
+          # Copy APK and tar.gz binaries into release-files
+          find release-artifacts -type f \( -name "*.apk" -o -name "*.tar.gz" \) -exec cp -v {} release-files/ \;
+
+          cd release-files
+          if [ -n "$(ls -A .)" ]; then
+            sha256sum * > SHA256SUMS.txt
+          fi
+          echo "=== Final Release Files ==="
+          ls -la .
+
+      - name: Create or Update Public GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(grep '"version":' package.json | head -1 | awk -F'"' '{print $4}')
+          VERSION="${VERSION:-0.1.0}"
+
+          # Determine target tag:
+          # 1. Manual input from workflow_dispatch (if provided)
+          # 2. Git tag from push (if refs/tags/*)
+          # 3. Default to 'latest'
+          TAG="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              TAG="${GITHUB_REF#refs/tags/}"
+            else
+              TAG="latest"
+            fi
+          fi
+
+          echo "Target tag: $TAG"
+          echo "Project version: $VERSION"
+
+          TITLE="Spatial Workspace Native XR (v${VERSION})"
+          if [ "$TAG" = "latest" ]; then
+            TITLE="Spatial Workspace Native XR (latest - v${VERSION})"
+          fi
+
+          cat << 'EOF' > release_notes.md
+          ## Spatial Workspace Native XR — Public Release
+
+          Native standalone builds compiled with **Godot 4.7.2** for Apple Vision Pro, PICO 4 Ultra, and Meta Quest.
+
+          ### 📦 Download Packages
+          | Platform | Package / Runtime | Public Download |
+          | :--- | :--- | :--- |
+          | **PICO 4 Ultra** | Android APK (arm64 OpenXR) | [⬇️ SpatialWorkspace-Pico4Ultra.apk](https://github.com/${{ github.repository }}/releases/download/latest/SpatialWorkspace-Pico4Ultra.apk) |
+          | **Meta Quest 2 / 3 / 3S / Pro** | Android APK (arm64 OpenXR) | [⬇️ SpatialWorkspace-MetaQuest.apk](https://github.com/${{ github.repository }}/releases/download/latest/SpatialWorkspace-MetaQuest.apk) |
+          | **Apple Vision Pro** | Xcode Project (RealityKit / visionOS) | [⬇️ SpatialWorkspace-visionOS-Xcode.tar.gz](https://github.com/${{ github.repository }}/releases/download/latest/SpatialWorkspace-visionOS-Xcode.tar.gz) |
+
+          ### 📲 Installation
+          - **PICO 4 Ultra & Meta Quest**: Install directly via adb or SideQuest:
+            ```bash
+            adb install -r SpatialWorkspace-Pico4Ultra.apk
+            # or
+            adb install -r SpatialWorkspace-MetaQuest.apk
+            ```
+          - **Apple Vision Pro**: Extract `SpatialWorkspace-visionOS-Xcode.tar.gz`, open `SpatialWorkspace.xcodeproj` in Xcode 16+, select your Development Team under *Signing & Capabilities*, and run to your Vision Pro device or Simulator.
+
+          ---
+          *Automated build from commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) on branch `${{ github.ref_name }}`.*
+          EOF
+
+          # Check if release already exists
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release '$TAG' already exists. Updating release metadata and uploading assets..."
+            gh release edit "$TAG" --title "$TITLE" --notes-file release_notes.md --target "${{ github.sha }}"
+            gh release upload "$TAG" release-files/* --clobber
+          else
+            echo "Creating new release '$TAG'..."
+            gh release create "$TAG" release-files/* \
+              --title "$TITLE" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest
+          fi
+
+          # If this was a versioned tag (e.g. v0.1.0), also synchronize the 'latest' release tag
+          if [ "$TAG" != "latest" ]; then
+            echo "Synchronizing rolling 'latest' release..."
+            if gh release view "latest" > /dev/null 2>&1; then
+              gh release edit "latest" --title "Spatial Workspace Native XR (latest - $TAG)" --notes-file release_notes.md --target "${{ github.sha }}"
+              gh release upload "latest" release-files/* --clobber
+            else
+              gh release create "latest" release-files/* \
+                --title "Spatial Workspace Native XR (latest - $TAG)" \
+                --notes-file release_notes.md \
+                --target "${{ github.sha }}" \
+                --latest
+            fi
+          fi
+
+          echo "Public release published successfully."
