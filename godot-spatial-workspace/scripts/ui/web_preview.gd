@@ -59,3 +59,31 @@ func is_favorite() -> bool:
 
 func get_url() -> String:
 	return _url_edit.text
+
+
+## Displays document or reference card information.
+func display_document(doc_title: String, doc_summary: String, url: String = "") -> void:
+	if _title != null:
+		_title.text = doc_title
+	if _summary != null:
+		_summary.text = doc_summary
+	if _url_edit != null:
+		_url_edit.text = url if url != "" else "doc://workspace/%s" % doc_title.to_lower().replace(" ", "-")
+	if _status != null:
+		_status.text = "Visualizando: %s" % doc_title
+	if _progress != null:
+		_progress.value = 100
+
+
+## Displays code execution results from CodeStudio wZed.
+func display_runner_output(file_name: String, summary: String) -> void:
+	if _title != null:
+		_title.text = "Ejecución: %s" % file_name
+	if _summary != null:
+		_summary.text = summary
+	if _url_edit != null:
+		_url_edit.text = "vfs://runtime/%s" % file_name
+	if _status != null:
+		_status.text = "✅ Compilado y ejecutado en wZed VFS"
+	if _progress != null:
+		_progress.value = 100

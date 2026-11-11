@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/xr/xr_manager.gd" id="1_xr"]
 [ext_resource type="Script" path="res://scripts/workspace/thinking_orb.gd" id="2_orb"]
@@ -11,6 +11,9 @@
 [ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="9_bridge"]
 [ext_resource type="Script" path="res://scripts/workspace/workspace.gd" id="10_workspace"]
 [ext_resource type="Script" path="res://scripts/xr/controller_pointer.gd" id="11_pointer"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_orb"]
+radius = 0.12
 
 [sub_resource type="QuadMesh" id="QuadMesh_code"]
 size = Vector2(0.94, 0.58)
@@ -90,6 +93,8 @@ script = ExtResource("10_workspace")
 studio_panel_path = NodePath("../XROrigin3D/Workspace/CodeStudioPanel")
 preview_panel_path = NodePath("../XROrigin3D/Workspace/WebPreviewPanel")
 carousel_path = NodePath("../XROrigin3D/Workspace/DocumentCarousel")
+system_bars_path = NodePath("../XROrigin3D/SystemBars")
+thinking_orb_path = NodePath("../XROrigin3D/Workspace/ThinkingOrb")
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 
@@ -125,6 +130,15 @@ script = ExtResource("2_orb")
 particle_count = 220
 particle_radius = 0.055
 affordance_path = NodePath("Affordance")
+collider_path = NodePath("Collider")
+
+[node name="Collider" type="Area3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/Workspace/ThinkingOrb/Collider"]
+shape = SubResource("SphereShape3D_orb")
 
 [node name="Particles" type="CPUParticles3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
 emission_shape = 1
@@ -158,6 +172,7 @@ omni_range = 1.2
 [node name="Affordance" parent="XROrigin3D/Workspace/ThinkingOrb" instance=ExtResource("4_pill")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.09, 0)
 label_text = "MOVER ORBE"
+hover_collider_path = NodePath("../Collider")
 
 [node name="CodeStudioPanel" type="Node3D" parent="XROrigin3D/Workspace" groups=["spatial_panel"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 1.52, -1.62)

@@ -67,6 +67,10 @@ func _ready() -> void:
 		_apply_surface_size()
 		_bind_viewport_texture()
 	_build_content()
+	if _bottom_bar != null:
+		var close_btn := _bottom_bar.get_node_or_null("BarViewport/BarRoot/BarRow/CloseButton") as Button
+		if close_btn != null:
+			close_btn.pressed.connect(request_close)
 
 
 ## Instantiates the 2D content inside the panel viewport when one is set.
@@ -267,7 +271,9 @@ func _yaw_between(a: Vector3, b: Vector3) -> float:
 func _hit_on_panel(hand: int) -> Dictionary:
 	var origin := _xr_manager.get_aim_origin(hand)
 	var direction := _xr_manager.get_aim_direction(hand)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 10.0)
+	if direction == Vector3.ZERO:
+		return {}
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 10.0, 0x0002)
 	query.collide_with_areas = true
 	query.collide_with_bodies = false
 	# intersect_ray returns the hit as a Dictionary (empty when nothing was hit).

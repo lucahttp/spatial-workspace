@@ -45,11 +45,15 @@ const STATE_LOOK := {
 	State.SHAPING: {"color": Color(0.96, 0.62, 0.18), "energy": 2.5, "speed": 1.55, "spread": 1.0},
 }
 
+const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
+const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
+
 @export var particle_count := 220
 @export var particle_radius := 0.055
 @export var core_radius := 0.012
 @export var transition_speed := 4.0
 @export var affordance_path: NodePath
+@export var collider_path: NodePath = ^"Collider"
 
 var state: State = State.BREATHING
 
@@ -59,6 +63,14 @@ var _halo: MeshInstance3D
 var _light: OmniLight3D
 var _material: StandardMaterial3D
 var _affordance: Node3D
+var _collider: Area3D
+var _xr: XRManagerScript
+
+var _dragging := false
+var _dragging_hand := -1
+var _drag_depth := 0.0
+var _drag_offset := Vector3.ZERO
+var _trigger_consumed := [false, false]
 
 var _target_color := Color(0.42, 0.55, 0.95)
 var _target_energy := 1.1
@@ -68,11 +80,15 @@ var _pulse := 0.0
 
 
 func _ready() -> void:
+	_xr = get_tree().get_first_node_in_group("xr_manager") as XRManagerScript
 	_particles = get_node_or_null("Particles") as CPUParticles3D
 	_core = get_node_or_null("Core") as MeshInstance3D
 	_halo = get_node_or_null("Halo") as MeshInstance3D
 	_light = get_node_or_null("Light") as OmniLight3D
 	_affordance = get_node_or_null(affordance_path) as Node3D
+	_collider = get_node_or_null(collider_path) as Area3D
+	if _collider == null:
+		_create_default_collider()
 	if _affordance != null and _affordance.has_method("set_label"):
 		_affordance.set_label("MOVER ORBE")
 	if _particles != null:
@@ -100,6 +116,20 @@ func _ready() -> void:
 	_apply_state(State.BREATHING, true)
 
 
+func _create_default_collider() -> void:
+	_collider = Area3D.new()
+	_collider.name = "Collider"
+	_collider.collision_layer = 2
+	_collider.collision_mask = 0
+	_collider.monitorable = true
+	var shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.12
+	shape.shape = sphere
+	_collider.add_child(shape)
+	add_child(_collider)
+
+
 func _process(delta: float) -> void:
 	_pulse += delta * (1.4 + _target_speed)
 	var t := minf(delta * transition_speed, 1.0)
@@ -121,6 +151,74 @@ func _process(delta: float) -> void:
 		_particles.initial_velocity_max = lerpf(_particles.initial_velocity_max, _target_speed * 0.18, t)
 		_particles.scale_amount_min = lerpf(_particles.scale_amount_min, 0.5 * _target_spread, t)
 		_particles.scale_amount_max = lerpf(_particles.scale_amount_max, 1.4 * _target_spread, t)
+	_handle_interaction()
+
+
+func _handle_interaction() -> void:
+	if _xr == null or _collider == null:
+		return
+
+	# 1. Trigger click: cycles cognitive states
+	for hand: int in [0, 1]:
+		if _xr.is_trigger_pressed(hand):
+			if not _trigger_consumed[hand]:
+				var hit := _raycast_hit(hand)
+				if not hit.is_empty():
+					_trigger_consumed[hand] = true
+					cycle_state()
+					SpatialAudioScript.play_chime(get_tree(), global_position)
+		else:
+			_trigger_consumed[hand] = false
+
+	# 2. Grip drag: translates orb in 3D
+	if not _dragging:
+		for hand: int in [0, 1]:
+			if _xr.is_grip_pressed(hand):
+				var hit := _raycast_hit(hand)
+				if not hit.is_empty():
+					_dragging = true
+					_dragging_hand = hand
+					var pos: Vector3 = hit["position"]
+					_drag_depth = _xr.get_aim_origin(hand).distance_to(pos)
+					_drag_offset = global_position - pos
+					SpatialAudioScript.play_grab(get_tree(), global_position)
+					if _affordance != null and _affordance.has_method("set_dragging"):
+						_affordance.set_dragging(true)
+					break
+	else:
+		if not _xr.is_grip_pressed(_dragging_hand):
+			_dragging = false
+			_dragging_hand = -1
+			SpatialAudioScript.play_release(get_tree(), global_position)
+			if _affordance != null and _affordance.has_method("set_dragging"):
+				_affordance.set_dragging(false)
+		else:
+			var origin := _xr.get_aim_origin(_dragging_hand)
+			var dir := _xr.get_aim_direction(_dragging_hand)
+			if dir != Vector3.ZERO:
+				global_position = origin + dir * _drag_depth + _drag_offset
+
+
+func _raycast_hit(hand: int) -> Dictionary:
+	var origin := _xr.get_aim_origin(hand)
+	var dir := _xr.get_aim_direction(hand)
+	if dir == Vector3.ZERO:
+		return {}
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + dir * 10.0, 0x0002)
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty() or hit["collider"] != _collider:
+		return {}
+	return hit
+
+
+## Cycles cognitive states in sequence.
+func cycle_state() -> void:
+	var next_val := (int(state) + 1) % (State.SHAPING + 1)
+	set_state(next_val as State)
+	if _affordance != null and _affordance.has_method("set_label"):
+		_affordance.set_label("ORBE: %s" % get_state_name().to_upper())
 
 
 ## Switches the orb to a cognitive state.

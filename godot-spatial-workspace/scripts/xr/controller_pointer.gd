@@ -10,7 +10,7 @@ extends Node3D
 @export var hand: int = 0 # 0 = Left, 1 = Right
 @export var beam_color: Color = Color(0.35, 0.65, 1.0, 0.55)
 @export var reticle_color: Color = Color(0.45, 0.8, 1.0, 0.9)
-@export var max_length: float = 2.5
+@export var max_length: float = 10.0
 
 var _controller: XRController3D
 var _beam: MeshInstance3D
@@ -100,8 +100,8 @@ func _process(_delta: float) -> void:
 	_reticle.visible = true
 
 	# Read trigger and grip states for reactive visual feedback
-	var trigger_down: bool = _controller.get_float("trigger") > 0.5
-	var grip_down: bool = _controller.get_float("grip") > 0.5
+	var trigger_down: bool = _controller.get_float("trigger") > 0.5 or _controller.is_button_pressed("trigger_click") or _controller.is_button_pressed("trigger")
+	var grip_down: bool = _controller.get_float("grip") > 0.5 or _controller.is_button_pressed("grip_click") or _controller.is_button_pressed("grip")
 
 	# Update materials based on state
 	if grip_down:

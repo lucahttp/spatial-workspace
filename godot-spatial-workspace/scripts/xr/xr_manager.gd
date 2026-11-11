@@ -220,18 +220,27 @@ func get_controller(hand: int) -> XRController3D:
 	return _controllers[hand] as XRController3D
 
 
+func is_controller_active(hand: int) -> bool:
+	var controller := get_controller(hand)
+	return controller != null and controller.get_is_active()
+
+
 func is_grip_pressed(hand: int) -> bool:
+	if not is_controller_active(hand):
+		return false
 	return hand >= 0 and hand < _grip_down.size() and _grip_down[hand]
 
 
 func is_trigger_pressed(hand: int) -> bool:
+	if not is_controller_active(hand):
+		return false
 	return hand >= 0 and hand < _trigger_down.size() and _trigger_down[hand]
 
 
 ## World space origin of the aim ray for the given hand.
 func get_aim_origin(hand: int) -> Vector3:
 	var controller := get_controller(hand)
-	if controller == null:
+	if controller == null or not controller.get_is_active():
 		return Vector3.ZERO
 	return controller.global_position
 
@@ -239,20 +248,29 @@ func get_aim_origin(hand: int) -> Vector3:
 ## World space direction of the aim ray for the given hand.
 func get_aim_direction(hand: int) -> Vector3:
 	var controller := get_controller(hand)
-	if controller == null:
+	if controller == null or not controller.get_is_active():
 		return Vector3.ZERO
 	return -controller.global_basis.z.normalized()
 
 
 func _read_grip(controller: XRController3D) -> bool:
-	# Godot's OpenXR action map exposes the grip as a float axis; the runtime
-	# converts the digital button for us. The docs recommend float + own
-	# threshold over the bool variant, so we only read the float.
-	return controller.get_float(ACTION_GRIP) > GRIP_THRESHOLD
+	if not controller.get_is_active():
+		return false
+	if controller.get_float(ACTION_GRIP) > GRIP_THRESHOLD:
+		return true
+	if controller.is_button_pressed("grip_click") or controller.is_button_pressed("grip"):
+		return true
+	return false
 
 
 func _read_trigger(controller: XRController3D) -> bool:
-	return controller.get_float(ACTION_TRIGGER) > TRIGGER_THRESHOLD
+	if not controller.get_is_active():
+		return false
+	if controller.get_float(ACTION_TRIGGER) > TRIGGER_THRESHOLD:
+		return true
+	if controller.is_button_pressed("trigger_click") or controller.is_button_pressed("trigger"):
+		return true
+	return false
 
 
 # --- Shared raycast helper ------------------------------------------------

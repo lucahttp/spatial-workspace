@@ -9,6 +9,7 @@ extends Node3D
 
 signal card_moved(card_id: String)
 signal card_added(card_id: String)
+signal card_selected(card_id: String, title: String, badge: String, summary: String)
 signal add_card_requested()
 
 const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
@@ -58,6 +59,7 @@ var _dragging_card: Node3D = null
 var _dragging_group := false
 var _drag_depth := 0.0
 var _drag_offset := Vector3.ZERO
+var _trigger_consumed := [false, false]
 
 
 func _ready() -> void:
@@ -158,6 +160,7 @@ func _process(_delta: float) -> void:
 		return
 	_update_add_button()
 	_check_add_button()
+	_check_card_selection()
 	var gripping := -1
 	for hand: int in [0, 1]:
 		if _xr.is_grip_pressed(hand):
@@ -171,6 +174,28 @@ func _process(_delta: float) -> void:
 		_begin_drag(gripping)
 		return
 	_update_drag(gripping)
+
+
+## Selects a card on trigger press, forwarding its contents to Web Preview.
+func _check_card_selection() -> void:
+	for hand: int in [0, 1]:
+		if _xr.is_trigger_pressed(hand):
+			if not _trigger_consumed[hand]:
+				var hit := _hit_under_ray(hand)
+				if not hit.is_empty() and hit["card"] != null:
+					_trigger_consumed[hand] = true
+					var card: Node3D = hit["card"]
+					var raw_id: String = card.name.trim_prefix("Card_")
+					var card_info: Dictionary = {}
+					for data in _card_data:
+						if data["id"] == raw_id:
+							card_info = data
+							break
+					if not card_info.is_empty():
+						card_selected.emit(card_info["id"], card_info["title"], card_info["badge"], card_info["summary"])
+						SpatialAudioScript.play_chime(get_tree(), card.global_position)
+		else:
+			_trigger_consumed[hand] = false
 
 
 ## The "+" button reacts to the trigger, same as any other 2D control.
@@ -231,7 +256,7 @@ func _hit_under_ray(hand: int) -> Dictionary:
 	var direction := _xr.get_aim_direction(hand)
 	if direction.length_squared() < 0.0001:
 		return {}
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * RAY_LENGTH)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * RAY_LENGTH, 0x0002)
 	query.collide_with_areas = true
 	query.collide_with_bodies = false
 	var hits := get_world_3d().direct_space_state.intersect_ray(query)

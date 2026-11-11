@@ -81,6 +81,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _resolve_pointer() -> Dictionary:
 	# The XR controller ray wins over the mouse.
 	if _xr_manager != null:
+		var candidate_hits := {}
 		for hand: int in [0, 1]:
 			var origin := _xr_manager.get_aim_origin(hand)
 			var direction := _xr_manager.get_aim_direction(hand)
@@ -88,8 +89,21 @@ func _resolve_pointer() -> Dictionary:
 				continue
 			var hit := _raycast(origin, origin + direction * 10.0)
 			if not hit.is_empty():
-				_sync_trigger(hand)
-				return hit
+				candidate_hits[hand] = hit
+
+		if not candidate_hits.is_empty():
+			# If any candidate hand is actively pressing the trigger, prioritize it!
+			var chosen_hand := -1
+			for hand: int in candidate_hits.keys():
+				if _xr_manager.is_trigger_pressed(hand):
+					chosen_hand = hand
+					break
+			# Otherwise prefer right hand (1) if it hit, else left hand (0)
+			if chosen_hand < 0:
+				chosen_hand = 1 if candidate_hits.has(1) else candidate_hits.keys()[0]
+			_sync_trigger(chosen_hand)
+			return candidate_hits[chosen_hand]
+
 	# No controller is pointing at the panel: drop any pending click.
 	_sync_trigger(-1)
 	if _camera == null:
@@ -118,7 +132,7 @@ func _sync_trigger(hand: int) -> void:
 
 ## Raycast against this panel's collider. Returns an empty Dictionary on a miss.
 func _raycast(from: Vector3, to: Vector3) -> Dictionary:
-	var query := PhysicsRayQueryParameters3D.create(from, to)
+	var query := PhysicsRayQueryParameters3D.create(from, to, 0x0002)
 	query.collide_with_areas = true
 	query.collide_with_bodies = false
 	# intersect_ray returns the hit as a Dictionary (empty when nothing was hit).

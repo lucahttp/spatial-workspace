@@ -63,8 +63,17 @@ godot-spatial-workspace/
    - Al acercar la mano o el puntero, se revela el botón con el símbolo **"+"** para anclar o añadir nuevas tarjetas.
 
 5. **Barra Superior y Dock**:
-   - **Top Bar simplificada**: Dos botones principales: `Passthrough MR / VR` (conmuta transparencia y sky) y `Ajustes`.
-   - **Bottom Dock visionOS**: Acceso rápido flotante a Home, Code Studio, Docs, Micrófono y Recentrar.
+   - **Top Bar simplificada**: Dos botones principales: `Passthrough MR / VR` (conmuta transparencia de passthrough y sky) y `Ajustes`.
+   - **Bottom Dock visionOS**: Acceso rápido flotante a `Inicio` (restablece layout ergonómico), `wZed` (conmuta estudio de código), `Preview` (conmuta navegador), `Fuentes` (conmuta carrusel) y `Voz` (activa estado Listening en el Orbe con audio espacial).
+
+6. **Orbe Cognitivo Interactivo**:
+   - Posee colisionador 3D esférico (`SphereShape3D`).
+   - **Grip**: Agarre y traslación libre en 6DoF por el espacio.
+   - **Trigger**: Clic directo para ciclar entre estados cognitivos (`breathing`, `listening`, `working`, `solving`, `composing`) con retroalimentación sonora procedural (`AudioStreamWAV`).
+
+7. **Flujo Cruzado entre Paneles (Cross-Panel Wiring)**:
+   - Al pulsar **"▶ Ejecutar"** en wZed, el código compila en el VFS simulado, muestra la traza en la terminal integrada, pasa el Orbe al estado `solving` (destello esmeralda) y sincroniza el resultado en la ventana de **Web Preview**.
+   - Al hacer clic con **Trigger** sobre cualquier tarjeta del carrusel, su contenido se despliega instantáneamente en el panel de **Web Preview**.
 
 ---
 
