@@ -25,15 +25,18 @@ const DOCK_ITEMS := [
 	{"id": "code", "label": "wZed"},
 	{"id": "preview", "label": "Preview"},
 	{"id": "carousel", "label": "Fuentes"},
+	{"id": "graph", "label": "Mapa"},
+	{"id": "pads", "label": "Bandejas"},
 	{"id": "voice", "label": "Voz"},
+	{"id": "recenter", "label": "Recentrar"},
 ]
 
 ## Top bar and dock are rebuilt from code so the theme and the button set
 ## live in one place.
 const TOP_BAR_SIZE := Vector2(0.46, 0.062)
-const DOCK_SIZE := Vector2(0.34, 0.052)
+const DOCK_SIZE := Vector2(0.62, 0.052)
 const TOP_BAR_PIXELS := Vector2i(760, 100)
-const DOCK_PIXELS := Vector2i(620, 90)
+const DOCK_PIXELS := Vector2i(1050, 90)
 
 var _xr: XRManagerScript
 var _passthrough_button: Button

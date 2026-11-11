@@ -16,24 +16,31 @@ godot-spatial-workspace/
 │   ├── ui/
 │   │   ├── code_studio_2d.tscn       # Editor wZed con CodeEdit y syntax highlighting
 │   │   ├── web_preview_2d.tscn       # Ventana de navegación y preview
+│   │   ├── transcript_panel_2d.tscn  # Transcripción de voz con ecualizador dinámico y Foundry Live
 │   │   ├── spatial_panel_3d.tscn     # Ventana 3D flotante (QuadMesh + SubViewport + Handle)
 │   │   ├── spatial_affordance_pill.tscn # Cápsula flotante orientada al usuario (billboard)
-│   │   └── system_bars.tscn          # Top Bar simplificada y Dock inferior visionOS
+│   │   └── system_bars.tscn          # Top Bar simplificada y Dock inferior visionOS (8 botones)
 │   └── workspace/
-│       └── document_carousel_3d.tscn # Carrusel cilíndrico de tarjetas de referencia
+│       ├── document_carousel_3d.tscn # Carrusel cilíndrico con flechas < y > y snap magnético
+│       ├── idea_graph_3d.tscn        # Mapa de Ideas: cristal octaedro y enlaces de constelación
+│       └── spatial_pads_3d.tscn      # Bandejas 3D de Archivar y Descartar con gotas Bézier
 ├── scripts/
 │   ├── xr/
-│   │   └── xr_manager.gd             # Detección de runtime (OpenXR vs RealityKit), passthrough AR
+│   │   ├── xr_manager.gd             # Detección de runtime (OpenXR vs RealityKit), passthrough AR
+│   │   └── controller_pointer.gd     # Puntero láser con retícula normalizada y destellos
 │   ├── ui/
 │   │   ├── spatial_viewport_bridge.gd# Raycast 3D a eventos 2D (SubViewport.push_input)
 │   │   ├── spatial_panel_3d.gd       # Arrastre Grip, manipulación bimanual (escala/rotación)
 │   │   ├── spatial_affordance_pill.gd# Lógica de dwell (3s), proximidad (<0.38m) y Grip
 │   │   ├── code_studio.gd            # wZed Studio: tabs, ejecución y desacople/acople
 │   │   ├── web_preview.gd            # Navegador y sincronización de preview
+│   │   ├── transcript_panel.gd       # Ecualizador de voz y delegación rápida de órdenes
 │   │   └── system_bars.gd            # Control de MR/VR, recentrado y accesos rápidos
 │   └── workspace/
 │       ├── thinking_orb.gd           # Orbe cognitivo (9 estados, halo y enjambre de partículas)
-│       ├── document_carousel_3d.gd   # Arrastre individual o grupal de tarjetas, botón "+"
+│       ├── document_carousel_3d.gd   # Arrastre, paginación < >, drop-zones y snap cilíndrico
+│       ├── idea_graph_3d.gd          # Grafo de conocimiento: satélites y líneas de constelación
+│       ├── spatial_pads_3d.gd        # Bandejas con hojas levitantes y partículas en arco Bézier
 │       └── workspace.gd              # Coordinador de ventanas espaciales
 ├── assets/
 │   └── themes/
@@ -74,6 +81,17 @@ godot-spatial-workspace/
 7. **Flujo Cruzado entre Paneles (Cross-Panel Wiring)**:
    - Al pulsar **"▶ Ejecutar"** en wZed, el código compila en el VFS simulado, muestra la traza en la terminal integrada, pasa el Orbe al estado `solving` (destello esmeralda) y sincroniza el resultado en la ventana de **Web Preview**.
    - Al hacer clic con **Trigger** sobre cualquier tarjeta del carrusel, su contenido se despliega instantáneamente en el panel de **Web Preview**.
+
+8. **Mapa de Ideas 3D (`IdeaGraph3D`)**:
+   - Cristal central en octaedro con halo orbital giratorio, luz puntual ámbar y etiqueta flotante.
+   - Nodos satélite de fuentes conectadas mediante líneas de constelación reactivas (`ImmediateMesh`). Clic en un satélite abre el documento en el visor.
+
+9. **Bandejas 3D de Archivar y Descartar (`SpatialPads3D`)**:
+   - **Bandeja de Archivar**: Plinto de pizarra con borde verde menta y hojas levitantes (`sin(t * 2.2)`). Al soltar una tarjeta sobre ella, emite una gota luminosa en trayectoria parabólica cuadrática de Bézier hacia el Mapa de Ideas, incorporándola a la red de conocimiento.
+   - **Tacho de Basura**: Receptáculo cilíndrico de titanio con anillo coral giratorio. Al soltar una tarjeta sobre él, reproduce sonido de residuo y la descarta.
+
+10. **Panel de Voz y Supervisión (`TranscriptPanel2D`)**:
+   - Ecualizador dinámico multibar, indicador *Foundry Live* en tiempo real, histórico de logs y botones de delegación rápida (*Correr wZed*, *Crear Módulo 3D*, *Listar VFS*). Conmutador de micrófono para silenciar o activar escucha.
 
 ---
 

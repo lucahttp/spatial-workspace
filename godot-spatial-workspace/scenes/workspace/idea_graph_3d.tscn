@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/workspace/idea_graph_3d.gd" id="1_graph"]
+[ext_resource type="PackedScene" path="res://scenes/ui/spatial_affordance_pill.tscn" id="2_pill"]
+
+[node name="IdeaGraph3D" type="Node3D"]
+script = ExtResource("1_graph")
+affordance_path = NodePath("Affordance")
+
+[node name="Affordance" parent="." instance=ExtResource("2_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11, 0)
+label_text = "MAPA DE IDEAS"
+hover_collider_path = NodePath("../Collider")

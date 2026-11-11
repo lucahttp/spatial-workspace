@@ -3,7 +3,8 @@ extends Node
 ## them (dock / undock, add card, passthrough mode).
 ##
 ## The Core never talks to a runtime directly: everything goes through the
-## XR manager. This node wires the spatial panels, carousel, orb and system bars.
+## XR manager. This node wires the spatial panels, carousel, orb, idea graph,
+## pads and system bars.
 
 signal status_changed(status: String)
 
@@ -15,6 +16,9 @@ const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 @export var carousel_path: NodePath
 @export var system_bars_path: NodePath
 @export var thinking_orb_path: NodePath
+@export var idea_graph_path: NodePath
+@export var pads_path: NodePath
+@export var transcript_panel_path: NodePath
 @export var debug_label_path: NodePath = ^"../Overlay/DebugLabel"
 
 var _studio: Node3D
@@ -22,6 +26,9 @@ var _preview: Node3D
 var _carousel: Node3D
 var _bars: Node3D
 var _orb: Node3D
+var _graph: Node3D
+var _pads: Node3D
+var _transcript: Node3D
 var _debug_label: Label
 var _detached: Dictionary = {}
 var _initial_transforms: Dictionary = {}
@@ -33,9 +40,12 @@ func _ready() -> void:
 	_carousel = get_node_or_null(carousel_path) as Node3D
 	_bars = get_node_or_null(system_bars_path) as Node3D
 	_orb = get_node_or_null(thinking_orb_path) as Node3D
+	_graph = get_node_or_null(idea_graph_path) as Node3D
+	_pads = get_node_or_null(pads_path) as Node3D
+	_transcript = get_node_or_null(transcript_panel_path) as Node3D
 	_debug_label = get_node_or_null(debug_label_path) as Label
 
-	for node in [_studio, _preview, _carousel, _orb]:
+	for node in [_studio, _preview, _carousel, _orb, _graph, _pads, _transcript]:
 		if node != null:
 			_initial_transforms[node] = node.transform
 
@@ -43,11 +53,28 @@ func _ready() -> void:
 		_studio.close_requested.connect(_on_studio_closed)
 	if _preview != null and _preview.has_signal("close_requested"):
 		_preview.close_requested.connect(_on_preview_closed)
+	if _transcript != null and _transcript.has_signal("close_requested"):
+		_transcript.close_requested.connect(func() -> void: _transcript.visible = false)
+
 	if _carousel != null:
 		if _carousel.has_signal("add_card_requested"):
 			_carousel.add_card_requested.connect(_on_add_card_requested)
 		if _carousel.has_signal("card_selected"):
 			_carousel.card_selected.connect(_on_card_selected)
+		if _pads != null:
+			_carousel.set("pads_path", _carousel.get_path_to(_pads))
+
+	if _graph != null and _graph.has_signal("source_selected"):
+		_graph.connect("source_selected", _on_graph_source_selected)
+
+	if _pads != null:
+		if _pads.has_signal("card_archived"):
+			_pads.connect("card_archived", _on_card_archived)
+		if _pads.has_signal("card_discarded"):
+			_pads.connect("card_discarded", _on_card_discarded)
+		if _graph != null:
+			_pads.set("idea_graph_path", _pads.get_path_to(_graph))
+
 	if _bars != null:
 		if _bars.has_signal("dock_item_pressed"):
 			_bars.dock_item_pressed.connect(_on_dock_item_pressed)
@@ -56,9 +83,8 @@ func _ready() -> void:
 		if _bars.has_signal("settings_pressed"):
 			_bars.settings_pressed.connect(_on_settings_pressed)
 
-	# The panels build their 2D content in their own _ready, which runs after
-	# this one, so the wiring waits for the next frame.
 	_connect_studio_content.call_deferred()
+	_connect_transcript_content.call_deferred()
 
 
 ## Wires CodeStudio 2D signals (detach views, run code).
@@ -76,6 +102,29 @@ func _connect_studio_content() -> void:
 			child.detach_view_requested.connect(detach_view)
 		if child.has_signal("run_requested"):
 			child.run_requested.connect(_on_run_requested)
+
+
+## Wires TranscriptPanel quick delegation buttons.
+func _connect_transcript_content() -> void:
+	if _transcript == null:
+		return
+	var viewport := _transcript.get_node_or_null("PanelViewport") as SubViewport
+	if viewport == null:
+		return
+	var host := viewport.get_node_or_null("Content")
+	if host == null:
+		return
+	for child in host.get_children():
+		if child.has_signal("run_wzed_requested"):
+			child.connect("run_wzed_requested", func() -> void: _on_run_requested("index.js"))
+		if child.has_signal("create_module_requested"):
+			child.connect("create_module_requested", func() -> void: add_reference_card("Nuevo Módulo 3D", "SPATIAL", "Generado por voz."))
+		if child.has_signal("list_vfs_requested"):
+			child.connect("list_vfs_requested", func() -> void:
+				if _studio != null:
+					_studio.visible = true
+				_status("Listando VFS...")
+			)
 
 
 func _on_studio_closed() -> void:
@@ -99,7 +148,6 @@ func detach_view(view_id: String) -> void:
 	panel.content_scene = _studio.content_scene
 	panel.content_solo_view = view_id
 	panel.panel_size = Vector2(0.7, 0.44)
-	# Offset to the side of the studio so both stay visible.
 	panel.position = _studio.position + Vector3(0.95, 0.05, 0.35)
 	add_child(panel)
 	_detached[view_id] = panel
@@ -138,7 +186,6 @@ func _on_run_requested(file_name: String) -> void:
 	_status("Ejecutando %s..." % file_name)
 	SpatialAudioScript.play_chime(get_tree(), _studio.global_position if _studio else Vector3.ZERO)
 
-	# Transition Thinking Orb to SOLVING state
 	if _orb != null and _orb.has_method("set_state"):
 		_orb.set_state(_orb.State.SOLVING)
 		get_tree().create_timer(3.0).timeout.connect(func() -> void:
@@ -146,7 +193,6 @@ func _on_run_requested(file_name: String) -> void:
 				_orb.set_state(_orb.State.BREATHING)
 		)
 
-	# Update WebPreview with execution output
 	if _preview != null:
 		_preview.visible = true
 		var preview_viewport := _preview.get_node_or_null("PanelViewport") as SubViewport
@@ -180,7 +226,28 @@ func _on_card_selected(id: String, title: String, _badge: String, summary: Strin
 						child.display_document(title, summary, "doc://carousel/%s" % id)
 
 
-## Handles bottom dock buttons (Inicio, wZed, Preview, Fuentes, Voz).
+func _on_graph_source_selected(_id: String, title: String, url: String) -> void:
+	_status("Fuente del mapa: %s" % title)
+	if _preview != null:
+		_preview.visible = true
+		var preview_viewport := _preview.get_node_or_null("PanelViewport") as SubViewport
+		if preview_viewport != null:
+			var host := preview_viewport.get_node_or_null("Content")
+			if host != null:
+				for child in host.get_children():
+					if child.has_method("display_document"):
+						child.display_document(title, "Fuente conectada en el Mapa de Ideas.", url)
+
+
+func _on_card_archived(card_data: Dictionary) -> void:
+	_status("Archivado: %s -> Tejiendo mapa" % card_data.get("title", ""))
+
+
+func _on_card_discarded(card_data: Dictionary) -> void:
+	_status("Descartado a la basura: %s" % card_data.get("title", ""))
+
+
+## Handles bottom dock buttons.
 func _on_dock_item_pressed(id: String) -> void:
 	SpatialAudioScript.play_click(get_tree())
 	match id:
@@ -199,11 +266,23 @@ func _on_dock_item_pressed(id: String) -> void:
 			if _carousel != null:
 				_carousel.visible = not _carousel.visible
 				_status("Fuentes %s" % ("abiertas" if _carousel.visible else "cerradas"))
+		"graph":
+			if _graph != null:
+				_graph.visible = not _graph.visible
+				_status("Mapa de ideas %s" % ("abierto" if _graph.visible else "cerrado"))
+		"pads":
+			if _pads != null:
+				_pads.visible = not _pads.visible
+				_status("Bandejas %s" % ("abiertas" if _pads.visible else "cerradas"))
 		"voice":
+			if _transcript != null:
+				_transcript.visible = not _transcript.visible
 			if _orb != null and _orb.has_method("set_state"):
 				_orb.set_state(_orb.State.LISTENING)
 				SpatialAudioScript.play_chime(get_tree(), _orb.global_position)
 				_status("Asistente: Escuchando voz...")
+		"recenter":
+			recenter()
 
 
 func _on_passthrough_changed(mode: int) -> void:
@@ -215,9 +294,17 @@ func _on_settings_pressed() -> void:
 	_status("Ajustes del espacio")
 
 
+## Recenters workspace directly in front of active viewpoint.
+func recenter() -> void:
+	if XRServer.primary_interface != null:
+		XRServer.center_on_hmd(XRServer.RESET_FULL_ROTATION, true)
+	SpatialAudioScript.play_chime(get_tree())
+	_status("Workspace recentrado frente a tu vista")
+
+
 ## Resets all panels and entities back to their initial ergonomic positions.
 func reset_layout() -> void:
-	for node in [_studio, _preview, _carousel, _orb]:
+	for node in [_studio, _preview, _carousel, _orb, _graph, _pads, _transcript]:
 		if node != null and _initial_transforms.has(node):
 			node.transform = _initial_transforms[node]
 			node.visible = true

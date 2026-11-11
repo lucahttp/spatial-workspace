@@ -15,6 +15,7 @@ extends Node3D
 var _controller: XRController3D
 var _beam: MeshInstance3D
 var _reticle: MeshInstance3D
+var _reticle_ring: MeshInstance3D
 var _body: MeshInstance3D
 var _beam_material: StandardMaterial3D
 var _reticle_material: StandardMaterial3D
@@ -84,8 +85,20 @@ func _setup_visuals() -> void:
 	_reticle.top_level = true
 	add_child(_reticle)
 
+	# 4. Reticle Outer Glow Ring
+	_reticle_ring = MeshInstance3D.new()
+	_reticle_ring.name = "ReticleRing"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 0.012
+	ring_mesh.outer_radius = 0.015
+	ring_mesh.rings = 24
+	ring_mesh.ring_segments = 6
+	_reticle_ring.mesh = ring_mesh
+	_reticle_ring.material_override = _reticle_material
+	_reticle.add_child(_reticle_ring)
 
-func _process(_delta: float) -> void:
+
+func _process(delta: float) -> void:
 	if _controller == null:
 		return
 
@@ -98,6 +111,8 @@ func _process(_delta: float) -> void:
 		return
 
 	_reticle.visible = true
+	if _reticle_ring != null:
+		_reticle_ring.rotation.z += delta * 2.0
 
 	# Read trigger and grip states for reactive visual feedback
 	var trigger_down: bool = _controller.get_float("trigger") > 0.5 or _controller.is_button_pressed("trigger_click") or _controller.is_button_pressed("trigger")

@@ -1,0 +1,83 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/transcript_panel.gd" id="1_transcript"]
+[ext_resource type="Theme" path="res://assets/themes/vaporwave_sunset.tres" id="2_theme"]
+
+[node name="TranscriptPanel2D" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_transcript")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="Column" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="OrbStateLabel" type="Label" parent="Margin/Column/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ESTADO: BREATHING"
+
+[node name="FoundryLive" type="Label" parent="Margin/Column/Header"]
+layout_mode = 2
+text = "● FOUNDRY LIVE"
+modulate = Color(0.1, 0.9, 0.5, 1)
+
+[node name="EqualizerRow" type="HBoxContainer" parent="Margin/Column/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 24)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="TranscriptText" type="RichTextLabel" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Iniciando sistema de voz..."
+
+[node name="PillsRow" type="HBoxContainer" parent="Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnRun" type="Button" parent="Margin/Column/PillsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "▶ Correr wZed"
+
+[node name="BtnCreate" type="Button" parent="Margin/Column/PillsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "✨ Crear Módulo 3D"
+
+[node name="BtnVfs" type="Button" parent="Margin/Column/PillsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "📁 Listar VFS"
+
+[node name="MicButton" type="Button" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🎤 Micrófono activo (Click para pausar)"

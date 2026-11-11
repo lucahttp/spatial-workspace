@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/xr/xr_manager.gd" id="1_xr"]
 [ext_resource type="Script" path="res://scripts/workspace/thinking_orb.gd" id="2_orb"]
@@ -11,6 +11,9 @@
 [ext_resource type="Script" path="res://scripts/ui/spatial_viewport_bridge.gd" id="9_bridge"]
 [ext_resource type="Script" path="res://scripts/workspace/workspace.gd" id="10_workspace"]
 [ext_resource type="Script" path="res://scripts/xr/controller_pointer.gd" id="11_pointer"]
+[ext_resource type="PackedScene" path="res://scenes/workspace/idea_graph_3d.tscn" id="12_graph"]
+[ext_resource type="PackedScene" path="res://scenes/workspace/spatial_pads_3d.tscn" id="13_pads"]
+[ext_resource type="PackedScene" path="res://scenes/ui/transcript_panel_2d.tscn" id="14_transcript"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_orb"]
 radius = 0.12
@@ -26,6 +29,20 @@ size = Vector2(0.56, 0.36)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_preview"]
 size = Vector3(0.56, 0.36, 0.02)
+
+[sub_resource type="QuadMesh" id="QuadMesh_transcript"]
+size = Vector2(0.52, 0.36)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_transcript"]
+size = Vector3(0.52, 0.36, 0.02)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(16, 16)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.04, 0.07, 0.16, 0.5)
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_space"]
 sky_top_color = Color(0.07, 0.05, 0.15, 1)
@@ -95,6 +112,9 @@ preview_panel_path = NodePath("../XROrigin3D/Workspace/WebPreviewPanel")
 carousel_path = NodePath("../XROrigin3D/Workspace/DocumentCarousel")
 system_bars_path = NodePath("../XROrigin3D/SystemBars")
 thinking_orb_path = NodePath("../XROrigin3D/Workspace/ThinkingOrb")
+idea_graph_path = NodePath("../XROrigin3D/Workspace/IdeaGraph3D")
+pads_path = NodePath("../XROrigin3D/Workspace/SpatialPads3D")
+transcript_panel_path = NodePath("../XROrigin3D/Workspace/TranscriptPanel")
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 
@@ -270,6 +290,65 @@ hover_collider_path = NodePath("../Collider")
 
 [node name="DocumentCarousel" parent="XROrigin3D/Workspace" instance=ExtResource("7_carousel")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 1.16, -0.42)
+pads_path = NodePath("../SpatialPads3D")
+
+[node name="IdeaGraph3D" parent="XROrigin3D/Workspace" instance=ExtResource("12_graph")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, -1.05)
+
+[node name="SpatialPads3D" parent="XROrigin3D/Workspace" instance=ExtResource("13_pads")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.90, -0.72)
+idea_graph_path = NodePath("../IdeaGraph3D")
+
+[node name="TranscriptPanel" type="Node3D" parent="XROrigin3D/Workspace"]
+transform = Transform3D(0.927, 0, 0.375, 0, 1, 0, -0.375, 0, 0.927, -0.78, 1.35, -1.05)
+script = ExtResource("3_panel")
+panel_size = Vector2(0.52, 0.36)
+surface_path = NodePath("Surface")
+collider_path = NodePath("Collider")
+affordance_path = NodePath("Affordance")
+content_scene = ExtResource("14_transcript")
+
+[node name="Surface" type="MeshInstance3D" parent="XROrigin3D/Workspace/TranscriptPanel"]
+mesh = SubResource("QuadMesh_transcript")
+
+[node name="PanelViewport" type="SubViewport" parent="XROrigin3D/Workspace/TranscriptPanel"]
+own_world_3d = false
+transparent_bg = true
+handle_input_locally = true
+size = Vector2i(650, 450)
+render_target_update_mode = 4
+
+[node name="Content" type="Control" parent="XROrigin3D/Workspace/TranscriptPanel/PanelViewport"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Collider" type="Area3D" parent="XROrigin3D/Workspace/TranscriptPanel"]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="ColliderShape" type="CollisionShape3D" parent="XROrigin3D/Workspace/TranscriptPanel/Collider"]
+shape = SubResource("BoxShape3D_transcript")
+
+[node name="Bridge" type="Node3D" parent="XROrigin3D/Workspace/TranscriptPanel"]
+script = ExtResource("9_bridge")
+sub_viewport_path = NodePath("../PanelViewport")
+surface_path = NodePath("../Surface")
+collider_path = NodePath("../Collider")
+
+[node name="Affordance" parent="XROrigin3D/Workspace/TranscriptPanel" instance=ExtResource("4_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+label_text = "MOVER PANEL"
+hover_collider_path = NodePath("../Collider")
+
+[node name="FloorHorizon" type="MeshInstance3D" parent="XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+mesh = SubResource("PlaneMesh_floor")
+material_override = SubResource("StandardMaterial3D_floor")
 
 [node name="SystemBars" parent="XROrigin3D" instance=ExtResource("8_bars")]
 

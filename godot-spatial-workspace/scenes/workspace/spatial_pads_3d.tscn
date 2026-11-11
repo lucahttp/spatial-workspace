@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/workspace/spatial_pads_3d.gd" id="1_pads"]
+
+[node name="SpatialPads3D" type="Node3D"]
+script = ExtResource("1_pads")

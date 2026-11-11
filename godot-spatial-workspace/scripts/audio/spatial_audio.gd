@@ -7,6 +7,9 @@ static var _click_stream: AudioStreamWAV
 static var _grab_stream: AudioStreamWAV
 static var _release_stream: AudioStreamWAV
 static var _chime_stream: AudioStreamWAV
+static var _trash_stream: AudioStreamWAV
+static var _spotlight_stream: AudioStreamWAV
+static var _undock_stream: AudioStreamWAV
 
 
 static func _ensure_streams() -> void:
@@ -16,6 +19,9 @@ static func _ensure_streams() -> void:
 	_grab_stream = _synth_sine(700.0, 380.0, 0.08, 0.18)
 	_release_stream = _synth_sine(320.0, 200.0, 0.06, 0.14)
 	_chime_stream = _synth_triad([587.33, 880.0, 1174.66], 0.35, 0.16)
+	_trash_stream = _synth_sine(180.0, 45.0, 0.28, 0.18)
+	_spotlight_stream = _synth_triad([440.0, 659.25, 880.0], 0.38, 0.14)
+	_undock_stream = _synth_sine(350.0, 750.0, 0.12, 0.16)
 
 
 static func play_click(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
@@ -36,6 +42,26 @@ static func play_release(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> voi
 static func play_chime(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
 	_ensure_streams()
 	_play_stream(tree, _chime_stream, at_pos)
+
+
+static func play_archive(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _chime_stream, at_pos)
+
+
+static func play_trash(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _trash_stream, at_pos)
+
+
+static func play_spotlight(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _spotlight_stream, at_pos)
+
+
+static func play_undock(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _undock_stream, at_pos)
 
 
 static func _play_stream(tree: SceneTree, stream: AudioStreamWAV, pos: Vector3) -> void:
