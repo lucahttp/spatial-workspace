@@ -108,6 +108,7 @@ const MAX_TILT_RAD := 0.65
 const XRManagerScript := preload("res://scripts/xr/xr_manager.gd")
 const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 const FresnelShader := preload("res://shaders/tech_orb_fresnel.gdshader")
+const ProjectedCirclesShader := preload("res://shaders/projected_circles_orb.gdshader")
 
 @export var affordance_path: NodePath
 @export var collider_path: NodePath = ^"Collider"
@@ -116,6 +117,7 @@ var state: State = State.BREATHING
 
 var _visuals: Node3D
 var _core: MeshInstance3D
+var _projected_rings: Node3D
 var _inner_ring: MeshInstance3D
 var _outer_ring: MeshInstance3D
 var _cloner: MultiMeshInstance3D
@@ -127,6 +129,7 @@ var _xr: XRManagerScript
 
 # Materials
 var _core_material: ShaderMaterial
+var _ring_contour_material: StandardMaterial3D
 var _ring_material_inner: StandardMaterial3D
 var _ring_material_outer: StandardMaterial3D
 var _cloner_material: StandardMaterial3D
@@ -194,9 +197,42 @@ func _setup_nodes() -> void:
 		_affordance.set_label("ORBE: %s" % get_state_name().to_upper())
 
 	_setup_core_mesh()
+	_setup_projected_rings()
 	_setup_rings()
 	_setup_particles()
 	_setup_light()
+
+
+func _setup_projected_rings() -> void:
+	_projected_rings = _visuals.get_node_or_null("ProjectedRings") as Node3D
+	if _projected_rings == null:
+		_projected_rings = Node3D.new()
+		_projected_rings.name = "ProjectedRings"
+		_visuals.add_child(_projected_rings)
+
+	# 5 nested latitude contour rings inspired by 2025_09_15_blender_projected_circles.blend
+	# (Array of concentric circles projected with Shrinkwrap onto the sphere)
+	var latitudes := [
+		{"y": 0.0, "r_in": 0.046, "r_out": 0.0485},
+		{"y": 0.018, "r_in": 0.042, "r_out": 0.0442},
+		{"y": -0.018, "r_in": 0.042, "r_out": 0.0442},
+		{"y": 0.030, "r_in": 0.032, "r_out": 0.0338},
+		{"y": -0.030, "r_in": 0.032, "r_out": 0.0338},
+	]
+	for i in range(latitudes.size()):
+		var data: Dictionary = latitudes[i]
+		var ring_node := _projected_rings.get_node_or_null("Ring_%d" % i) as MeshInstance3D
+		if ring_node == null:
+			ring_node = MeshInstance3D.new()
+			ring_node.name = "Ring_%d" % i
+			var torus := TorusMesh.new()
+			torus.inner_radius = data["r_in"]
+			torus.outer_radius = data["r_out"]
+			torus.rings = 36
+			torus.ring_segments = 10
+			ring_node.mesh = torus
+			ring_node.position.y = data["y"]
+			_projected_rings.add_child(ring_node)
 
 
 func _setup_core_mesh() -> void:
@@ -313,12 +349,23 @@ func _setup_light() -> void:
 
 func _setup_materials() -> void:
 	_core_material = ShaderMaterial.new()
-	_core_material.shader = FresnelShader
-	_core_material.set_shader_parameter("base_color", Color(0.02, 0.04, 0.08))
-	_core_material.set_shader_parameter("glow_color", _target_color)
-	_core_material.set_shader_parameter("inner_rim_color", _target_rim)
-	_core_material.set_shader_parameter("pulse_energy", _target_energy)
+	_core_material.shader = ProjectedCirclesShader
+	_core_material.set_shader_parameter("base_color", Color(0.02, 0.04, 0.07))
+	_core_material.set_shader_parameter("ring_color", _target_color)
+	_core_material.set_shader_parameter("rim_color", _target_rim)
+	_core_material.set_shader_parameter("ring_glow", 3.6)
 	_core.material_override = _core_material
+
+	_ring_contour_material = StandardMaterial3D.new()
+	_ring_contour_material.metallic = 0.95
+	_ring_contour_material.roughness = 0.15
+	_ring_contour_material.emission_enabled = true
+	_ring_contour_material.emission = _target_color
+	_ring_contour_material.emission_energy_multiplier = 1.2
+	if _projected_rings != null:
+		for child in _projected_rings.get_children():
+			if child is MeshInstance3D:
+				(child as MeshInstance3D).material_override = _ring_contour_material
 
 	_ring_material_inner = StandardMaterial3D.new()
 	_ring_material_inner.metallic = 0.95
@@ -437,26 +484,34 @@ func _update_visuals(delta: float) -> void:
 		var q_cur := _visuals.basis.get_rotation_quaternion()
 		_visuals.basis = Basis(q_cur.slerp(Quaternion.IDENTITY, minf(delta * 3.0, 1.0)))
 
-	# 2. Asynchronous Gyro Ring Rotation
+	# 2. Concentric Projected Rings & Gyro Rotation
+	var breathe := 1.0 + sin(_pulse * 2.5) * 0.05 + _proximity * 0.12
+	if _projected_rings != null:
+		_projected_rings.rotate_y(delta * 0.45 * (1.0 + _proximity * 1.5))
+		_projected_rings.scale = Vector3.ONE * breathe * _bounce_scale
+
 	if _inner_ring != null:
 		_inner_ring.rotate_object_local(Vector3(0.5, 1.0, 0.2).normalized(), delta * (0.7 + _proximity * 1.5))
 	if _outer_ring != null:
 		_outer_ring.rotate_object_local(Vector3(-0.3, 0.4, 0.9).normalized(), delta * (0.5 + _proximity * 1.2))
 
 	# 3. Dynamic Material Shading & Emission Modulation
-	var breathe := 1.0 + sin(_pulse * 2.5) * 0.05 + _proximity * 0.12
 	if _core != null:
 		_core.scale = Vector3.ONE * breathe * _bounce_scale
 		if _core_material != null:
-			var energy := _target_energy * (1.0 + _proximity * 0.8) + sin(_pulse * 4.0) * 0.2
-			_core_material.set_shader_parameter("glow_color", _target_color)
-			_core_material.set_shader_parameter("inner_rim_color", _target_rim)
-			_core_material.set_shader_parameter("pulse_energy", energy)
+			_core_material.set_shader_parameter("pulse_phase", _pulse)
+			_core_material.set_shader_parameter("proximity_infl", _proximity)
+			_core_material.set_shader_parameter("pointer_local", _target_pointer_local)
+			_core_material.set_shader_parameter("ring_color", _target_color)
+			_core_material.set_shader_parameter("rim_color", _target_rim)
 
 	if _light != null:
 		_light.light_color = _light.light_color.lerp(_target_color, delta * 4.0)
 		_light.light_energy = _target_energy * (0.9 + _proximity * 0.8)
 
+	if _ring_contour_material != null:
+		_ring_contour_material.emission = _target_color
+		_ring_contour_material.emission_energy_multiplier = 1.2 + _proximity * 1.6
 	if _ring_material_inner != null:
 		_ring_material_inner.emission = _target_color
 		_ring_material_inner.emission_energy_multiplier = 0.9 + _proximity * 1.2
@@ -605,9 +660,10 @@ func _apply_state(target: State, immediate: bool) -> void:
 		_particle_material.albedo_color = _target_color
 		_particle_material.emission = _target_color
 	if _core_material != null:
-		_core_material.set_shader_parameter("glow_color", _target_color)
-		_core_material.set_shader_parameter("inner_rim_color", _target_rim)
-		_core_material.set_shader_parameter("pulse_energy", _target_energy)
+		_core_material.set_shader_parameter("ring_color", _target_color)
+		_core_material.set_shader_parameter("rim_color", _target_rim)
+	if _ring_contour_material != null:
+		_ring_contour_material.emission = _target_color
 
 	if immediate:
 		_bounce_scale = 1.0
