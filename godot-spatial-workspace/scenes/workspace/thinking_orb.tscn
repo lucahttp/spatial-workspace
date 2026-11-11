@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/workspace/thinking_orb.gd" id="1_orb"]
+[ext_resource type="PackedScene" path="res://scenes/ui/spatial_affordance_pill.tscn" id="2_pill"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_orb"]
+radius = 0.14
+
+[node name="ThinkingOrb" type="Node3D"]
+script = ExtResource("1_orb")
+affordance_path = NodePath("Affordance")
+collider_path = NodePath("Collider")
+
+[node name="Collider" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitorable = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Collider"]
+shape = SubResource("SphereShape3D_orb")
+
+[node name="Affordance" parent="." instance=ExtResource("2_pill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11, 0)
+label_text = "ORBE: BREATHING"
+hover_collider_path = NodePath("../Collider")

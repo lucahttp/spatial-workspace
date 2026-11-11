@@ -1,7 +1,7 @@
 [gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/xr/xr_manager.gd" id="1_xr"]
-[ext_resource type="Script" path="res://scripts/workspace/thinking_orb.gd" id="2_orb"]
+[ext_resource type="PackedScene" path="res://scenes/workspace/thinking_orb.tscn" id="2_orb"]
 [ext_resource type="Script" path="res://scripts/ui/spatial_panel_3d.gd" id="3_panel"]
 [ext_resource type="PackedScene" path="res://scenes/ui/spatial_affordance_pill.tscn" id="4_pill"]
 [ext_resource type="PackedScene" path="res://scenes/ui/code_studio_2d.tscn" id="5_code"]
@@ -14,9 +14,6 @@
 [ext_resource type="PackedScene" path="res://scenes/workspace/idea_graph_3d.tscn" id="12_graph"]
 [ext_resource type="PackedScene" path="res://scenes/workspace/spatial_pads_3d.tscn" id="13_pads"]
 [ext_resource type="PackedScene" path="res://scenes/ui/transcript_panel_2d.tscn" id="14_transcript"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_orb"]
-radius = 0.12
 
 [sub_resource type="QuadMesh" id="QuadMesh_code"]
 size = Vector2(0.94, 0.58)
@@ -62,34 +59,6 @@ ambient_light_energy = 1.1
 tonemap_mode = 3
 tonemap_white = 4.0
 sky = SubResource("Sky_space")
-
-[sub_resource type="SphereMesh" id="SphereMesh_core"]
-radius = 0.012
-height = 0.024
-radial_segments = 24
-rings = 12
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_core"]
-shading_mode = 0
-albedo_color = Color(0.42, 0.55, 0.95, 1)
-emission_enabled = true
-emission = Color(0.42, 0.55, 0.95, 1)
-emission_energy_multiplier = 1.1
-
-[sub_resource type="TorusMesh" id="TorusMesh_halo"]
-inner_radius = 0.045
-outer_radius = 0.052
-rings = 48
-ring_segments = 12
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_halo"]
-transparency = 1
-shading_mode = 0
-blend_mode = 1
-albedo_color = Color(0.42, 0.55, 0.95, 0.45)
-emission_enabled = true
-emission = Color(0.42, 0.55, 0.95, 1)
-emission_energy_multiplier = 1.1
 
 [node name="Main" type="Node3D"]
 
@@ -144,55 +113,8 @@ reticle_color = Color(0.8, 0.6, 1.0, 0.95)
 
 [node name="Workspace" type="Node3D" parent="XROrigin3D"]
 
-[node name="ThinkingOrb" type="Node3D" parent="XROrigin3D/Workspace"]
+[node name="ThinkingOrb" parent="XROrigin3D/Workspace" instance=ExtResource("2_orb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 1.42, -0.95)
-script = ExtResource("2_orb")
-particle_count = 220
-particle_radius = 0.055
-affordance_path = NodePath("Affordance")
-collider_path = NodePath("Collider")
-
-[node name="Collider" type="Area3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
-collision_layer = 2
-collision_mask = 0
-monitorable = true
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/Workspace/ThinkingOrb/Collider"]
-shape = SubResource("SphereShape3D_orb")
-
-[node name="Particles" type="CPUParticles3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
-emission_shape = 1
-emission_sphere_radius = 0.055
-spread = 180.0
-gravity = Vector3(0, 0.04, 0)
-initial_velocity_min = 0.07
-initial_velocity_max = 0.16
-angular_velocity_min = -45.0
-angular_velocity_max = 45.0
-scale_amount_min = 0.5
-scale_amount_max = 1.4
-lifetime = 3.2
-amount = 220
-local_coords = true
-
-[node name="Core" type="MeshInstance3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
-mesh = SubResource("SphereMesh_core")
-material_override = SubResource("StandardMaterial3D_core")
-
-[node name="Halo" type="MeshInstance3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
-transform = Transform3D(1, 0, 0, 0, 0.7, 0.7, 0, -0.7, 0.7, 0, -0.03, 0)
-mesh = SubResource("TorusMesh_halo")
-material_override = SubResource("StandardMaterial3D_halo")
-
-[node name="Light" type="OmniLight3D" parent="XROrigin3D/Workspace/ThinkingOrb"]
-light_color = Color(0.42, 0.55, 0.95, 1)
-light_energy = 0.9
-omni_range = 1.2
-
-[node name="Affordance" parent="XROrigin3D/Workspace/ThinkingOrb" instance=ExtResource("4_pill")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.09, 0)
-label_text = "MOVER ORBE"
-hover_collider_path = NodePath("../Collider")
 
 [node name="CodeStudioPanel" type="Node3D" parent="XROrigin3D/Workspace" groups=["spatial_panel"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 1.52, -1.62)
