@@ -63,6 +63,8 @@ var _undocked: Dictionary = {}
 
 
 func _ready() -> void:
+	if _editor != null:
+		_editor.virtual_keyboard_enabled = false
 	_build_highlighter()
 	_build_tabs()
 	_build_view_buttons()

@@ -66,6 +66,7 @@ var _next_btn: Node3D
 # Drag state
 var _dragging_card: Node3D = null
 var _dragging_group := false
+var _drag_hand := -1
 var _drag_depth := 0.0
 var _drag_offset := Vector3.ZERO
 var _trigger_consumed := [false, false]
@@ -234,22 +235,26 @@ func _process(delta: float) -> void:
 		card.position = card.position.lerp(target_pos, delta * 7.0)
 		card.rotation.y = lerpf(card.rotation.y, angle, delta * 7.0)
 
-	# Grip drag handling
-	var gripping := -1
-	for hand: int in [0, 1]:
-		if _xr.is_grip_pressed(hand):
-			gripping = hand
-			break
-	if gripping < 0:
-		if _dragging_card != null:
-			_end_card_drag()
-		_dragging_card = null
-		_dragging_group = false
-		return
+	# Grip drag handling with strict ownership checks
 	if _dragging_card == null and not _dragging_group:
-		_begin_drag(gripping)
-		return
-	_update_drag(gripping)
+		for hand: int in [0, 1]:
+			if _xr.can_claim_grip(hand, self):
+				var hit := _hit_under_ray(hand)
+				if not hit.is_empty():
+					if _xr.claim_grip(hand, self):
+						_drag_hand = hand
+						_begin_drag(hand, hit)
+						break
+	else:
+		if not _xr.is_grip_pressed(_drag_hand):
+			_xr.release_grip(_drag_hand, self)
+			if _dragging_card != null:
+				_end_card_drag()
+			_dragging_card = null
+			_dragging_group = false
+			_drag_hand = -1
+		else:
+			_update_drag(_drag_hand)
 
 
 func _check_nav_buttons() -> void:
@@ -294,18 +299,19 @@ func _check_card_selection() -> void:
 			_trigger_consumed[hand] = false
 
 
-func _begin_drag(hand: int) -> void:
-	var hit := _hit_under_ray(hand)
+func _begin_drag(hand: int, hit: Dictionary = {}) -> void:
+	if hit.is_empty():
+		hit = _hit_under_ray(hand)
 	if hit.is_empty():
 		return
-	var card: Node3D = hit["card"]
+	var card: Node3D = hit.get("card")
 	if card != null:
 		_dragging_card = card
 		_drag_depth = _ray_depth(hand)
 		var pos: Vector3 = hit["position"]
 		_drag_offset = card.global_position - pos
 		SpatialAudioScript.play_grab(get_tree(), pos)
-	elif hit["group"]:
+	elif hit.get("group", false):
 		_dragging_group = true
 		_drag_depth = _ray_depth(hand)
 		var g_pos: Vector3 = hit["position"]

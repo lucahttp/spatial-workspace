@@ -583,9 +583,9 @@ func _handle_interaction() -> void:
 	# 2. Grip Drag: Translates the orb in 3D space
 	if not _dragging:
 		for hand: int in [0, 1]:
-			if _xr.is_grip_pressed(hand):
+			if _xr.can_claim_grip(hand, self):
 				var hit := _raycast_hit(hand)
-				if not hit.is_empty():
+				if not hit.is_empty() and _xr.claim_grip(hand, self):
 					_dragging = true
 					_dragging_hand = hand
 					var pos: Vector3 = hit["position"]
@@ -597,6 +597,7 @@ func _handle_interaction() -> void:
 					break
 	else:
 		if not _xr.is_grip_pressed(_dragging_hand):
+			_xr.release_grip(_dragging_hand, self)
 			_dragging = false
 			_dragging_hand = -1
 			SpatialAudioScript.play_release(tree, global_position)

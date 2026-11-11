@@ -108,18 +108,19 @@ func _bind_viewport_texture() -> void:
 	material.albedo_texture = viewport.get_texture()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _xr_manager == null:
 		return
 
 	if not _dragging:
 		# Check if either hand starts gripping the panel
 		for hand: int in [0, 1]:
-			if _xr_manager.is_grip_pressed(hand):
+			if _xr_manager.can_claim_grip(hand, self):
 				var hit := _hit_on_panel(hand)
 				if not hit.is_empty():
-					_start_drag(hand, hit)
-					break
+					if _xr_manager.claim_grip(hand, self):
+						_start_drag(hand, hit)
+						break
 		return
 
 	# We are dragging. Check active grip states for each hand.
@@ -136,11 +137,11 @@ func _process(_delta: float) -> void:
 			return
 		elif not primary_active and secondary_active:
 			_transition_to_single(_second_hand)
-			_update_single(_dragging_hand)
+			_update_single(_dragging_hand, delta)
 			return
 		elif primary_active and not secondary_active:
 			_transition_to_single(_dragging_hand)
-			_update_single(_dragging_hand)
+			_update_single(_dragging_hand, delta)
 			return
 		else:
 			_update_bimanual()
@@ -152,28 +153,26 @@ func _process(_delta: float) -> void:
 		# Dragging hand was released. Check if the other hand is gripping the panel.
 		var other_hand: int = 1 - _dragging_hand
 		var other_active: bool = hand0_active if other_hand == 0 else hand1_active
-		if other_active:
+		if other_active and _xr_manager.can_claim_grip(other_hand, self):
 			var hit := _hit_on_panel(other_hand)
-			if not hit.is_empty():
+			if not hit.is_empty() and _xr_manager.claim_grip(other_hand, self):
 				_start_drag(other_hand, hit)
 				return
 		_end_drag()
 		return
 
-	# Primary hand is still gripping. Check if other hand grips to engage bimanual manipulation.
+	# Primary hand is still gripping. Check if other hand grips anywhere in space to engage bimanual manipulation.
 	var candidate_second: int = 1 - _dragging_hand
 	var candidate_active: bool = hand0_active if candidate_second == 0 else hand1_active
-	if candidate_active:
-		var second_hit := _hit_on_panel(candidate_second)
-		if not second_hit.is_empty():
+	if candidate_active and _xr_manager.can_claim_grip(candidate_second, self):
+		if _xr_manager.claim_grip(candidate_second, self):
 			_second_hand = candidate_second
-			_depth[candidate_second] = _ray_depth(candidate_second)
-			var pos: Vector3 = second_hit["position"]
-			_offset[candidate_second] = global_position - pos
+			_depth[candidate_second] = _depth.get(_dragging_hand, 1.2)
+			_offset[candidate_second] = Vector3.ZERO
 			_begin_bimanual()
 			return
 
-	_update_single(_dragging_hand)
+	_update_single(_dragging_hand, delta)
 
 
 # --- Dragging --------------------------------------------------------------
@@ -194,6 +193,9 @@ func _start_drag(hand: int, hit: Dictionary = {}) -> void:
 
 
 func _transition_to_single(hand: int) -> void:
+	if _second_hand >= 0:
+		var released_hand: int = _second_hand if hand == _dragging_hand else _dragging_hand
+		_xr_manager.release_grip(released_hand, self)
 	_dragging_hand = hand
 	_second_hand = -1
 	var point := _point_on_drag_plane(hand)
@@ -203,6 +205,10 @@ func _transition_to_single(hand: int) -> void:
 
 
 func _end_drag() -> void:
+	if _dragging_hand >= 0:
+		_xr_manager.release_grip(_dragging_hand, self)
+	if _second_hand >= 0:
+		_xr_manager.release_grip(_second_hand, self)
 	_dragging = false
 	_dragging_hand = -1
 	_second_hand = -1
@@ -212,20 +218,45 @@ func _end_drag() -> void:
 	SpatialAudioScript.play_release(get_tree(), global_position)
 
 
+## Smoothly rotates the panel so its normal faces directly toward the user's headset.
+func face_user() -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var to_cam := cam.global_position - global_position
+	to_cam.y = 0.0
+	if to_cam.length_squared() > 0.001:
+		var target_yaw := atan2(to_cam.x, to_cam.z) + PI
+		var target_basis := Basis(Vector3.UP, target_yaw)
+		var tween := create_tween()
+		tween.tween_property(self, "basis", target_basis, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		SpatialAudioScript.play_chime(get_tree(), global_position)
+
+
 ## Tells the affordance pill whether the panel is being held.
 func _set_affordance_dragging(value: bool) -> void:
 	if _affordance != null and _affordance.has_method("set_dragging"):
 		_affordance.set_dragging(value)
 
 
-## Moves the panel so the grip keeps its relative position on the panel.
-func _update_single(hand: int) -> void:
+## Moves the panel so the grip keeps its relative position on the panel,
+## while smoothly orienting around yaw so it faces the user.
+func _update_single(hand: int, delta: float = 0.016) -> void:
 	var point := _point_on_drag_plane(hand)
 	if point.is_empty():
 		return
 	var offset: Vector3 = _offset.get(hand, Vector3.ZERO)
 	var point_position: Vector3 = point["position"]
 	global_position = point_position + offset
+
+	# Natural arc: panel smoothly turns towards user as you move it around your space
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var to_cam := cam.global_position - global_position
+		to_cam.y = 0.0
+		if to_cam.length_squared() > 0.04:
+			var target_yaw := atan2(to_cam.x, to_cam.z) + PI
+			rotation.y = lerp_angle(rotation.y, target_yaw, delta * 6.0)
 
 
 # --- Bimanual manipulation -------------------------------------------------
@@ -254,7 +285,7 @@ func _update_bimanual() -> void:
 	var distance := pa.distance_to(pb)
 	var angle := _yaw_between(pa, pb)
 	var ratio := distance / maxf(_bimanual_start_distance, GRIP_MIN_DISTANCE)
-	scale = _bimanual_start_scale * ratio
+	scale = _bimanual_start_scale * clampf(ratio, 0.45, 2.5)
 	rotation.y = _bimanual_start_rotation + (angle - _bimanual_start_angle)
 	# The panel follows the midpoint of both grips seamlessly without popping.
 	global_position = ((pa + pb) * 0.5) + _bimanual_mid_offset

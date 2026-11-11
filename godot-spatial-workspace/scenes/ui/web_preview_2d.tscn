@@ -21,88 +21,305 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="TitleBar" type="PanelContainer" parent="Root"]
+[node name="BrowserNav" type="PanelContainer" parent="Root"]
 layout_mode = 2
 
-[node name="Row" type="HBoxContainer" parent="Root/TitleBar"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="TitleLabel" type="Label" parent="Root/TitleBar/Row"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Wolvic & WebXR Layers"
-
-[node name="FavoriteButton" type="Button" parent="Root/TitleBar/Row"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(34, 30)
-layout_mode = 2
-text = "☆"
-
-[node name="UrlBar" type="PanelContainer" parent="Root"]
-layout_mode = 2
-
-[node name="Row" type="HBoxContainer" parent="Root/UrlBar"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="LockLabel" type="Label" parent="Root/UrlBar/Row"]
-layout_mode = 2
-text = "🔒"
-
-[node name="UrlEdit" type="LineEdit" parent="Root/UrlBar/Row"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "https://wolvic.com/webxr-layers"
-
-[node name="ReloadButton" type="Button" parent="Root/UrlBar/Row"]
-custom_minimum_size = Vector2(34, 30)
-layout_mode = 2
-text = "⟳"
-
-[node name="Content" type="PanelContainer" parent="Root"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Column" type="VBoxContainer" parent="Root/Content"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="SummaryLabel" type="Label" parent="Root/Content/Column"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Integración de navegador espacial multi-ventana y puente nativo SystemBridge."
-autowrap_mode = 3
-
-[node name="Badges" type="HBoxContainer" parent="Root/Content/Column"]
+[node name="Row" type="HBoxContainer" parent="Root/BrowserNav"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Badge1" type="Label" parent="Root/Content/Column/Badges"]
+[node name="BackButton" type="Button" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+layout_mode = 2
+text = "◀"
+
+[node name="ForwardButton" type="Button" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+layout_mode = 2
+text = "▶"
+
+[node name="ReloadButton" type="Button" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+layout_mode = 2
+text = "⟳"
+
+[node name="HomeButton" type="Button" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 28)
+layout_mode = 2
+text = "🏠"
+
+[node name="LockIcon" type="Label" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "⚡"
+
+[node name="UrlEdit" type="LineEdit" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "http://localhost:5173/preview"
+
+[node name="LiveBadge" type="Label" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🟢 NodePod :5173"
+
+[node name="FavoriteButton" type="Button" parent="Root/BrowserNav/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 28)
+layout_mode = 2
+text = "☆"
+
+[node name="TabBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+
+[node name="TabsRow" type="HBoxContainer" parent="Root/TabBar"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TabPreview" type="Button" parent="Root/TabBar/TabsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "🌐 Vista Previa"
+
+[node name="TabConsole" type="Button" parent="Root/TabBar/TabsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "⚡ Consola NodePod"
+
+[node name="TabVfs" type="Button" parent="Root/TabBar/TabsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "📦 VFS Archivos"
+
+[node name="Spacer" type="Control" parent="Root/TabBar/TabsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HmrStatus" type="Label" parent="Root/TabBar/TabsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "HMR Activo"
+
+[node name="ViewStack" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PreviewView" type="PanelContainer" parent="Root/ViewStack"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PreviewVBox" type="VBoxContainer" parent="Root/ViewStack/PreviewView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "NodePod Spatial App (Vite + WebXR)"
+
+[node name="VersionBadge" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/HeaderRow"]
+layout_mode = 2
+text = "v1.4-vr"
+
+[node name="SummaryLabel" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Servidor de desarrollo NodePod activo en memoria VFS. Aplicación reactiva lista para inspeccionar."
+autowrap_mode = 3
+
+[node name="WidgetCard" type="PanelContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+layout_mode = 2
+
+[node name="WidgetVBox" type="VBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="WidgetTitle" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox"]
+layout_mode = 2
+text = "⚡ Componente Reactivo en Vivo"
+
+[node name="CounterRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DecButton" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 32)
+layout_mode = 2
+text = "−"
+
+[node name="CountDisplay" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Clicks: 0"
+horizontal_alignment = 1
+
+[node name="IncButton" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 32)
+layout_mode = 2
+text = "+"
+
+[node name="ResetCounterBtn" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "↺ Reset"
+
+[node name="WidgetStateLabel" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Estado: Renderizado con NodePod VFS"
+horizontal_alignment = 2
+
+[node name="Badges" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Badge1" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
 layout_mode = 2
 text = "WebXR"
 
-[node name="Badge2" type="Label" parent="Root/Content/Column/Badges"]
+[node name="Badge2" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
 layout_mode = 2
-text = "Hand Kinematics"
+text = "NodePod VFS"
 
-[node name="Badge3" type="Label" parent="Root/Content/Column/Badges"]
+[node name="Badge3" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
 layout_mode = 2
-text = "Spatial UI"
+text = "wZed Engine"
 
-[node name="ReadingProgress" type="ProgressBar" parent="Root/Content/Column"]
+[node name="Badge4" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
+layout_mode = 2
+text = "Hot-Reload"
+
+[node name="QuickNavRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="QuickBtn1" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
-value = 40.0
+text = "🌐 localhost:5173"
+
+[node name="QuickBtn2" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🕶️ Wolvic Layers"
+
+[node name="QuickBtn3" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🤖 DeepSeek Harness"
+
+[node name="ReadingProgress" type="ProgressBar" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+value = 100.0
 show_percentage = false
+
+[node name="ConsoleView" type="PanelContainer" parent="Root/ViewStack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ConsoleVBox" type="VBoxContainer" parent="Root/ViewStack/ConsoleView"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ConsoleToolRow" type="HBoxContainer" parent="Root/ViewStack/ConsoleView/ConsoleVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ConsoleTitle" type="Label" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⚡ NodePod Container Daemon v20.11.0"
+
+[node name="RestartDevBtn" type="Button" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "↺ Reiniciar Servidor"
+
+[node name="ClearConsoleBtn" type="Button" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🗑️ Limpiar"
+
+[node name="ConsoleOutput" type="RichTextLabel" parent="Root/ViewStack/ConsoleView/ConsoleVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+
+[node name="VfsView" type="PanelContainer" parent="Root/ViewStack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VfsVBox" type="VBoxContainer" parent="Root/ViewStack/VfsView"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="VfsTitle" type="Label" parent="Root/ViewStack/VfsView/VfsVBox"]
+layout_mode = 2
+text = "📦 Sistema de Archivos Virtual (memfs)"
+
+[node name="VfsFileList" type="ItemList" parent="Root/ViewStack/VfsView/VfsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VfsPreviewText" type="Label" parent="Root/ViewStack/VfsView/VfsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Seleccione un archivo para ver detalles."
+autowrap_mode = 3
 
 [node name="StatusBar" type="PanelContainer" parent="Root"]
 layout_mode = 2
 
-[node name="StatusLabel" type="Label" parent="Root/StatusBar"]
+[node name="StatusRow" type="HBoxContainer" parent="Root/StatusBar"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Root/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Cargando…"
+size_flags_horizontal = 3
+text = "NodePod en línea · http://localhost:5173"
+
+[node name="PingLabel" type="Label" parent="Root/StatusBar/StatusRow"]
+layout_mode = 2
+text = "⚡ 12ms"

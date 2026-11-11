@@ -214,21 +214,22 @@ func _handle_drag() -> void:
 		return
 	if _dragging_node == null:
 		for hand: int in [0, 1]:
-			if _xr.is_grip_pressed(hand):
+			if _xr.can_claim_grip(hand, self):
 				var origin := _xr.get_aim_origin(hand)
 				var dir := _xr.get_aim_direction(hand)
 				if dir != Vector3.ZERO:
 					var hit := _raycast(origin, origin + dir * 10.0)
 					if not hit.is_empty():
 						var col: Object = hit.get("collider")
-						if col == _archive_collider:
+						if col == _archive_collider and _xr.claim_grip(hand, self):
 							_start_drag(_archive_node, hand, origin, hit.get("position"))
 							break
-						elif col == _trash_collider:
+						elif col == _trash_collider and _xr.claim_grip(hand, self):
 							_start_drag(_trash_node, hand, origin, hit.get("position"))
 							break
 	else:
 		if not _xr.is_grip_pressed(_dragging_hand):
+			_xr.release_grip(_dragging_hand, self)
 			_dragging_node = null
 			_dragging_hand = -1
 			SpatialAudioScript.play_release(get_tree(), global_position)

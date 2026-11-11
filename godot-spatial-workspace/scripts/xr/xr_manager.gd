@@ -52,6 +52,7 @@ var _passthrough_enabled := false
 var _controllers: Array = [null, null]
 var _grip_down: Array[bool] = [false, false]
 var _trigger_down: Array[bool] = [false, false]
+var _grip_owners: Array = [null, null]
 
 
 func _ready() -> void:
@@ -75,6 +76,8 @@ func _process(_delta: float) -> void:
 		var grip := _read_grip(controller)
 		if grip != _grip_down[hand]:
 			_grip_down[hand] = grip
+			if not grip:
+				_grip_owners[hand] = null
 			grip_changed.emit(hand, grip)
 		var trigger := _read_trigger(controller)
 		if trigger != _trigger_down[hand]:
@@ -229,6 +232,38 @@ func is_grip_pressed(hand: int) -> bool:
 	if not is_controller_active(hand):
 		return false
 	return hand >= 0 and hand < _grip_down.size() and _grip_down[hand]
+
+
+## Attempts to claim exclusive grip ownership of the given hand for an object.
+## Returns true if claimed successfully or if already owned by this object.
+func claim_grip(hand: int, owner: Object) -> bool:
+	if hand < 0 or hand >= _grip_owners.size() or owner == null:
+		return false
+	if _grip_owners[hand] == null or _grip_owners[hand] == owner:
+		_grip_owners[hand] = owner
+		return true
+	return false
+
+
+## Releases grip ownership of the given hand if owned by the caller.
+func release_grip(hand: int, owner: Object) -> void:
+	if hand >= 0 and hand < _grip_owners.size() and _grip_owners[hand] == owner:
+		_grip_owners[hand] = null
+
+
+## Returns the current owner of the grip on the given hand, or null.
+func get_grip_owner(hand: int) -> Object:
+	if hand >= 0 and hand < _grip_owners.size():
+		return _grip_owners[hand]
+	return null
+
+
+## Returns true if the grip is pressed AND not claimed by another object.
+func can_claim_grip(hand: int, claimant: Object) -> bool:
+	if not is_grip_pressed(hand):
+		return false
+	var owner: Object = get_grip_owner(hand)
+	return owner == null or owner == claimant
 
 
 func is_trigger_pressed(hand: int) -> bool:

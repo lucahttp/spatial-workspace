@@ -260,23 +260,25 @@ func _handle_interaction() -> void:
 	# 2. Grip drag on central graph collider
 	if not _dragging:
 		for hand: int in [0, 1]:
-			if _xr.is_grip_pressed(hand):
+			if _xr.can_claim_grip(hand, self):
 				var origin := _xr.get_aim_origin(hand)
 				var dir := _xr.get_aim_direction(hand)
 				if dir != Vector3.ZERO:
 					var hit := _raycast(origin, origin + dir * 10.0)
 					if not hit.is_empty() and hit.get("collider") == _collider:
-						_dragging = true
-						_dragging_hand = hand
-						var pos: Vector3 = hit.get("position")
-						_drag_depth = origin.distance_to(pos)
-						_drag_offset = global_position - pos
-						SpatialAudioScript.play_grab(get_tree(), global_position)
-						if _affordance != null and _affordance.has_method("set_dragging"):
-							_affordance.set_dragging(true)
-						break
+						if _xr.claim_grip(hand, self):
+							_dragging = true
+							_dragging_hand = hand
+							var pos: Vector3 = hit.get("position")
+							_drag_depth = origin.distance_to(pos)
+							_drag_offset = global_position - pos
+							SpatialAudioScript.play_grab(get_tree(), global_position)
+							if _affordance != null and _affordance.has_method("set_dragging"):
+								_affordance.set_dragging(true)
+							break
 	else:
 		if not _xr.is_grip_pressed(_dragging_hand):
+			_xr.release_grip(_dragging_hand, self)
 			_dragging = false
 			_dragging_hand = -1
 			SpatialAudioScript.play_release(get_tree(), global_position)
