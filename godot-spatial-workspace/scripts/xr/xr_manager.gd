@@ -26,6 +26,7 @@ signal session_stopped()
 signal passthrough_changed(enabled: bool)
 signal grip_changed(hand: int, pressed: bool)
 signal trigger_changed(hand: int, pressed: bool)
+signal voice_trigger_pressed()
 
 enum Runtime { NONE, OPENXR, REALITYKIT }
 enum Hand { LEFT = 0, RIGHT = 1 }
@@ -52,6 +53,7 @@ var _passthrough_enabled := false
 var _controllers: Array = [null, null]
 var _grip_down: Array[bool] = [false, false]
 var _trigger_down: Array[bool] = [false, false]
+var _primary_down: Array[bool] = [false, false]
 var _grip_owners: Array = [null, null]
 
 
@@ -83,6 +85,11 @@ func _process(_delta: float) -> void:
 		if trigger != _trigger_down[hand]:
 			_trigger_down[hand] = trigger
 			trigger_changed.emit(hand, trigger)
+		var primary := controller.is_button_pressed("ax_button") or controller.is_button_pressed("primary_click")
+		if primary != _primary_down[hand]:
+			_primary_down[hand] = primary
+			if primary:
+				voice_trigger_pressed.emit()
 
 
 # --- Runtime detection -----------------------------------------------------

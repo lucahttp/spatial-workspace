@@ -83,6 +83,10 @@ func _ready() -> void:
 		if _bars.has_signal("settings_pressed"):
 			_bars.settings_pressed.connect(_on_settings_pressed)
 
+	var xr_mgr := get_tree().get_first_node_in_group("xr_manager")
+	if xr_mgr != null and xr_mgr.has_signal("voice_trigger_pressed"):
+		xr_mgr.connect("voice_trigger_pressed", _on_controller_voice_pressed)
+
 	_connect_studio_content.call_deferred()
 	_connect_transcript_content.call_deferred()
 
@@ -133,6 +137,11 @@ func _connect_transcript_content() -> void:
 			child.connect("open_browser_requested", _on_open_browser_requested)
 		if child.has_signal("recenter_requested"):
 			child.connect("recenter_requested", recenter)
+		if child.has_signal("orb_state_changed"):
+			child.connect("orb_state_changed", func(st: int) -> void:
+				if _orb != null and _orb.has_method("set_state"):
+					_orb.set_state(st)
+			)
 
 
 func _on_voice_command_submitted(utterance: String) -> void:
@@ -167,6 +176,21 @@ func _on_open_browser_requested(url: String) -> void:
 				for child in host.get_children():
 					if child.has_method("_navigate_to"):
 						child._navigate_to(url)
+
+
+func _on_controller_voice_pressed() -> void:
+	if _transcript != null:
+		_transcript.visible = true
+		var viewport := _transcript.get_node_or_null("PanelViewport") as SubViewport
+		if viewport != null:
+			var host := viewport.get_node_or_null("Content")
+			if host != null:
+				for child in host.get_children():
+					if child.has_method("get_orchestrator"):
+						var orch: Object = child.get_orchestrator()
+						if orch != null:
+							orch.trigger_start_button()
+							_status("Voz: Activado vía mando / dock")
 
 
 func _on_studio_closed() -> void:
@@ -317,12 +341,7 @@ func _on_dock_item_pressed(id: String) -> void:
 				_pads.visible = not _pads.visible
 				_status("Bandejas %s" % ("abiertas" if _pads.visible else "cerradas"))
 		"voice":
-			if _transcript != null:
-				_transcript.visible = not _transcript.visible
-			if _orb != null and _orb.has_method("set_state"):
-				_orb.set_state(_orb.State.LISTENING)
-				SpatialAudioScript.play_chime(get_tree(), _orb.global_position)
-				_status("Asistente: Escuchando voz...")
+			_on_controller_voice_pressed()
 		"recenter":
 			recenter()
 
