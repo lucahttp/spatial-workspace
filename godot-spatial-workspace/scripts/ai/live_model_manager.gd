@@ -4,6 +4,8 @@ extends RefCounted
 ## Supports MiniMax (Speech-02 / abab6.5s), OpenAI Realtime, and DeepSeek Harness.
 ##
 ## Configuration is persisted in user://live_model_config.json.
+## Supports easy secrets loading from /sdcard/spatial_workspace_secrets.json,
+## res://secrets.json, and OS environment variables.
 
 signal config_changed()
 signal agent_speaking_started(text: String)
@@ -12,6 +14,14 @@ signal tool_executed(tool_name: String, result: String)
 
 const CONFIG_PATH := "user://live_model_config.json"
 
+const EXTERNAL_CANDIDATE_PATHS := [
+	"user://live_model_config.json",
+	"/sdcard/spatial_workspace_secrets.json",
+	"/sdcard/Download/spatial_secrets.json",
+	"/sdcard/Download/spatial_workspace_secrets.json",
+	"res://secrets.json",
+]
+
 enum Provider {
 	MINIMAX,
 	OPENAI_REALTIME,
@@ -19,28 +29,28 @@ enum Provider {
 	MOCK_LOCAL,
 }
 
-const PROVIDER_NAMES := {
+const PROVIDER_NAMES: Dictionary = {
 	Provider.MINIMAX: "MiniMax Realtime",
 	Provider.OPENAI_REALTIME: "OpenAI GPT-4o Live",
 	Provider.DEEPSEEK: "DeepSeek Reasoning",
 	Provider.MOCK_LOCAL: "Modo Local / Simulado",
 }
 
-const DEFAULT_MODELS := {
+const DEFAULT_MODELS: Dictionary = {
 	Provider.MINIMAX: "speech-02-turbo",
 	Provider.OPENAI_REALTIME: "gpt-4o-realtime-preview",
 	Provider.DEEPSEEK: "deepseek-chat",
 	Provider.MOCK_LOCAL: "mock-voice-agent",
 }
 
-const AVAILABLE_MODELS := {
+const AVAILABLE_MODELS: Dictionary = {
 	Provider.MINIMAX: ["speech-02-turbo", "speech-01-hd", "abab6.5s-chat", "MiniMax-Text-01"],
 	Provider.OPENAI_REALTIME: ["gpt-4o-realtime-preview", "gpt-4o-mini-realtime-preview"],
 	Provider.DEEPSEEK: ["deepseek-chat", "deepseek-reasoner"],
 	Provider.MOCK_LOCAL: ["mock-voice-agent", "jarvis-offline"],
 }
 
-const VOICES := {
+const VOICES: Dictionary = {
 	Provider.MINIMAX: [
 		{"id": "moss_audio", "name": "MOSS (Jarvis Calmo / Intelectual)"},
 		{"id": "male-qn-qingse", "name": "Qingse (Masculino Juvenil / Dinámico)"},
@@ -82,33 +92,157 @@ func _init() -> void:
 	load_config()
 
 
-## Loads persisted configuration or defaults.
+## Loads persisted configuration or defaults, and auto-discovers external secrets if missing.
 func load_config() -> void:
-	if not FileAccess.file_exists(CONFIG_PATH):
-		_apply_defaults()
-		return
+	var loaded := false
+	if FileAccess.file_exists(CONFIG_PATH):
+		var file := FileAccess.open(CONFIG_PATH, FileAccess.READ)
+		if file != null:
+			var json_text := file.get_as_text()
+			var json := JSON.new()
+			if json.parse(json_text) == OK and json.data is Dictionary:
+				_apply_dictionary_data(json.data)
+				loaded = true
 
-	var file := FileAccess.open(CONFIG_PATH, FileAccess.READ)
-	if file == null:
+	if not loaded:
 		_apply_defaults()
-		return
 
-	var json_text := file.get_as_text()
-	var json := JSON.new()
-	if json.parse(json_text) != OK:
-		_apply_defaults()
-		return
+	# If API key is still empty, scan external search paths (e.g. pushed via ADB or res://)
+	if api_key.is_empty():
+		scan_and_import_secrets()
 
-	var data: Dictionary = json.data
-	current_provider = data.get("provider", Provider.MINIMAX) as Provider
-	current_model = data.get("model", DEFAULT_MODELS.get(current_provider, "speech-02-turbo"))
-	api_key = data.get("api_key", "")
-	group_id = data.get("group_id", "")
-	voice_id = data.get("voice_id", "moss_audio")
-	custom_endpoint = data.get("custom_endpoint", "")
-	system_prompt = data.get("system_prompt", system_prompt)
-	vad_enabled = data.get("vad_enabled", true)
-	temperature = data.get("temperature", 0.7)
+	# Check environment variables
+	_check_environment_secrets()
+
+
+func _check_environment_secrets() -> void:
+	var env_minimax_key := OS.get_environment("MINIMAX_API_KEY")
+	var env_minimax_group := OS.get_environment("MINIMAX_GROUP_ID")
+	var env_openai_key := OS.get_environment("OPENAI_API_KEY")
+
+	if not env_minimax_key.is_empty() and api_key.is_empty():
+		api_key = env_minimax_key
+		current_provider = Provider.MINIMAX
+	if not env_minimax_group.is_empty() and group_id.is_empty():
+		group_id = env_minimax_group
+	if not env_openai_key.is_empty() and api_key.is_empty():
+		api_key = env_openai_key
+		current_provider = Provider.OPENAI_REALTIME
+
+
+## Scans candidate paths (/sdcard, Download, res://) for external secrets files.
+## Returns a result dictionary describing what was found.
+func scan_and_import_secrets() -> Dictionary:
+	for path in EXTERNAL_CANDIDATE_PATHS:
+		if path == CONFIG_PATH:
+			continue
+		if FileAccess.file_exists(path):
+			var file := FileAccess.open(path, FileAccess.READ)
+			if file != null:
+				var text := file.get_as_text()
+				var json := JSON.new()
+				if json.parse(text) == OK and json.data is Dictionary:
+					var count := _apply_dictionary_data(json.data)
+					if count > 0:
+						save_config()
+						return {
+							"success": true,
+							"path": path,
+							"count": count,
+							"message": "Cargados %d secretos desde %s" % [count, path],
+						}
+				# Try parsing as KEY=VALUE .env style
+				var env_count := _parse_and_apply_env_text(text)
+				if env_count > 0:
+					save_config()
+					return {
+						"success": true,
+						"path": path,
+						"count": env_count,
+						"message": "Cargados %d secretos formato .env desde %s" % [env_count, path],
+					}
+
+	return {
+		"success": false,
+		"path": "",
+		"count": 0,
+		"message": "No se encontraron archivos de secretos externos.",
+	}
+
+
+func _apply_dictionary_data(data: Dictionary) -> int:
+	var count := 0
+
+	# Standard keys
+	if data.has("provider"):
+		current_provider = data.get("provider") as Provider
+	if data.has("model"):
+		current_model = data.get("model", current_model)
+	if data.has("voice_id"):
+		voice_id = data.get("voice_id", voice_id)
+	if data.has("custom_endpoint"):
+		custom_endpoint = data.get("custom_endpoint", custom_endpoint)
+
+	# Direct api_key & group_id
+	if data.has("api_key") and not str(data["api_key"]).is_empty():
+		api_key = str(data["api_key"]).strip_edges()
+		count += 1
+	if data.has("group_id") and not str(data["group_id"]).is_empty():
+		group_id = str(data["group_id"]).strip_edges()
+		count += 1
+
+	# Provider-specific named keys (convenience for multi-provider files)
+	if data.has("minimax_api_key") and not str(data["minimax_api_key"]).is_empty():
+		api_key = str(data["minimax_api_key"]).strip_edges()
+		current_provider = Provider.MINIMAX
+		count += 1
+	if data.has("minimax_group_id") and not str(data["minimax_group_id"]).is_empty():
+		group_id = str(data["minimax_group_id"]).strip_edges()
+		count += 1
+
+	if data.has("openai_api_key") and not str(data["openai_api_key"]).is_empty():
+		if api_key.is_empty():
+			api_key = str(data["openai_api_key"]).strip_edges()
+			current_provider = Provider.OPENAI_REALTIME
+		count += 1
+
+	return count
+
+
+func _parse_and_apply_env_text(text: String) -> int:
+	var lines := text.split("\n")
+	var count := 0
+	for line in lines:
+		var trimmed := line.strip_edges()
+		if trimmed.begins_with("#") or not trimmed.contains("="):
+			continue
+		var parts := trimmed.split("=", true, 1)
+		if parts.size() < 2:
+			continue
+		var key := parts[0].strip_edges().to_upper()
+		var val := parts[1].strip_edges().trim_prefix("\"").trim_suffix("\"").trim_prefix("'").trim_suffix("'")
+
+		match key:
+			"MINIMAX_API_KEY":
+				api_key = val
+				current_provider = Provider.MINIMAX
+				count += 1
+			"MINIMAX_GROUP_ID":
+				group_id = val
+				count += 1
+			"OPENAI_API_KEY":
+				if api_key.is_empty():
+					api_key = val
+					current_provider = Provider.OPENAI_REALTIME
+				count += 1
+			"API_KEY":
+				api_key = val
+				count += 1
+			"GROUP_ID":
+				group_id = val
+				count += 1
+
+	return count
 
 
 ## Saves configuration to user://live_model_config.json.

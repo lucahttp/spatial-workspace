@@ -24,3 +24,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets & Environment
+.env
+.env.*
+*.secrets
+secrets.json
+spatial_secrets.json
+spatial_workspace_secrets.json
+live_model_config.json

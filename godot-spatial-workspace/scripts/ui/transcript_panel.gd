@@ -58,6 +58,7 @@ const RealtimeOrchestratorScript := preload("res://scripts/ai/realtime_agent_orc
 @onready var _test_voice_btn: Button = %TestVoiceBtn
 @onready var _test_result_label: Label = %TestResultLabel
 @onready var _save_config_btn: Button = %SaveConfigBtn
+@onready var _load_secrets_btn: Button = %LoadSecretsBtn
 @onready var _close_settings_btn: Button = %CloseSettingsBtn
 
 var _model_manager: LiveModelManagerScript
@@ -183,6 +184,8 @@ func _connect_signals() -> void:
 		_test_voice_btn.pressed.connect(_on_test_voice_pressed)
 	if _save_config_btn != null:
 		_save_config_btn.pressed.connect(_on_save_config_pressed)
+	if _load_secrets_btn != null:
+		_load_secrets_btn.pressed.connect(_on_load_secrets_pressed)
 
 
 func _connect_orchestrator() -> void:
@@ -355,6 +358,19 @@ func _on_save_config_pressed() -> void:
 		_model_manager.current_model,
 		_model_manager.voice_id
 	)
+
+
+func _on_load_secrets_pressed() -> void:
+	var result: Dictionary = _model_manager.scan_and_import_secrets()
+	if result.get("success", false):
+		_populate_settings_ui()
+		_update_model_badge()
+		if _test_result_label != null:
+			_test_result_label.text = "✅ " + str(result.get("message", ""))
+		append_log("Secretos importados: %s" % str(result.get("message", "")))
+	else:
+		if _test_result_label != null:
+			_test_result_label.text = "⚠️ " + str(result.get("message", ""))
 
 
 func _on_test_voice_pressed() -> void:

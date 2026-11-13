@@ -7,3 +7,11 @@ builds/
 extension_api.json
 addons/godotopenxrvendors/
 android/
+
+# Secrets & Local Configs
+.env
+.env.*
+secrets.json
+spatial_secrets.json
+spatial_workspace_secrets.json
+live_model_config.json
