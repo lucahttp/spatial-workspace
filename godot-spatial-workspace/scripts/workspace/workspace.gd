@@ -125,6 +125,48 @@ func _connect_transcript_content() -> void:
 					_studio.visible = true
 				_status("Listando VFS...")
 			)
+		if child.has_signal("voice_command_submitted"):
+			child.connect("voice_command_submitted", _on_voice_command_submitted)
+		if child.has_signal("model_configured"):
+			child.connect("model_configured", _on_model_configured)
+		if child.has_signal("open_browser_requested"):
+			child.connect("open_browser_requested", _on_open_browser_requested)
+		if child.has_signal("recenter_requested"):
+			child.connect("recenter_requested", recenter)
+
+
+func _on_voice_command_submitted(utterance: String) -> void:
+	_status("Voz: %s" % utterance)
+	if _orb != null and _orb.has_method("set_state"):
+		_orb.set_state(_orb.State.LISTENING)
+		SpatialAudioScript.play_listening_start(get_tree(), _orb.global_position)
+		get_tree().create_timer(1.2).timeout.connect(func() -> void:
+			if _orb != null:
+				_orb.set_state(_orb.State.WORKING)
+				SpatialAudioScript.play_voice_response(get_tree(), _orb.global_position)
+			get_tree().create_timer(2.0).timeout.connect(func() -> void:
+				if _orb != null and _orb.state == _orb.State.WORKING:
+					_orb.set_state(_orb.State.BREATHING)
+			)
+		)
+
+
+func _on_model_configured(provider_name: String, model_name: String, voice_id: String) -> void:
+	_status("Modelo Live configurado: %s (%s) con voz %s" % [provider_name, model_name, voice_id])
+	if _orb != null:
+		SpatialAudioScript.play_chime(get_tree(), _orb.global_position)
+
+
+func _on_open_browser_requested(url: String) -> void:
+	if _preview != null:
+		_preview.visible = true
+		var preview_viewport := _preview.get_node_or_null("PanelViewport") as SubViewport
+		if preview_viewport != null:
+			var host := preview_viewport.get_node_or_null("Content")
+			if host != null:
+				for child in host.get_children():
+					if child.has_method("_navigate_to"):
+						child._navigate_to(url)
 
 
 func _on_studio_closed() -> void:
@@ -291,7 +333,16 @@ func _on_passthrough_changed(mode: int) -> void:
 
 func _on_settings_pressed() -> void:
 	SpatialAudioScript.play_click(get_tree())
-	_status("Ajustes del espacio")
+	_status("Ajustes: Configuración de Modelo y Espacio")
+	if _transcript != null:
+		_transcript.visible = true
+		var viewport := _transcript.get_node_or_null("PanelViewport") as SubViewport
+		if viewport != null:
+			var host := viewport.get_node_or_null("Content")
+			if host != null:
+				for child in host.get_children():
+					if child.has_method("show_settings"):
+						child.show_settings(true)
 
 
 ## Recenters workspace directly in front of active viewpoint.

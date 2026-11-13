@@ -59,6 +59,16 @@ static func play_spotlight(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> v
 	_play_stream(tree, _spotlight_stream, at_pos)
 
 
+static func play_voice_response(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _spotlight_stream, at_pos)
+
+
+static func play_listening_start(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
+	_ensure_streams()
+	_play_stream(tree, _chime_stream, at_pos)
+
+
 static func play_undock(tree: SceneTree, at_pos: Vector3 = Vector3.ZERO) -> void:
 	_ensure_streams()
 	_play_stream(tree, _undock_stream, at_pos)

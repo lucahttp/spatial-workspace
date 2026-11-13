@@ -20,64 +20,234 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
 
 [node name="Column" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="Header" type="HBoxContainer" parent="Margin/Column"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="OrbStateLabel" type="Label" parent="Margin/Column/Header"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 text = "ESTADO: BREATHING"
 
-[node name="FoundryLive" type="Label" parent="Margin/Column/Header"]
+[node name="ModelBadge" type="Button" parent="Margin/Column/Header"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "● FOUNDRY LIVE"
-modulate = Color(0.1, 0.9, 0.5, 1)
+size_flags_horizontal = 3
+text = "⚡ MiniMax Live: speech-02"
 
 [node name="EqualizerRow" type="HBoxContainer" parent="Margin/Column/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 24)
+custom_minimum_size = Vector2(36, 22)
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 3
 alignment = 1
 
-[node name="TranscriptText" type="RichTextLabel" parent="Margin/Column"]
+[node name="SettingsToggleBtn" type="Button" parent="Margin/Column/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(34, 28)
+layout_mode = 2
+text = "⚙️"
+
+[node name="ViewStack" type="Control" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TranscriptView" type="VBoxContainer" parent="Margin/Column/ViewStack"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TranscriptText" type="RichTextLabel" parent="Margin/Column/ViewStack/TranscriptView"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
 text = "Iniciando sistema de voz..."
 
-[node name="PillsRow" type="HBoxContainer" parent="Margin/Column"]
+[node name="QuickSpeechRow" type="HBoxContainer" parent="Margin/Column/ViewStack/TranscriptView"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
-[node name="BtnRun" type="Button" parent="Margin/Column/PillsRow"]
+[node name="QuickVoice1" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🗣️ \"MiniMax, corre wZed\""
+
+[node name="QuickVoice2" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🗣️ \"Abre browser\""
+
+[node name="QuickVoice3" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🗣️ \"Recentra\""
+
+[node name="PillsRow" type="HBoxContainer" parent="Margin/Column/ViewStack/TranscriptView"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BtnRun" type="Button" parent="Margin/Column/ViewStack/TranscriptView/PillsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "▶ Correr wZed"
 
-[node name="BtnCreate" type="Button" parent="Margin/Column/PillsRow"]
+[node name="BtnCreate" type="Button" parent="Margin/Column/ViewStack/TranscriptView/PillsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "✨ Crear Módulo 3D"
 
-[node name="BtnVfs" type="Button" parent="Margin/Column/PillsRow"]
+[node name="BtnVfs" type="Button" parent="Margin/Column/ViewStack/TranscriptView/PillsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "📁 Listar VFS"
 
-[node name="MicButton" type="Button" parent="Margin/Column"]
+[node name="MicButton" type="Button" parent="Margin/Column/ViewStack/TranscriptView"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "🎤 Micrófono activo (Click para pausar)"
+
+[node name="SettingsView" type="VBoxContainer" parent="Margin/Column/ViewStack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="SettingsTitle" type="Label" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+text = "⚙️ Configurar Modelo GPT Live / Asistente de Voz"
+
+[node name="ProviderRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ProviderLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ProviderRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "Proveedor:"
+
+[node name="ProviderOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/ProviderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ModelRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ModelLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ModelRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "Modelo:"
+
+[node name="ModelOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/ModelRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VoiceRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="VoiceLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/VoiceRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "Voz Persona:"
+
+[node name="VoiceOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/VoiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ApiKeyRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ApiKeyLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ApiKeyRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "API Key:"
+
+[node name="ApiKeyEdit" type="LineEdit" parent="Margin/Column/ViewStack/SettingsView/ApiKeyRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "sk-..."
+secret = true
+
+[node name="ShowKeyBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ApiKeyRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+text = "👁"
+
+[node name="PasteKeyBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ApiKeyRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "📋 Pegar"
+
+[node name="GroupIdRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="GroupIdLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/GroupIdRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "Group ID:"
+
+[node name="GroupIdEdit" type="LineEdit" parent="Margin/Column/ViewStack/SettingsView/GroupIdRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "MiniMax Group ID..."
+
+[node name="TestRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TestVoiceBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/TestRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🔊 Probar Voz y Orbe"
+
+[node name="TestResultLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/TestRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Configuración cargada"
+
+[node name="ActionsRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SaveConfigBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ActionsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "💾 Guardar y Activar"
+
+[node name="CloseSettingsBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ActionsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "◀ Volver"
