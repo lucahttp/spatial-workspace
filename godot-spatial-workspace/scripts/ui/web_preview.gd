@@ -184,19 +184,19 @@ func _boot_console() -> void:
 	if _console_output == null:
 		return
 	_console_output.clear()
-	_log_console("[color=#42b883][nodepod:kernel][/color] Node.js v20.11.0 runtime activo en memoria VFS (memfs)")
-	_log_console("[color=#38bdf8][nodepod:vfs][/color] Montado /workspace (5 archivos)")
-	_log_console("[color=#a78bfa][vite:server][/color] dev server corriendo en:")
+	_log_console("[color=#42b883][deno:v8][/color] Deno / Celld V8 runtime activo en memoria VFS")
+	_log_console("[color=#38bdf8][deno:vfs][/color] Montado /workspace (5 módulos TypeScript / ES)")
+	_log_console("[color=#a78bfa][deno:serve][/color] Servidor Deno HTTP corriendo en:")
 	_log_console("  ➜ Local:   [color=#38bdf8]http://localhost:5173/[/color]")
 	_log_console("  ➜ Network: [color=#38bdf8]http://192.168.1.100:5173/[/color]")
-	_log_console("[color=#34d399][vite:hmr][/color] WebSocket HMR escuchando en puerto 24678")
+	_log_console("[color=#34d399][celld:actor][/color] Durable Object Facet listo para hot-reload")
 
 
 func _restart_dev_server() -> void:
-	_log_console("[color=#f59e0b][nodepod:daemon][/color] Reiniciando servidor Vite NodePod...")
-	_log_console("[color=#34d399][vite:server][/color] Servidor reiniciado en 48ms. WebSocket listo.")
+	_log_console("[color=#f59e0b][deno:daemon][/color] Reiniciando runtime Deno Web...")
+	_log_console("[color=#34d399][deno:serve][/color] Servidor reiniciado en 4ms (V8 Isolate).")
 	if _status != null:
-		_status.text = "Servidor NodePod reiniciado · http://localhost:5173"
+		_status.text = "Servidor Deno Web reiniciado · http://localhost:5173"
 
 
 func _log_console(bbcode_line: String) -> void:
@@ -241,7 +241,7 @@ func _navigate_to(url: String, record_history := true) -> void:
 		if _lock_icon != null:
 			_lock_icon.text = "⚡"
 		if _live_badge != null:
-			_live_badge.text = "🟢 NodePod :5173"
+			_live_badge.text = "🟢 Deno :5173"
 	else:
 		if _lock_icon != null:
 			_lock_icon.text = "📄"
@@ -260,9 +260,9 @@ func _navigate_to(url: String, record_history := true) -> void:
 func _update_content_for_url(url: String) -> void:
 	if url.contains("localhost:5173"):
 		if _title != null:
-			_title.text = "NodePod Spatial App (Vite + WebXR)"
+			_title.text = "Deno Spatial App (TypeScript + WebXR)"
 		if _summary != null:
-			_summary.text = "Servidor de desarrollo NodePod activo en memoria VFS. Aplicación reactiva lista para interactuar."
+			_summary.text = "Servidor Deno Web / Celld activo en VFS. Aplicación reactiva lista para interactuar."
 		if _progress != null:
 			_progress.value = 100
 	elif url.contains("wolvic"):
@@ -339,20 +339,20 @@ func display_runner_output(file_name: String, summary: String) -> void:
 	_navigate_to(runner_url)
 
 	if _title != null:
-		_title.text = "⚡ NodePod Live: %s" % file_name
+		_title.text = "⚡ Deno Web Live: %s" % file_name
 	if _summary != null:
 		_summary.text = summary
 	if _widget_state != null:
 		_widget_state.text = "HMR Activo: %s actualizado" % file_name
 	if _status != null:
-		_status.text = "✅ Compilado y recargado con NodePod VFS"
+		_status.text = "✅ Compilado y recargado con Deno/Celld VFS"
 	if _progress != null:
 		_progress.value = 100
 
 	# Add live HMR log to console
-	_log_console("[color=#34d399][vite:hmr][/color] Hot-reloaded [b]%s[/b] desde wZed CodeStudio" % file_name)
-	_log_console("[color=#60a5fa][nodepod:runner][/color] %s" % summary)
+	_log_console("[color=#34d399][deno:hmr][/color] Hot-reloaded [b]%s[/b] desde wZed CodeStudio" % file_name)
+	_log_console("[color=#60a5fa][deno:runner][/color] %s" % summary)
 
 	# Flash HMR label
 	if _hmr_status != null:
-		_hmr_status.text = "⚡ HMR: %s" % file_name
+		_hmr_status.text = "⚡ Deno HMR: %s" % file_name

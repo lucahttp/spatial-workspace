@@ -1,7 +1,7 @@
 class_name LiveModelManager
 extends RefCounted
 ## Manages Live Agent / GPT Live model configuration and speech orchestration.
-## Supports MiniMax (Speech-02 / abab6.5s), OpenAI Realtime, and DeepSeek Harness.
+## Supports MiniMax (m3.1-flash / MiniMax-Text-01), OpenAI Realtime, and DeepSeek Harness.
 ##
 ## Configuration is persisted in user://live_model_config.json.
 ## Supports easy secrets loading from /sdcard/spatial_workspace_secrets.json,
@@ -11,6 +11,7 @@ signal config_changed()
 signal agent_speaking_started(text: String)
 signal agent_speaking_finished()
 signal tool_executed(tool_name: String, result: String)
+signal models_fetched(provider_id: int, model_names: Array)
 
 const CONFIG_PATH := "user://live_model_config.json"
 
@@ -37,14 +38,14 @@ const PROVIDER_NAMES: Dictionary = {
 }
 
 const DEFAULT_MODELS: Dictionary = {
-	Provider.MINIMAX: "speech-02-turbo",
+	Provider.MINIMAX: "m3.1-flash",
 	Provider.OPENAI_REALTIME: "gpt-4o-realtime-preview",
 	Provider.DEEPSEEK: "deepseek-chat",
 	Provider.MOCK_LOCAL: "mock-voice-agent",
 }
 
 const AVAILABLE_MODELS: Dictionary = {
-	Provider.MINIMAX: ["speech-02-turbo", "speech-01-hd", "abab6.5s-chat", "MiniMax-Text-01"],
+	Provider.MINIMAX: ["m3.1-flash", "MiniMax-M3.1-Flash", "MiniMax-Text-01"],
 	Provider.OPENAI_REALTIME: ["gpt-4o-realtime-preview", "gpt-4o-mini-realtime-preview"],
 	Provider.DEEPSEEK: ["deepseek-chat", "deepseek-reasoner"],
 	Provider.MOCK_LOCAL: ["mock-voice-agent", "jarvis-offline"],
@@ -78,15 +79,72 @@ const VOICES: Dictionary = {
 }
 
 var current_provider: Provider = Provider.MINIMAX
-var current_model: String = "speech-02-turbo"
+var current_model: String = "m3.1-flash"
 var api_key: String = ""
 var group_id: String = "" # Needed for MiniMax accounts
 var voice_id: String = "moss_audio"
 var custom_endpoint: String = ""
 var azure_resources: Dictionary = {}
-var system_prompt: String = "Eres Jarvis, el asistente de voz espacial tipo superintendente de Spatial Workspace. Coordinas el estudio de código wZed, navegas en el browser con NodePod y orquestas paneles 3D."
+var system_prompt: String = "Eres Jarvis, el asistente de voz espacial de Spatial Workspace. Coordinas el estudio de código wZed, ejecutas scripts con Deno/Web y orquestas paneles 3D."
 var vad_enabled := true
 var temperature := 0.7
+var dynamic_models: Dictionary = {}
+
+
+## Returns the list of models for a provider, prioritizing dynamically queried models over baseline fallbacks.
+func get_models_for_provider(provider_id: int) -> Array:
+	if dynamic_models.has(provider_id) and dynamic_models[provider_id].size() > 0:
+		return dynamic_models[provider_id]
+	return AVAILABLE_MODELS.get(provider_id, [])
+
+
+## Constructs the endpoint and headers to dynamically query a provider's models list.
+func get_models_endpoint_and_headers(provider_id: int) -> Dictionary:
+	var url := ""
+	var headers: PackedStringArray = ["Content-Type: application/json"]
+
+	match provider_id:
+		Provider.MINIMAX:
+			url = "https://api.minimax.chat/v1/models"
+			if not api_key.is_empty():
+				headers.append("Authorization: Bearer %s" % api_key)
+		Provider.OPENAI_REALTIME:
+			url = "https://api.openai.com/v1/models"
+			if not api_key.is_empty():
+				headers.append("Authorization: Bearer %s" % api_key)
+		Provider.DEEPSEEK:
+			url = "https://api.deepseek.com/models"
+			if not api_key.is_empty():
+				headers.append("Authorization: Bearer %s" % api_key)
+		Provider.MOCK_LOCAL:
+			url = "http://localhost:11434/v1/models"
+
+	return {"url": url, "headers": headers}
+
+
+## Parses a remote JSON payload from /v1/models and caches the model IDs dynamically.
+func parse_and_store_models_response(provider_id: int, json_body: String) -> Array:
+	var parsed_models: Array = []
+	var json := JSON.new()
+	if json.parse(json_body) == OK and json.data is Dictionary:
+		var root: Dictionary = json.data
+		var data_array: Array = root.get("data", [])
+		for item in data_array:
+			if item is Dictionary and item.has("id"):
+				var mid: String = str(item["id"])
+				if not parsed_models.has(mid):
+					parsed_models.append(mid)
+		# Ollama /tags format fallback
+		if parsed_models.is_empty() and root.has("models"):
+			for m in root["models"]:
+				if m is Dictionary and m.has("name"):
+					parsed_models.append(str(m["name"]))
+
+	if not parsed_models.is_empty():
+		dynamic_models[provider_id] = parsed_models
+		models_fetched.emit(provider_id, parsed_models)
+
+	return parsed_models
 
 
 func _init() -> void:
@@ -177,7 +235,11 @@ func _apply_dictionary_data(data: Dictionary) -> int:
 	if data.has("provider"):
 		current_provider = data.get("provider") as Provider
 	if data.has("model"):
-		current_model = data.get("model", current_model)
+		var m_val: String = str(data.get("model", current_model))
+		if m_val == "speech-02-turbo" or m_val == "abab6.5s-chat":
+			current_model = "m3.1-flash"
+		else:
+			current_model = m_val
 	if data.has("voice_id"):
 		voice_id = data.get("voice_id", voice_id)
 	if data.has("custom_endpoint"):

@@ -84,7 +84,7 @@ func _ready() -> void:
 	set_transcript([
 		"● GPT-Live activo con orquestación Swarm.",
 		"● Wake Word: \"Hey Buddy\" o presiona el botón rojo para hablar.",
-		"● Tareas pesadas se delegan automáticamente a MiniMax Bare LLM (abab6.5s-chat).",
+		"● Tareas pesadas se delegan dinámicamente a MiniMax (m3.1-flash).",
 	])
 
 
@@ -276,9 +276,12 @@ func _populate_settings_ui() -> void:
 		_group_id_edit.text = _model_manager.group_id
 
 
+var _model_http: HTTPRequest = null
+
+
 func _refresh_models_and_voices() -> void:
 	var provider_id: int = _provider_option.get_selected_id() if _provider_option != null else _model_manager.current_provider
-	var models: Array = LiveModelManagerScript.AVAILABLE_MODELS.get(provider_id, [])
+	var models: Array = _model_manager.get_models_for_provider(provider_id)
 	var voices: Array = LiveModelManagerScript.VOICES.get(provider_id, [])
 
 	if _model_option != null:
@@ -301,6 +304,40 @@ func _refresh_models_and_voices() -> void:
 
 	if _group_id_row != null:
 		_group_id_row.visible = provider_id == LiveModelManagerScript.Provider.MINIMAX
+
+	_fetch_dynamic_models_if_possible(provider_id)
+
+
+func _fetch_dynamic_models_if_possible(provider_id: int) -> void:
+	if _model_http == null:
+		_model_http = HTTPRequest.new()
+		add_child(_model_http)
+		_model_http.request_completed.connect(_on_models_request_completed)
+
+	if _model_http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		return
+
+	var req_info: Dictionary = _model_manager.get_models_endpoint_and_headers(provider_id)
+	var url: String = req_info.get("url", "")
+	var headers: PackedStringArray = req_info.get("headers", PackedStringArray())
+	if not url.is_empty():
+		_model_http.request(url, headers, HTTPClient.METHOD_GET)
+
+
+func _on_models_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if result == HTTPRequest.RESULT_SUCCESS and response_code == 200:
+		var json_str := body.get_string_from_utf8()
+		var provider_id: int = _model_manager.current_provider
+		var fetched: Array = _model_manager.parse_and_store_models_response(provider_id, json_str)
+		if fetched.size() > 0:
+			if _model_option != null:
+				_model_option.clear()
+				for m in fetched:
+					_model_option.add_item(m)
+				var current_idx: int = fetched.find(_model_manager.current_model)
+				_model_option.select(max(0, current_idx))
+			if _test_result_label != null:
+				_test_result_label.text = "Modelos remotos: %d disponibles" % fetched.size()
 
 
 func _on_provider_selected(_index: int) -> void:

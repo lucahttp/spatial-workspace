@@ -7,10 +7,10 @@ extends RefCounted
 ## 1. Trigger: Wake Word ("Hey Buddy") OR Start Button in VR.
 ## 2. GPT-Live (Frontman): Fast, low-latency conversational voice agent.
 ##    Evaluates user intent and issues immediate voice acknowledgement.
-## 3. Delegation (Handoff): Delegates heavy tasks to MiniMax Bare LLM
-##    (abab6.5s-chat / MiniMax-Text-01) or specialized expert agents.
+## 3. Delegation (Handoff): Delegates heavy tasks to MiniMax-M3.1-Flash
+##    (m3.1-flash / MiniMax-Text-01) or specialized expert agents.
 ## 4. Spatial Control: Dispatches actions to Godot spatial workspace
-##    (wZed VFS code runner, NodePod browser preview, 3D panel transformations).
+##    (wZed VFS code runner, Deno/Web browser preview, 3D panel transformations).
 ## 5. Voice Resolution: GPT-Live speaks final outcome with 3D spatial audio.
 
 signal state_changed(state_id: int, state_name: String)
@@ -108,22 +108,23 @@ func submit_user_utterance(utterance: String) -> void:
 func _evaluate_route(utterance: String) -> Dictionary:
 	var text := utterance.to_lower()
 
-	# 1. Coding / Scripting / wZed / NodePod tasks -> Delegate to MiniMax Coder
+	# 1. Coding / Scripting / wZed / Deno tasks -> Delegate to MiniMax Coder
 	if text.contains("corre") or text.contains("ejecuta") or text.contains("wzed") or text.contains("codigo") or text.contains("código") or text.contains("crea") or text.contains("tarjeta"):
 		var is_create: bool = text.contains("crea") or text.contains("tarjeta") or text.contains("componente")
 		var target_file := "spatial-card.js" if is_create else "index.js"
+		var current_active_model: String = model_manager.current_model if model_manager != null else "m3.1-flash"
 		return {
 			"delegate": true,
-			"agent": "MiniMax Bare LLM (abab6.5s-chat)",
+			"agent": "MiniMax (%s)" % current_active_model,
 			"agent_type": "minimax_coder",
-			"task": "Generar y compilar componente 3D en %s" % target_file,
-			"ack_speech": "Entendido. Delegando a MiniMax Bare LLM para compilar %s en el motor wZed." % target_file,
+			"task": "Generar y compilar componente 3D en %s con %s" % [target_file, current_active_model],
+			"ack_speech": "Entendido. Delegando a MiniMax %s para compilar %s en el motor Deno/wZed." % [current_active_model, target_file],
 			"action": "run_wzed",
 			"action_param": target_file,
 			"is_create": is_create,
 		}
 
-	# 2. Browser / NodePod Web Preview tasks -> Delegate to Browser Agent
+	# 2. Browser / Deno Web Preview tasks -> Delegate to Browser Agent
 	if text.contains("browser") or text.contains("navegador") or text.contains("web") or text.contains("pagina") or text.contains("página") or text.contains("preview"):
 		var target_url := "http://localhost:5173/preview"
 		if text.contains("wolvic"):
@@ -133,10 +134,10 @@ func _evaluate_route(utterance: String) -> Dictionary:
 
 		return {
 			"delegate": true,
-			"agent": "Browser Web Agent (NodePod)",
+			"agent": "Browser Web Agent (Deno Web Sandbox)",
 			"agent_type": "browser_agent",
-			"task": "Navegar a %s y verificar estado de Vite VFS" % target_url,
-			"ack_speech": "Abriendo el navegador web en %s a través de NodePod." % target_url,
+			"task": "Navegar a %s en el sandbox Deno Web" % target_url,
+			"ack_speech": "Abriendo el navegador web en %s a través del sandbox Deno Web." % target_url,
 			"action": "open_browser",
 			"action_param": target_url,
 		}
@@ -157,7 +158,7 @@ func _evaluate_route(utterance: String) -> Dictionary:
 	# 4. Fallback: Direct conversational response from GPT-Live
 	return {
 		"delegate": false,
-		"reply": "Hola, soy el asistente GPT-Live. Puedo delegar tareas a MiniMax para programar en wZed, abrir el navegador NodePod o controlar tus paneles espaciales en VR.",
+		"reply": "Hola, soy el asistente GPT-Live. Puedo delegar tareas a MiniMax m3.1-flash para programar en wZed, abrir el navegador Deno Web o controlar tus paneles espaciales en VR.",
 	}
 
 
@@ -179,14 +180,14 @@ func _execute_expert_agent(agent_name: String, route: Dictionary) -> void:
 				result_data = {
 					"success": true,
 					"file": action_param,
-					"summary": "Componente reactivo generado por MiniMax (42 líneas) -> Hot-Reloaded en NodePod",
+					"summary": "Componente reactivo generado por MiniMax (%s) -> Hot-Reloaded en Deno Sandbox" % (model_manager.current_model if model_manager != null else "m3.1-flash"),
 				}
-				final_voice_summary = "MiniMax generó y compiló el componente en spatial-card.js. Ya lo puedes ver interactivo en tu vista previa."
+				final_voice_summary = "MiniMax generó y compiló el componente en spatial-card.js. Ya lo puedes ver interactivo en tu vista previa de Deno."
 			else:
 				result_data = {
 					"success": true,
 					"file": action_param,
-					"summary": "Ejecutado index.js con 3 anclajes espaciales en wZed VFS",
+					"summary": "Ejecutado index.js con 3 anclajes espaciales en Deno VFS",
 				}
 				final_voice_summary = "MiniMax completó la ejecución del script. Tres nodos de anclaje están activos en el espacio."
 
@@ -197,7 +198,7 @@ func _execute_expert_agent(agent_name: String, route: Dictionary) -> void:
 			result_data = {
 				"success": true,
 				"url": action_param,
-				"summary": "Página cargada en NodePod con latencia 12ms",
+				"summary": "Página cargada en Deno Web con latencia 6ms",
 			}
 			final_voice_summary = "El navegador web está abierto en %s con soporte para capas espaciales." % action_param
 			workspace_action_requested.emit("open_browser", {"url": action_param})
