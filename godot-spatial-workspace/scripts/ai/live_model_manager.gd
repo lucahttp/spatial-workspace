@@ -83,6 +83,7 @@ var api_key: String = ""
 var group_id: String = "" # Needed for MiniMax accounts
 var voice_id: String = "moss_audio"
 var custom_endpoint: String = ""
+var azure_resources: Dictionary = {}
 var system_prompt: String = "Eres Jarvis, el asistente de voz espacial tipo superintendente de Spatial Workspace. Coordinas el estudio de código wZed, navegas en el browser con NodePod y orquestas paneles 3D."
 var vad_enabled := true
 var temperature := 0.7
@@ -107,9 +108,8 @@ func load_config() -> void:
 	if not loaded:
 		_apply_defaults()
 
-	# If API key is still empty, scan external search paths (e.g. pushed via ADB or res://)
-	if api_key.is_empty():
-		scan_and_import_secrets()
+	# Always scan external paths (e.g. pushed via ADB to /sdcard or local res://secrets.json)
+	scan_and_import_secrets()
 
 	# Check environment variables
 	_check_environment_secrets()
@@ -206,6 +206,10 @@ func _apply_dictionary_data(data: Dictionary) -> int:
 			current_provider = Provider.OPENAI_REALTIME
 		count += 1
 
+	if data.has("azure_resources") and data["azure_resources"] is Dictionary:
+		azure_resources = data["azure_resources"]
+		count += azure_resources.size()
+
 	return count
 
 
@@ -258,6 +262,7 @@ func save_config() -> bool:
 		"group_id": group_id,
 		"voice_id": voice_id,
 		"custom_endpoint": custom_endpoint,
+		"azure_resources": azure_resources,
 		"system_prompt": system_prompt,
 		"vad_enabled": vad_enabled,
 		"temperature": temperature,
