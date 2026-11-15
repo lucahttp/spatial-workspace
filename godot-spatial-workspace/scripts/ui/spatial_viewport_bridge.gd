@@ -69,8 +69,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Desktop fallback: a real mouse click activates the 2D Controls.
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	# Desktop fallback: only if no XR manager is bound and this specific panel is hovered.
+	if _xr_manager == null and _hovering and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_trigger_down = event.pressed
 		_push_button(_last_position, event.pressed)
 

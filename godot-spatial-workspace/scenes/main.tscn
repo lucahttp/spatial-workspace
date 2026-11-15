@@ -133,6 +133,7 @@ mesh = SubResource("QuadMesh_code")
 own_world_3d = false
 transparent_bg = true
 handle_input_locally = true
+gui_embed_subwindows = true
 size = Vector2i(940, 580)
 render_target_update_mode = 4
 
@@ -180,6 +181,7 @@ mesh = SubResource("QuadMesh_preview")
 own_world_3d = false
 transparent_bg = true
 handle_input_locally = true
+gui_embed_subwindows = true
 size = Vector2i(700, 450)
 render_target_update_mode = 4
 
@@ -237,6 +239,7 @@ mesh = SubResource("QuadMesh_transcript")
 own_world_3d = false
 transparent_bg = true
 handle_input_locally = true
+gui_embed_subwindows = true
 size = Vector2i(650, 450)
 render_target_update_mode = 4
 

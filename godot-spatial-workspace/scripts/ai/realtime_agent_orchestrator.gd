@@ -39,9 +39,14 @@ const STATE_NAMES: Dictionary = {
 }
 
 const LiveModelManagerScript := preload("res://scripts/ai/live_model_manager.gd")
+const DecisionRouterScript := preload("res://scripts/ai/decision_router.gd")
+const NeedleToolEngineScript := preload("res://scripts/ai/needle_tool_engine.gd")
 
 var state: State = State.IDLE
 var model_manager: LiveModelManagerScript
+var decision_router: DecisionRouterScript
+var needle_engine: NeedleToolEngineScript
+var coordinator_ref: Node = null
 var wake_word_enabled := true
 var last_user_utterance := ""
 
@@ -51,6 +56,16 @@ func _init(mgr: LiveModelManagerScript = null) -> void:
 		model_manager = mgr
 	else:
 		model_manager = LiveModelManagerScript.new()
+	
+	decision_router = DecisionRouterScript.new()
+	needle_engine = NeedleToolEngineScript.new()
+	
+	decision_router.decision_completed.connect(_on_jev_decision_completed)
+
+
+## Sets the workspace coordinator reference for direct spatial Needle tool calls.
+func set_coordinator(coord: Node) -> void:
+	coordinator_ref = coord
 
 
 ## Triggers the listening state via Wake Word ("Hey Buddy").
@@ -69,39 +84,120 @@ func trigger_start_button() -> void:
 		message_logged.emit("SISTEMA", "🔴 Botón Start presionado. Escuchando...", "#38bdf8")
 		orb_state_requested.emit(1) # State.LISTENING
 	elif state == State.LISTENING:
-		# Second click stops listening and triggers processing
-		submit_user_utterance(last_user_utterance if not last_user_utterance.is_empty() else "Ayuda con el workspace")
+		submit_user_utterance(last_user_utterance if not last_user_utterance.is_empty() else "Acomoda el workspace")
 
 
-## Submits a user speech utterance into the GPT-Live multi-agent pipeline.
+## Submits a user speech utterance into the JEV (Foundry Decision-1) + Needle pipeline.
 func submit_user_utterance(utterance: String) -> void:
-	last_user_utterance = utterance
+	var cleaned := utterance.strip_edges()
+	var lower := cleaned.to_lower()
+	
+	# Detect and strip wake phrase onset
+	var wake_phrases := ["hey buddy", "hello buddy", "hi buddy", "oye orbe", "computer"]
+	for wp in wake_phrases:
+		if lower.begins_with(wp):
+			message_logged.emit("HEYBUDDY", "🎙️ Wake Word detectado: \"%s\"" % wp, "#38bdf8")
+			cleaned = cleaned.substr(wp.length()).strip_edges().trim_prefix(",").strip_edges()
+			break
+
+	if cleaned.is_empty():
+		cleaned = "Acomoda el workspace"
+
+	last_user_utterance = cleaned
 	message_logged.emit("TÚ", utterance, "#67e8f9")
 
 	_set_state(State.GPT_LIVE_THINKING)
 	orb_state_requested.emit(2) # State.WORKING
 
-	# GPT-Live evaluates intent and decides handoff
-	var route: Dictionary = _evaluate_route(utterance)
-	var requires_delegation: bool = route.get("delegate", false)
+	# Evaluate intent and safety with Microsoft-Decision-1 as JEV
+	var context := {
+		"active_model": model_manager.current_model if model_manager else "m3.1-flash",
+	}
+	decision_router.evaluate(cleaned, context)
 
-	if requires_delegation:
-		var agent_name: String = route.get("agent", "MiniMax Bare LLM")
-		var task_desc: String = route.get("task", "")
-		var ack_speech: String = route.get("ack_speech", "Entendido, derivo la tarea al agente experto...")
 
-		_set_state(State.DELEGATING)
-		message_logged.emit("GPT-LIVE", ack_speech, "#c084fc")
+func _on_jev_decision_completed(decision: Dictionary) -> void:
+	var route: String = decision.get("route", "live_chat")
+	var confidence: float = decision.get("confidence", 0.85)
+	var is_dest: bool = decision.get("is_destructive", false)
+	var dest_prob: float = decision.get("destructive_probability", 0.0)
 
-		delegation_started.emit(agent_name, task_desc)
-		orb_state_requested.emit(4) # State.SOLVING
+	# Log JEV probabilistic reasoning
+	var jev_log := "⚖️ [JEV] Ruta: %s (%.0f%%) · Peligro: %.0f%%" % [
+		route.to_upper(),
+		confidence * 100.0,
+		dest_prob * 100.0
+	]
+	message_logged.emit("FOUNDRY JEV", jev_log, "#a855f7")
 
-		# Execute expert agent asynchronously via timer simulation or real API call
-		_execute_expert_agent(agent_name, route)
+	if is_dest:
+		message_logged.emit("GUARDRAIL", "⚠️ Acción potencialmente destructiva detectada. Requiere confirmación del usuario.", "#ef4444")
+		orb_state_requested.emit(8) # State.SHAPING (alert)
+		_finish_with_speech("JEV GUARDRAIL", "Atención: La acción solicitada puede ser destructiva. Por favor confirma en la cápsula 3D.")
+		return
+
+	match route:
+		"needle_local":
+			_execute_needle_local(last_user_utterance)
+		"deno_vfs":
+			_delegate_to_deno_coder(last_user_utterance)
+		_:
+			_reply_live_chat(last_user_utterance)
+
+
+func _execute_needle_local(utterance: String) -> void:
+	_set_state(State.EXPERT_EXECUTING)
+	orb_state_requested.emit(4) # State.SOLVING
+
+	var needle_res := needle_engine.parse_and_execute(utterance, coordinator_ref)
+	var summary: String = needle_res.get("summary", "Needle ejecutó la acción espacial local.")
+	var tool_name: String = needle_res.get("tool", "")
+
+	if tool_name == "search_web":
+		var q: String = needle_res.get("query", "")
+		workspace_action_requested.emit("search_web", {"query": q})
+	elif tool_name == "navigate_browser":
+		workspace_action_requested.emit("open_browser", {"url": needle_res.get("url", "")})
+	elif tool_name == "recenter_view":
+		workspace_action_requested.emit("recenter", {})
+
+	message_logged.emit("NEEDLE 3", "⚡ " + summary, "#10b981")
+	_finish_with_speech("NEEDLE 3", summary)
+
+
+func _delegate_to_deno_coder(utterance: String) -> void:
+	var current_model: String = model_manager.current_model if model_manager else "m3.1-flash"
+	var agent_name := "MiniMax Coder (%s)" % current_model
+	var task_desc := "Compilar componente reactivo en Deno Web V8 Sandbox"
+
+	_set_state(State.DELEGATING)
+	message_logged.emit("GPT-LIVE", "Delegando a %s para compilar en Deno VFS..." % agent_name, "#c084fc")
+	delegation_started.emit(agent_name, task_desc)
+	orb_state_requested.emit(4) # State.SOLVING
+
+	var route_data := {
+		"agent_type": "minimax_coder",
+		"action": "run_wzed",
+		"action_param": "spatial-card.js" if utterance.contains("tarjeta") or utterance.contains("componente") else "index.js",
+		"is_create": utterance.contains("crea") or utterance.contains("componente"),
+	}
+	_execute_expert_agent(agent_name, route_data)
+
+
+func _reply_live_chat(utterance: String) -> void:
+	var lower := utterance.to_lower()
+	if lower.contains("busca") or lower.contains("search") or lower.contains("googlea"):
+		_execute_needle_local(utterance)
+		return
+
+	var active_model: String = model_manager.current_model if model_manager else "m3.1-flash"
+	var reply := ""
+	if lower.contains("quien eres") or lower.contains("quién eres") or lower.contains("que haces") or lower.contains("qué haces"):
+		reply = "Soy tu copiloto espacial de voz GPT-Live en VR con Needle 3 para herramientas locales y MiniMax (%s) para programación wZed." % active_model
 	else:
-		# Direct conversational reply from GPT-Live
-		var direct_reply: String = route.get("reply", "Entendido, estoy a tu disposición en el espacio.")
-		_finish_with_speech("GPT-LIVE", direct_reply)
+		reply = "Entendido. Coordinando con %s en el espacio de trabajo. ¿Quieres buscar algo en la web o modificar tus ventanas 3D?" % active_model
+
+	_finish_with_speech("GPT-LIVE", reply)
 
 
 ## Evaluates user utterance and routes to appropriate downstream expert agent.

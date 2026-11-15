@@ -56,6 +56,14 @@ var _trigger_down: Array[bool] = [false, false]
 var _primary_down: Array[bool] = [false, false]
 var _grip_owners: Array = [null, null]
 
+# Desktop simulation properties
+var _desktop_camera: Camera3D = null
+var _desktop_grip: bool = false
+var _desktop_trigger: bool = false
+var _mouse_look_active: bool = false
+var _initial_cam_transform: Transform3D = Transform3D.IDENTITY
+var _cam_initialized: bool = false
+
 
 func _ready() -> void:
 	# The runtime has to be detected before the session starts, otherwise the
@@ -67,10 +75,17 @@ func _ready() -> void:
 		start_session()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if runtime == Runtime.NONE:
+		_process_desktop_controls(delta)
+		return
 	if _controllers[0] == null and _controllers[1] == null:
 		_collect_controllers()
 		return
+	_process_xr_controllers()
+
+
+func _process_xr_controllers() -> void:
 	for hand: int in [Hand.LEFT, Hand.RIGHT]:
 		var controller := _controllers[hand] as XRController3D
 		if controller == null:
@@ -90,6 +105,79 @@ func _process(_delta: float) -> void:
 			_primary_down[hand] = primary
 			if primary:
 				voice_trigger_pressed.emit()
+
+
+func _process_desktop_controls(delta: float) -> void:
+	var cam := _get_desktop_camera()
+	if cam == null:
+		return
+	
+	# WASD Navigation
+	var move := Vector3.ZERO
+	if Input.is_key_pressed(KEY_W): move.z -= 1.0
+	if Input.is_key_pressed(KEY_S): move.z += 1.0
+	if Input.is_key_pressed(KEY_A): move.x -= 1.0
+	if Input.is_key_pressed(KEY_D): move.x += 1.0
+	if Input.is_key_pressed(KEY_E): move.y += 1.0
+	if Input.is_key_pressed(KEY_Q): move.y -= 1.0
+	
+	if move != Vector3.ZERO:
+		cam.translate(move.normalized() * 2.0 * delta)
+	
+	# Desktop Grip detection (G key or Middle Mouse)
+	var is_gripping := Input.is_key_pressed(KEY_G) or Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE)
+	if is_gripping != _desktop_grip:
+		_desktop_grip = is_gripping
+		_grip_down[Hand.RIGHT] = is_gripping
+		if not is_gripping:
+			_grip_owners[Hand.RIGHT] = null
+		grip_changed.emit(Hand.RIGHT, is_gripping)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if runtime != Runtime.NONE:
+		return
+	
+	# Desktop Mouse Look (Hold Right Mouse Button)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		_mouse_look_active = event.pressed
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE
+	elif event is InputEventMouseMotion and _mouse_look_active:
+		var cam := _get_desktop_camera()
+		if cam != null:
+			cam.rotate_y(-event.relative.x * 0.003)
+			cam.rotate_object_local(Vector3.RIGHT, -event.relative.y * 0.003)
+	
+	# Desktop Left Click Trigger
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_desktop_trigger = event.pressed
+		_trigger_down[Hand.RIGHT] = event.pressed
+		trigger_changed.emit(Hand.RIGHT, event.pressed)
+	
+	# Desktop Keyboard Shortcuts: V or Space for Voice, R for Recenter
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_V or event.keycode == KEY_SPACE:
+			voice_trigger_pressed.emit()
+		elif event.keycode == KEY_R:
+			_reset_desktop_camera()
+
+
+func _get_desktop_camera() -> Camera3D:
+	if _desktop_camera != null and is_instance_valid(_desktop_camera):
+		return _desktop_camera
+	_desktop_camera = get_viewport().get_camera_3d()
+	if _desktop_camera == null:
+		var cam_node := get_tree().get_first_node_in_group("xr_camera")
+		_desktop_camera = cam_node as Camera3D
+	if _desktop_camera != null and not _cam_initialized:
+		_initial_cam_transform = _desktop_camera.transform
+		_cam_initialized = true
+	return _desktop_camera
+
+
+func _reset_desktop_camera() -> void:
+	if _desktop_camera != null and _cam_initialized:
+		_desktop_camera.transform = _initial_cam_transform
 
 
 # --- Runtime detection -----------------------------------------------------
@@ -145,10 +233,14 @@ func start_session() -> bool:
 			xr_interface = XRServer.find_interface(INTERFACE_OPENXR)
 	if xr_interface == null:
 		push_warning("XR: no interface available (OpenXR or RealityKit).")
+		runtime = Runtime.NONE
+		runtime_detected.emit(runtime)
 		return false
 	if not xr_interface.is_initialized():
 		if not xr_interface.initialize():
 			push_warning("XR: interface failed to initialize.")
+			runtime = Runtime.NONE
+			runtime_detected.emit(runtime)
 			return false
 	# OpenXR drives the frame timing on the headset, so the desktop v-sync has
 	# to go or the compositor stutters.
@@ -231,11 +323,15 @@ func get_controller(hand: int) -> XRController3D:
 
 
 func is_controller_active(hand: int) -> bool:
+	if runtime == Runtime.NONE:
+		return hand == Hand.RIGHT
 	var controller := get_controller(hand)
 	return controller != null and controller.get_is_active()
 
 
 func is_grip_pressed(hand: int) -> bool:
+	if runtime == Runtime.NONE:
+		return hand == Hand.RIGHT and _desktop_grip
 	if not is_controller_active(hand):
 		return false
 	return hand >= 0 and hand < _grip_down.size() and _grip_down[hand]
@@ -274,6 +370,8 @@ func can_claim_grip(hand: int, claimant: Object) -> bool:
 
 
 func is_trigger_pressed(hand: int) -> bool:
+	if runtime == Runtime.NONE:
+		return hand == Hand.RIGHT and _desktop_trigger
 	if not is_controller_active(hand):
 		return false
 	return hand >= 0 and hand < _trigger_down.size() and _trigger_down[hand]
@@ -281,6 +379,12 @@ func is_trigger_pressed(hand: int) -> bool:
 
 ## World space origin of the aim ray for the given hand.
 func get_aim_origin(hand: int) -> Vector3:
+	if runtime == Runtime.NONE:
+		if hand == Hand.RIGHT:
+			var cam := _get_desktop_camera()
+			if cam != null:
+				return cam.project_ray_origin(get_viewport().get_mouse_position())
+		return Vector3.ZERO
 	var controller := get_controller(hand)
 	if controller == null or not controller.get_is_active():
 		return Vector3.ZERO
@@ -289,6 +393,12 @@ func get_aim_origin(hand: int) -> Vector3:
 
 ## World space direction of the aim ray for the given hand.
 func get_aim_direction(hand: int) -> Vector3:
+	if runtime == Runtime.NONE:
+		if hand == Hand.RIGHT:
+			var cam := _get_desktop_camera()
+			if cam != null:
+				return cam.project_ray_normal(get_viewport().get_mouse_position())
+		return Vector3.ZERO
 	var controller := get_controller(hand)
 	if controller == null or not controller.get_is_active():
 		return Vector3.ZERO

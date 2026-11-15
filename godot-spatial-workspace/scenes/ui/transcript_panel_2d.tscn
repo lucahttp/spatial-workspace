@@ -42,20 +42,55 @@ text = "ESTADO: EN ESPERA"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "● GPT-LIVE + MINIMAX SWARM"
+text = "● GPT-LIVE + MINIMAX M3.1-FLASH"
 
 [node name="EqualizerRow" type="HBoxContainer" parent="Margin/Column/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(36, 22)
+custom_minimum_size = Vector2(40, 24)
 layout_mode = 2
 theme_override_constants/separation = 3
 alignment = 1
 
 [node name="SettingsToggleBtn" type="Button" parent="Margin/Column/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(34, 28)
+custom_minimum_size = Vector2(36, 30)
 layout_mode = 2
 text = "⚙️"
+
+[node name="ModelSelectorBar" type="HBoxContainer" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ProviderCycleBtn" type="Button" parent="Margin/Column/ModelSelectorBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🌐 MiniMax"
+
+[node name="ModelPrevBtn" type="Button" parent="Margin/Column/ModelSelectorBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 28)
+layout_mode = 2
+text = "◀"
+
+[node name="ModelDirectLabel" type="Button" parent="Margin/Column/ModelSelectorBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⚡ Modelo: m3.1-flash"
+
+[node name="ModelNextBtn" type="Button" parent="Margin/Column/ModelSelectorBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 28)
+layout_mode = 2
+text = "▶"
+
+[node name="VoiceMicBtn" type="Button" parent="Margin/Column/ModelSelectorBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "🎙️ Mic VAD"
 
 [node name="TriggerBar" type="HBoxContainer" parent="Margin/Column"]
 layout_mode = 2
@@ -63,7 +98,7 @@ theme_override_constants/separation = 8
 
 [node name="StartButton" type="Button" parent="Margin/Column/TriggerBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(170, 32)
+custom_minimum_size = Vector2(180, 34)
 layout_mode = 2
 text = "🔴 HEY BUDDY / INICIAR"
 
@@ -71,7 +106,7 @@ text = "🔴 HEY BUDDY / INICIAR"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Hey Buddy ➔ GPT-Live ➔ MiniMax ➔ Workspace"
+text = "Hey Buddy ➔ Orbe GPT-Live ➔ MiniMax ➔ Workspace"
 horizontal_alignment = 1
 
 [node name="WakeWordToggle" type="Button" parent="Margin/Column/TriggerBar"]
@@ -79,7 +114,7 @@ unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
-text = "🎙️ Wake Word"
+text = "✨ Voz Activa"
 
 [node name="ViewStack" type="Control" parent="Margin/Column"]
 unique_name_in_owner = true
@@ -110,7 +145,7 @@ theme_override_constants/separation = 6
 [node name="QuickVoice1" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "🗣️ \"Hey Buddy, crea tarjeta 3D con MiniMax\""
+text = "🗣️ \"Hey Buddy, crea tarjeta 3D\""
 
 [node name="QuickVoice2" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
 unique_name_in_owner = true
@@ -120,7 +155,7 @@ text = "🗣️ \"Hey Buddy, corre wZed\""
 [node name="QuickVoice3" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "🗣️ \"Abre browser\""
+text = "🔍 \"Hey Buddy, busca WebXR\""
 
 [node name="QuickVoice4" type="Button" parent="Margin/Column/ViewStack/TranscriptView/QuickSpeechRow"]
 unique_name_in_owner = true
@@ -160,60 +195,121 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
 [node name="SettingsTitle" type="Label" parent="Margin/Column/ViewStack/SettingsView"]
 layout_mode = 2
-text = "⚙️ Configurar Orquestador GPT-Live y MiniMax Bare LLM"
+text = "⚙️ Configuración de Proveedor y Modelo (Selección Directa XR)"
 
-[node name="ProviderRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+[node name="ProviderChipsRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
-[node name="ProviderLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ProviderRow"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "Frontman Voz:"
-
-[node name="ProviderOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/ProviderRow"]
+[node name="ProvMiniMaxBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ProviderChipsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+text = "🚀 MiniMax (m3.1-flash)"
 
-[node name="ModelRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="ModelLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ModelRow"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "Modelo Realtime:"
-
-[node name="ModelOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/ModelRow"]
+[node name="ProvAzureBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ProviderChipsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+text = "☁️ Azure OpenAI"
 
-[node name="VoiceRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="VoiceLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/VoiceRow"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "Voz Persona:"
-
-[node name="VoiceOption" type="OptionButton" parent="Margin/Column/ViewStack/SettingsView/VoiceRow"]
+[node name="ProvOpenAIBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ProviderChipsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+text = "🟢 OpenAI Live"
+
+[node name="ProvLocalBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ProviderChipsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "💻 Local / Edge"
+
+[node name="ModelHeaderRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ModelHeaderLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ModelHeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Modelos Disponibles (Dinámicos /v1/models):"
+
+[node name="RefreshModelsBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/ModelHeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🔄 Listar Modelos API"
+
+[node name="ModelScroll" type="ScrollContainer" parent="Margin/Column/ViewStack/SettingsView"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+vertical_scroll_mode = 0
+
+[node name="ModelChipsContainer" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView/ModelScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="CustomModelRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CustomModelLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/CustomModelRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+text = "ID Modelo:"
+
+[node name="CustomModelEdit" type="LineEdit" parent="Margin/Column/ViewStack/SettingsView/CustomModelRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Escribe o pega cualquier ID (e.g. m3.1-flash, deepseek-v3, gpt-4o)"
+
+[node name="ApplyModelBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/CustomModelRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "⚡ Aplicar"
+
+[node name="VoiceChipsRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="VoiceMossBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/VoiceChipsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🎙️ MOSS (Jarvis)"
+
+[node name="VoiceQingseBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/VoiceChipsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🎙️ Qingse (Joven)"
+
+[node name="VoiceTianmeiBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/VoiceChipsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🎙️ Tianmei (Asistente)"
+
+[node name="VoiceAlloyBtn" type="Button" parent="Margin/Column/ViewStack/SettingsView/VoiceChipsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🎙️ Alloy (Natural)"
 
 [node name="ApiKeyRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ApiKeyLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/ApiKeyRow"]
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(90, 0)
 layout_mode = 2
 text = "API Key:"
 
@@ -234,22 +330,6 @@ text = "👁"
 unique_name_in_owner = true
 layout_mode = 2
 text = "📋 Pegar"
-
-[node name="GroupIdRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="GroupIdLabel" type="Label" parent="Margin/Column/ViewStack/SettingsView/GroupIdRow"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-text = "Group ID:"
-
-[node name="GroupIdEdit" type="LineEdit" parent="Margin/Column/ViewStack/SettingsView/GroupIdRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-placeholder_text = "MiniMax Group ID..."
 
 [node name="TestRow" type="HBoxContainer" parent="Margin/Column/ViewStack/SettingsView"]
 layout_mode = 2

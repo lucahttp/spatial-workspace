@@ -33,6 +33,16 @@ var _debug_label: Label
 var _detached: Dictionary = {}
 var _initial_transforms: Dictionary = {}
 
+enum DeviceProfile {
+	MR_XR_VR = 0,
+	DESKTOP = 1,
+	TABLET = 2,
+	MOBILE = 3,
+	TV = 4,
+}
+
+var current_profile: int = -1
+
 
 func _ready() -> void:
 	_studio = get_node_or_null(studio_panel_path) as Node3D
@@ -45,9 +55,17 @@ func _ready() -> void:
 	_transcript = get_node_or_null(transcript_panel_path) as Node3D
 	_debug_label = get_node_or_null(debug_label_path) as Label
 
-	for node in [_studio, _preview, _carousel, _orb, _graph, _pads, _transcript]:
+	for node in [_studio, _preview, _carousel, _orb, _graph, _pads, _transcript, _bars]:
 		if node != null:
 			_initial_transforms[node] = node.transform
+
+	if _graph != null:
+		_graph.visible = false
+	if _pads != null:
+		_pads.visible = false
+
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	call_deferred("_initialize_responsive_layout")
 
 	if _studio != null and _studio.has_signal("close_requested"):
 		_studio.close_requested.connect(_on_studio_closed)
@@ -87,6 +105,9 @@ func _ready() -> void:
 	if xr_mgr != null and xr_mgr.has_signal("voice_trigger_pressed"):
 		xr_mgr.connect("voice_trigger_pressed", _on_controller_voice_pressed)
 
+	if _orb != null and _orb.has_signal("voice_trigger_requested"):
+		_orb.voice_trigger_requested.connect(_on_controller_voice_pressed)
+
 	_connect_studio_content.call_deferred()
 	_connect_transcript_content.call_deferred()
 
@@ -119,6 +140,13 @@ func _connect_transcript_content() -> void:
 	if host == null:
 		return
 	for child in host.get_children():
+		if child.has_method("get_orchestrator"):
+			var orch = child.get_orchestrator()
+			if orch != null:
+				if orch.has_method("set_coordinator"):
+					orch.set_coordinator(self)
+				if orch.has_signal("workspace_action_requested") and not orch.workspace_action_requested.is_connected(_on_workspace_action_requested):
+					orch.workspace_action_requested.connect(_on_workspace_action_requested)
 		if child.has_signal("run_wzed_requested"):
 			child.connect("run_wzed_requested", func() -> void: _on_run_requested("index.js"))
 		if child.has_signal("create_module_requested"):
@@ -141,6 +169,11 @@ func _connect_transcript_content() -> void:
 			child.connect("orb_state_changed", func(st: int) -> void:
 				if _orb != null and _orb.has_method("set_state"):
 					_orb.set_state(st)
+			)
+		if child.has_signal("mic_volume_meter_updated"):
+			child.connect("mic_volume_meter_updated", func(vol: float) -> void:
+				if _orb != null and _orb.has_method("set_voice_level"):
+					_orb.set_voice_level(vol)
 			)
 
 
@@ -176,6 +209,54 @@ func _on_open_browser_requested(url: String) -> void:
 				for child in host.get_children():
 					if child.has_method("_navigate_to"):
 						child._navigate_to(url)
+
+
+## Handles web search queries dispatched by Needle / GPT Live.
+func _on_search_web_requested(query: String) -> void:
+	_status("Búsqueda web: %s" % query)
+	if _preview != null:
+		_preview.visible = true
+		var preview_viewport := _preview.get_node_or_null("PanelViewport") as SubViewport
+		if preview_viewport != null:
+			var host := preview_viewport.get_node_or_null("Content")
+			if host != null:
+				for child in host.get_children():
+					if child.has_method("display_search_results"):
+						child.display_search_results(query)
+
+
+## Central dispatcher for high-level agent workspace actions from RealtimeAgentOrchestrator.
+func _on_workspace_action_requested(action_name: String, params: Dictionary) -> void:
+	match action_name:
+		"run_wzed":
+			var file_name: String = params.get("file", "index.js")
+			_on_run_requested(file_name)
+		"open_browser":
+			var url: String = params.get("url", "http://localhost:5173/preview")
+			_on_open_browser_requested(url)
+		"search_web":
+			var query: String = params.get("query", "")
+			_on_search_web_requested(query)
+		"recenter":
+			recenter()
+		"reset_layout":
+			reset_layout()
+		"set_layout_profile":
+			var profile_id: int = params.get("profile", 1)
+			var animated: bool = params.get("animated", false)
+			apply_device_profile(profile_id, animated)
+		"add_card":
+			var title: String = params.get("title", "Nueva Fuente")
+			var badge: String = params.get("badge", "VOZ")
+			var summary: String = params.get("summary", "Generada por HeyBuddy")
+			add_reference_card(title, badge, summary)
+		"toggle_panel":
+			var p_id: String = params.get("panel_id", "")
+			var vis: bool = params.get("visible", true)
+			var node_target = get("_%s" % ("studio" if p_id == "code" else p_id))
+			if node_target != null:
+				node_target.visible = vis
+				_status("Panel %s %s" % [p_id, "visible" if vis else "oculto"])
 
 
 func _on_controller_voice_pressed() -> void:
@@ -385,3 +466,146 @@ func _status(text: String) -> void:
 	if _debug_label != null:
 		_debug_label.text = text
 	status_changed.emit(text)
+
+
+# --- Responsive Layout System (Mobile, Tablet, Desktop, TV, XR) ------------
+
+func _initialize_responsive_layout() -> void:
+	var profile := detect_device_profile()
+	apply_device_profile(profile, false)
+
+
+func detect_device_profile() -> int:
+	var xr_mgr := get_tree().get_first_node_in_group("xr_manager")
+	if xr_mgr != null and xr_mgr.has_method("is_session_active") and xr_mgr.is_session_active():
+		return DeviceProfile.MR_XR_VR
+	
+	var vp := get_viewport()
+	if vp == null:
+		return DeviceProfile.DESKTOP
+	var vp_size := vp.get_visible_rect().size
+	if vp_size.x >= 2560 and vp_size.y >= 1440:
+		return DeviceProfile.TV
+	elif vp_size.y > vp_size.x * 1.05 or vp_size.x < 720:
+		return DeviceProfile.MOBILE
+	elif vp_size.x < 1150:
+		return DeviceProfile.TABLET
+	else:
+		return DeviceProfile.DESKTOP
+
+
+func _on_viewport_size_changed() -> void:
+	var new_profile := detect_device_profile()
+	if new_profile != current_profile:
+		apply_device_profile(new_profile, true)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_1:
+				apply_device_profile(DeviceProfile.DESKTOP, true)
+			KEY_2:
+				apply_device_profile(DeviceProfile.TABLET, true)
+			KEY_3:
+				apply_device_profile(DeviceProfile.MOBILE, true)
+			KEY_4:
+				apply_device_profile(DeviceProfile.TV, true)
+			KEY_5:
+				apply_device_profile(DeviceProfile.MR_XR_VR, true)
+
+
+func apply_device_profile(profile: int, animated: bool = true) -> void:
+	current_profile = profile
+	var tween: Tween = null
+	if animated and is_inside_tree():
+		tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	
+	match profile:
+		DeviceProfile.MR_XR_VR:
+			_apply_xr_layout(tween)
+			_status("Layout: MR/XR/VR 6DoF Espacial")
+		DeviceProfile.DESKTOP:
+			_apply_desktop_layout(tween)
+			_status("Layout: Desktop Widescreen 3 Paneles")
+		DeviceProfile.TABLET:
+			_apply_tablet_layout(tween)
+			_status("Layout: Tablet Foco Adaptativo")
+		DeviceProfile.MOBILE:
+			_apply_mobile_layout(tween)
+			_status("Layout: Mobile Vertical Compacto")
+		DeviceProfile.TV:
+			_apply_tv_layout(tween)
+			_status("Layout: TV Panorámica 10-Foot 4K")
+
+
+func _apply_desktop_layout(tween: Tween) -> void:
+	_animate_node(tween, _preview, Vector3(0.0, 1.48, -1.45), Vector3.ZERO, Vector3.ONE)
+	_animate_node(tween, _studio, Vector3(-1.08, 1.48, -1.40), Vector3(0, deg_to_rad(16), 0), Vector3.ONE)
+	_animate_node(tween, _transcript, Vector3(1.02, 1.48, -1.40), Vector3(0, deg_to_rad(-16), 0), Vector3.ONE)
+	_animate_node(tween, _orb, Vector3(0.0, 1.95, -1.35), Vector3.ZERO, Vector3.ONE)
+	_animate_node(tween, _carousel, Vector3(0.0, 0.96, -1.25), Vector3.ZERO, Vector3.ONE)
+	_animate_node(tween, _bars, Vector3(0.0, 0.90, -1.15), Vector3.ZERO, Vector3.ONE)
+	if _studio != null: _studio.visible = true
+	if _preview != null: _preview.visible = true
+	if _transcript != null: _transcript.visible = true
+	if _graph != null: _graph.visible = false
+	if _pads != null: _pads.visible = false
+
+
+func _apply_tablet_layout(tween: Tween) -> void:
+	var s := Vector3(0.85, 0.85, 0.85)
+	_animate_node(tween, _preview, Vector3(0.0, 1.44, -1.35), Vector3.ZERO, s)
+	_animate_node(tween, _studio, Vector3(-0.78, 1.44, -1.35), Vector3(0, deg_to_rad(22), 0), s)
+	_animate_node(tween, _transcript, Vector3(0.78, 1.44, -1.35), Vector3(0, deg_to_rad(-22), 0), s)
+	_animate_node(tween, _orb, Vector3(0.0, 1.88, -1.30), Vector3.ZERO, Vector3(0.9, 0.9, 0.9))
+	_animate_node(tween, _carousel, Vector3(0.0, 0.96, -1.25), Vector3.ZERO, s)
+	_animate_node(tween, _bars, Vector3(0.0, 0.90, -1.15), Vector3.ZERO, s)
+	if _studio != null: _studio.visible = true
+	if _preview != null: _preview.visible = true
+	if _transcript != null: _transcript.visible = true
+
+
+func _apply_mobile_layout(tween: Tween) -> void:
+	var s_prev := Vector3(0.72, 0.72, 0.72)
+	var s_trans := Vector3(0.65, 0.65, 0.65)
+	_animate_node(tween, _orb, Vector3(0.0, 1.95, -1.15), Vector3.ZERO, Vector3(0.8, 0.8, 0.8))
+	_animate_node(tween, _preview, Vector3(0.0, 1.55, -1.18), Vector3.ZERO, s_prev)
+	_animate_node(tween, _transcript, Vector3(0.0, 1.08, -1.18), Vector3.ZERO, s_trans)
+	_animate_node(tween, _studio, Vector3(-1.3, 1.45, -1.3), Vector3(0, deg_to_rad(30), 0), Vector3(0.6, 0.6, 0.6))
+	_animate_node(tween, _bars, Vector3(0.0, 0.72, -1.10), Vector3.ZERO, Vector3(0.75, 0.75, 0.75))
+	if _preview != null: _preview.visible = true
+	if _transcript != null: _transcript.visible = true
+
+
+func _apply_tv_layout(tween: Tween) -> void:
+	var s := Vector3(1.35, 1.35, 1.35)
+	_animate_node(tween, _preview, Vector3(0.0, 1.55, -2.25), Vector3.ZERO, s)
+	_animate_node(tween, _studio, Vector3(-1.65, 1.55, -2.15), Vector3(0, deg_to_rad(24), 0), s)
+	_animate_node(tween, _transcript, Vector3(1.55, 1.55, -2.15), Vector3(0, deg_to_rad(-24), 0), s)
+	_animate_node(tween, _orb, Vector3(0.0, 2.30, -2.15), Vector3.ZERO, Vector3(1.4, 1.4, 1.4))
+	_animate_node(tween, _carousel, Vector3(0.0, 0.95, -2.10), Vector3.ZERO, s)
+	_animate_node(tween, _bars, Vector3(0.0, 0.85, -1.95), Vector3.ZERO, Vector3(1.3, 1.3, 1.3))
+	if _studio != null: _studio.visible = true
+	if _preview != null: _preview.visible = true
+	if _transcript != null: _transcript.visible = true
+
+
+func _apply_xr_layout(tween: Tween) -> void:
+	for node in [_studio, _preview, _carousel, _orb, _graph, _pads, _transcript, _bars]:
+		if node != null and _initial_transforms.has(node):
+			var initial_t: Transform3D = _initial_transforms[node]
+			_animate_node(tween, node, initial_t.origin, initial_t.basis.get_euler(), initial_t.basis.get_scale())
+
+
+func _animate_node(tween: Tween, node: Node3D, target_pos: Vector3, target_rot: Vector3, target_scale: Vector3) -> void:
+	if node == null:
+		return
+	if tween != null:
+		tween.tween_property(node, "position", target_pos, 0.45)
+		tween.tween_property(node, "rotation", target_rot, 0.45)
+		tween.tween_property(node, "scale", target_scale, 0.45)
+	else:
+		node.position = target_pos
+		node.rotation = target_rot
+		node.scale = target_scale

@@ -88,15 +88,15 @@ static func _play_stream(tree: SceneTree, stream: AudioStreamWAV, pos: Vector3) 
 		player3d.unit_size = 1.5
 		player3d.max_distance = 6.0
 		player3d.bus = &"Master"
-		root.add_child(player3d)
-		player3d.play()
+		root.call_deferred("add_child", player3d)
+		player3d.call_deferred("play")
 		player3d.finished.connect(player3d.queue_free)
 	else:
 		var player := AudioStreamPlayer.new()
 		player.stream = stream
 		player.bus = &"Master"
-		root.add_child(player)
-		player.play()
+		root.call_deferred("add_child", player)
+		player.call_deferred("play")
 		player.finished.connect(player.queue_free)
 
 

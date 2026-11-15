@@ -3,8 +3,8 @@ extends Control
 ## 2D UI for Voice & Agent Reasoning transcript, GPT-Live orchestrator, and
 ## MiniMax Bare LLM delegation.
 ##
-## Implements the OpenAI Realtime Agents pattern:
-## (HeyBuddy or Start Button) -> (GPT-Live) -> (MiniMax Bare LLM / Downstream Agents) -> (Spatial Workspace)
+## Implements direct XR model cycling, hardware microphone capture via
+## AudioCaptureService, and organic reactive feedback matching the Thinking Orb.
 
 signal run_wzed_requested()
 signal create_module_requested()
@@ -15,16 +15,26 @@ signal mic_toggled(active: bool)
 signal voice_command_submitted(utterance: String)
 signal model_configured(provider_name: String, model_name: String, voice_id: String)
 signal orb_state_changed(orb_state: int)
+signal mic_volume_meter_updated(volume: float)
 
 const THEME := preload("res://assets/themes/vaporwave_sunset.tres")
 const LiveModelManagerScript := preload("res://scripts/ai/live_model_manager.gd")
 const RealtimeOrchestratorScript := preload("res://scripts/ai/realtime_agent_orchestrator.gd")
+const AudioCaptureServiceScript := preload("res://scripts/audio/audio_capture_service.gd")
+const SpatialAudioScript := preload("res://scripts/audio/spatial_audio.gd")
 
 # Header Nodes
 @onready var _orb_state_label: Label = %OrbStateLabel
 @onready var _model_badge: Button = %ModelBadge
 @onready var _eq_container: HBoxContainer = %EqualizerRow
 @onready var _settings_toggle_btn: Button = %SettingsToggleBtn
+
+# Direct Model Selector Bar
+@onready var _provider_cycle_btn: Button = %ProviderCycleBtn
+@onready var _model_prev_btn: Button = %ModelPrevBtn
+@onready var _model_direct_label: Button = %ModelDirectLabel
+@onready var _model_next_btn: Button = %ModelNextBtn
+@onready var _voice_mic_btn: Button = %VoiceMicBtn
 
 # Trigger Bar Nodes
 @onready var _start_button: Button = %StartButton
@@ -47,14 +57,23 @@ const RealtimeOrchestratorScript := preload("res://scripts/ai/realtime_agent_orc
 @onready var _btn_browser: Button = %BtnBrowser
 
 # Settings View Nodes
-@onready var _provider_option: OptionButton = %ProviderOption
-@onready var _model_option: OptionButton = %ModelOption
-@onready var _voice_option: OptionButton = %VoiceOption
+@onready var _prov_minimax_btn: Button = %ProvMiniMaxBtn
+@onready var _prov_azure_btn: Button = %ProvAzureBtn
+@onready var _prov_openai_btn: Button = %ProvOpenAIBtn
+@onready var _prov_local_btn: Button = %ProvLocalBtn
+@onready var _refresh_models_btn: Button = %RefreshModelsBtn
+@onready var _model_chips_container: HBoxContainer = %ModelChipsContainer
+@onready var _custom_model_edit: LineEdit = %CustomModelEdit
+@onready var _apply_model_btn: Button = %ApplyModelBtn
+
+@onready var _voice_moss_btn: Button = %VoiceMossBtn
+@onready var _voice_qingse_btn: Button = %VoiceQingseBtn
+@onready var _voice_tianmei_btn: Button = %VoiceTianmeiBtn
+@onready var _voice_alloy_btn: Button = %VoiceAlloyBtn
+
 @onready var _api_key_edit: LineEdit = %ApiKeyEdit
 @onready var _show_key_btn: Button = %ShowKeyBtn
 @onready var _paste_key_btn: Button = %PasteKeyBtn
-@onready var _group_id_row: Control = %GroupIdRow
-@onready var _group_id_edit: LineEdit = %GroupIdEdit
 @onready var _test_voice_btn: Button = %TestVoiceBtn
 @onready var _test_result_label: Label = %TestResultLabel
 @onready var _save_config_btn: Button = %SaveConfigBtn
@@ -63,10 +82,13 @@ const RealtimeOrchestratorScript := preload("res://scripts/ai/realtime_agent_orc
 
 var _model_manager: LiveModelManagerScript
 var _orchestrator: RealtimeOrchestratorScript
+var _audio_capture: AudioCaptureServiceScript
 var _mic_active := true
 var _eq_bars: Array[ColorRect] = []
 var _time := 0.0
 var _is_speaking := false
+var _current_mic_volume := 0.0
+var _model_http: HTTPRequest
 
 
 func _ready() -> void:
@@ -74,25 +96,36 @@ func _ready() -> void:
 	_model_manager = LiveModelManagerScript.new()
 	_orchestrator = RealtimeOrchestratorScript.new(_model_manager)
 
+	_setup_audio_capture()
+	_setup_http()
 	_setup_equalizer()
 	_prevent_virtual_keyboard_hijack()
-	_populate_settings_ui()
 	_connect_signals()
 	_connect_orchestrator()
+	_refresh_all_ui()
+	_fetch_remote_models(_model_manager.current_provider)
 
-	_update_model_badge()
 	set_transcript([
-		"● GPT-Live activo con orquestación Swarm.",
-		"● Wake Word: \"Hey Buddy\" o presiona el botón rojo para hablar.",
+		"● GPT-Live activo en el Orbe con orquestación Swarm.",
+		"● Micrófono y VAD de hardware activos: habla para interactuar.",
+		"● Selector directo XR: usa [◀] y [▶] para cambiar modelos al instante.",
 		"● Tareas pesadas se delegan dinámicamente a MiniMax (m3.1-flash).",
 	])
 
 
-func _prevent_virtual_keyboard_hijack() -> void:
-	if _api_key_edit != null:
-		_api_key_edit.virtual_keyboard_enabled = false
-	if _group_id_edit != null:
-		_group_id_edit.virtual_keyboard_enabled = false
+func _setup_audio_capture() -> void:
+	_audio_capture = AudioCaptureServiceScript.new()
+	add_child(_audio_capture)
+	_audio_capture.volume_meter_updated.connect(_on_mic_volume_updated)
+	_audio_capture.speech_detected.connect(_on_speech_detected)
+	_audio_capture.speech_finished.connect(_on_speech_finished)
+
+
+func _setup_http() -> void:
+	_model_http = HTTPRequest.new()
+	_model_http.timeout = 5.0
+	add_child(_model_http)
+	_model_http.request_completed.connect(_on_models_request_completed)
 
 
 func _setup_equalizer() -> void:
@@ -103,25 +136,53 @@ func _setup_equalizer() -> void:
 	_eq_bars.clear()
 	for i in range(5):
 		var bar := ColorRect.new()
-		bar.custom_minimum_size = Vector2(4, 8)
+		bar.custom_minimum_size = Vector2(4, 6)
 		bar.color = Color(0.22, 0.74, 0.98) # Cyan accent
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_eq_container.add_child(bar)
 		_eq_bars.append(bar)
 
 
+func _prevent_virtual_keyboard_hijack() -> void:
+	if _api_key_edit != null:
+		_api_key_edit.virtual_keyboard_enabled = false
+	if _custom_model_edit != null:
+		_custom_model_edit.virtual_keyboard_enabled = false
+
+
 func _process(delta: float) -> void:
 	_time += delta
-	if not _mic_active and not _is_speaking:
-		for bar in _eq_bars:
-			bar.custom_minimum_size.y = 4
-		return
+	var target_volume := _current_mic_volume if _mic_active else 0.0
+	var speed := 14.0 if _is_speaking else 8.0
 
-	var speed := 12.0 if _is_speaking else 6.0
-	var amp := 20.0 if _is_speaking else 14.0
 	for i in range(_eq_bars.size()):
-		var val := 4.0 + absf(sin(_time * speed + float(i) * 1.3)) * amp
-		_eq_bars[i].custom_minimum_size.y = val
+		var harmonic := absf(sin(_time * speed + float(i) * 1.2))
+		var height := 4.0 + (target_volume * 22.0) + (harmonic * 6.0 if _is_speaking else 0.0)
+		_eq_bars[i].custom_minimum_size.y = clampf(height, 4.0, 26.0)
+		if target_volume > 0.05 or _is_speaking:
+			_eq_bars[i].color = Color(0.12, 0.94, 0.58) # Active cyber green
+		else:
+			_eq_bars[i].color = Color(0.22, 0.74, 0.98) # Idle cyan
+
+
+func _on_mic_volume_updated(volume: float) -> void:
+	_current_mic_volume = volume
+	mic_volume_meter_updated.emit(volume)
+
+
+func _on_speech_detected() -> void:
+	if not _mic_active:
+		return
+	if _orchestrator.state == _orchestrator.State.IDLE:
+		_orchestrator.trigger_wake_word("Voz detectada en hardware")
+		SpatialAudioScript.play_listening_start(get_tree())
+
+
+func _on_speech_finished() -> void:
+	if not _mic_active:
+		return
+	if _orchestrator.state == _orchestrator.State.LISTENING:
+		_orchestrator.submit_user_utterance("Comando por voz capturado en el espacio")
 
 
 func _connect_signals() -> void:
@@ -129,22 +190,38 @@ func _connect_signals() -> void:
 		_settings_toggle_btn.pressed.connect(toggle_settings_view)
 	if _model_badge != null:
 		_model_badge.pressed.connect(toggle_settings_view)
+	if _model_direct_label != null:
+		_model_direct_label.pressed.connect(toggle_settings_view)
 	if _close_settings_btn != null:
 		_close_settings_btn.pressed.connect(func() -> void: show_settings(false))
 
-	# Start Button & Wake Word
-	if _start_button != null:
-		_start_button.pressed.connect(_on_start_button_pressed)
-	if _wake_word_toggle != null:
-		_wake_word_toggle.toggled.connect(func(active: bool) -> void:
-			_orchestrator.wake_word_enabled = active
-			_wake_word_toggle.text = "🎙️ Wake Word" if active else "🔇 Wake Off"
+	# Direct Model & Provider Cycling Buttons
+	if _model_prev_btn != null:
+		_model_prev_btn.pressed.connect(func() -> void: _cycle_model(false))
+	if _model_next_btn != null:
+		_model_next_btn.pressed.connect(func() -> void: _cycle_model(true))
+	if _provider_cycle_btn != null:
+		_provider_cycle_btn.pressed.connect(func() -> void: _cycle_provider(true))
+
+	if _voice_mic_btn != null:
+		_voice_mic_btn.toggled.connect(func(active: bool) -> void:
+			_mic_active = active
+			if _audio_capture != null:
+				_audio_capture.set_active(active)
+			_voice_mic_btn.text = "🎙️ Mic VAD" if active else "🔇 Mic Off"
 		)
 
-	# Quick speech chips
+	# Start Button
+	if _start_button != null:
+		_start_button.pressed.connect(func() -> void:
+			SpatialAudioScript.play_click(get_tree())
+			_orchestrator.trigger_start_button()
+		)
+
+	# Quick speech shortcuts
 	if _quick_voice_1 != null:
 		_quick_voice_1.pressed.connect(func() -> void:
-			_orchestrator.submit_user_utterance("Hey Buddy, crea una tarjeta 3D con MiniMax")
+			_orchestrator.submit_user_utterance("Hey Buddy, crea tarjeta 3D con MiniMax")
 		)
 	if _quick_voice_2 != null:
 		_quick_voice_2.pressed.connect(func() -> void:
@@ -152,14 +229,14 @@ func _connect_signals() -> void:
 		)
 	if _quick_voice_3 != null:
 		_quick_voice_3.pressed.connect(func() -> void:
-			_orchestrator.submit_user_utterance("Abre el navegador web en localhost:5173")
+			_orchestrator.submit_user_utterance("Hey Buddy, busca cómo compilar WebXR en Godot")
 		)
 	if _quick_voice_4 != null:
 		_quick_voice_4.pressed.connect(func() -> void:
-			_orchestrator.submit_user_utterance("Recentra el espacio de trabajo")
+			_orchestrator.submit_user_utterance("Recentra el espacio")
 		)
 
-	# Action pills
+	# Action Pills
 	if _btn_run != null:
 		_btn_run.pressed.connect(func() -> void: run_wzed_requested.emit())
 	if _btn_create != null:
@@ -169,159 +246,180 @@ func _connect_signals() -> void:
 	if _btn_browser != null:
 		_btn_browser.pressed.connect(func() -> void: open_browser_requested.emit("http://localhost:5173/preview"))
 
-	# Settings controls
-	if _provider_option != null:
-		_provider_option.item_selected.connect(_on_provider_selected)
-	if _model_option != null:
-		_model_option.item_selected.connect(_on_model_selected)
-	if _voice_option != null:
-		_voice_option.item_selected.connect(_on_voice_selected)
+	# Provider Chips in Settings
+	if _prov_minimax_btn != null:
+		_prov_minimax_btn.pressed.connect(func() -> void: _select_provider(_model_manager.Provider.MINIMAX))
+	if _prov_azure_btn != null:
+		_prov_azure_btn.pressed.connect(func() -> void: _select_provider(_model_manager.Provider.OPENAI_REALTIME))
+	if _prov_openai_btn != null:
+		_prov_openai_btn.pressed.connect(func() -> void: _select_provider(_model_manager.Provider.OPENAI_REALTIME))
+	if _prov_local_btn != null:
+		_prov_local_btn.pressed.connect(func() -> void: _select_provider(_model_manager.Provider.MOCK_LOCAL))
+
+	# Voice Chips
+	if _voice_moss_btn != null:
+		_voice_moss_btn.pressed.connect(func() -> void: _select_voice("moss_audio", "MOSS (Jarvis)"))
+	if _voice_qingse_btn != null:
+		_voice_qingse_btn.pressed.connect(func() -> void: _select_voice("male-qn-qingse", "Qingse (Joven)"))
+	if _voice_tianmei_btn != null:
+		_voice_tianmei_btn.pressed.connect(func() -> void: _select_voice("female-tianmei", "Tianmei (Asistente)"))
+	if _voice_alloy_btn != null:
+		_voice_alloy_btn.pressed.connect(func() -> void: _select_voice("alloy", "Alloy (Natural)"))
+
+	# Settings buttons & custom models
+	if _refresh_models_btn != null:
+		_refresh_models_btn.pressed.connect(func() -> void:
+			SpatialAudioScript.play_click(get_tree())
+			_fetch_remote_models(_model_manager.current_provider)
+		)
+	if _apply_model_btn != null:
+		_apply_model_btn.pressed.connect(_on_apply_custom_model)
+	if _custom_model_edit != null:
+		_custom_model_edit.text_submitted.connect(func(_t: String) -> void: _on_apply_custom_model())
+
 	if _show_key_btn != null:
 		_show_key_btn.pressed.connect(_on_show_key_pressed)
 	if _paste_key_btn != null:
 		_paste_key_btn.pressed.connect(_on_paste_key_pressed)
-	if _test_voice_btn != null:
-		_test_voice_btn.pressed.connect(_on_test_voice_pressed)
 	if _save_config_btn != null:
 		_save_config_btn.pressed.connect(_on_save_config_pressed)
 	if _load_secrets_btn != null:
 		_load_secrets_btn.pressed.connect(_on_load_secrets_pressed)
+	if _test_voice_btn != null:
+		_test_voice_btn.pressed.connect(_on_test_voice_pressed)
 
 
 func _connect_orchestrator() -> void:
 	if _orchestrator == null:
 		return
-	_orchestrator.message_logged.connect(_on_orchestrator_message_logged)
 	_orchestrator.state_changed.connect(_on_orchestrator_state_changed)
-	_orchestrator.workspace_action_requested.connect(_on_workspace_action_requested)
-	_orchestrator.orb_state_requested.connect(func(st: int) -> void: orb_state_changed.emit(st))
+	_orchestrator.message_logged.connect(_on_message_logged)
+	_orchestrator.orb_state_requested.connect(func(orb_state: int) -> void: orb_state_changed.emit(orb_state))
 
 
-func _on_start_button_pressed() -> void:
-	_orchestrator.trigger_start_button()
+func _cycle_model(forward: bool) -> void:
+	SpatialAudioScript.play_click(get_tree())
+	var new_model := _model_manager.cycle_model(forward)
+	_refresh_all_ui()
+	append_log("⚡ Modelo cambiado a: %s" % new_model)
+	if _test_result_label != null:
+		_test_result_label.text = "Modelo: %s" % new_model
 
 
-func _on_orchestrator_state_changed(state_id: int, state_name: String) -> void:
-	if _orb_state_label != null:
-		_orb_state_label.text = "ESTADO: %s" % state_name.to_upper()
-
-	if _start_button != null:
-		match state_id:
-			RealtimeOrchestratorScript.State.LISTENING:
-				_start_button.text = "🟢 ESCUCHANDO..."
-				_start_button.modulate = Color(0.2, 1.0, 0.4)
-			RealtimeOrchestratorScript.State.DELEGATING, RealtimeOrchestratorScript.State.EXPERT_EXECUTING:
-				_start_button.text = "⚡ DELEGANDO A MINIMAX..."
-				_start_button.modulate = Color(0.9, 0.6, 1.0)
-			RealtimeOrchestratorScript.State.SPEAKING:
-				_start_button.text = "🔊 GPT-LIVE HABLANDO..."
-				_start_button.modulate = Color(0.3, 0.8, 1.0)
-			_:
-				_start_button.text = "🔴 HEY BUDDY / INICIAR"
-				_start_button.modulate = Color.WHITE
-
-	if _pipeline_breadcrumb != null:
-		match state_id:
-			RealtimeOrchestratorScript.State.LISTENING:
-				_pipeline_breadcrumb.text = "[🎙️ Hey Buddy ACTIVO] ➔ GPT-Live ➔ MiniMax ➔ Workspace"
-			RealtimeOrchestratorScript.State.GPT_LIVE_THINKING, RealtimeOrchestratorScript.State.DELEGATING:
-				_pipeline_breadcrumb.text = "Hey Buddy ➔ [⚡ GPT-Live DELEGANDO] ➔ MiniMax ➔ Workspace"
-			RealtimeOrchestratorScript.State.EXPERT_EXECUTING:
-				_pipeline_breadcrumb.text = "Hey Buddy ➔ GPT-Live ➔ [🤖 MiniMax EJECUTANDO] ➔ Workspace"
-			RealtimeOrchestratorScript.State.SPEAKING:
-				_pipeline_breadcrumb.text = "Hey Buddy ➔ [🔊 GPT-Live RESOLVIENDO] ➔ [🌐 Workspace ACTUALIZADO]"
-			_:
-				_pipeline_breadcrumb.text = "Hey Buddy ➔ GPT-Live ➔ MiniMax ➔ Workspace"
+func _cycle_provider(forward: bool) -> void:
+	SpatialAudioScript.play_click(get_tree())
+	var prov_id := _model_manager.cycle_provider(forward)
+	_refresh_all_ui()
+	_fetch_remote_models(prov_id)
+	append_log("🌐 Proveedor cambiado a: %s (%s)" % [
+		_model_manager.PROVIDER_NAMES.get(prov_id, ""),
+		_model_manager.current_model
+	])
 
 
-func _on_orchestrator_message_logged(speaker: String, text: String, color_hex: String) -> void:
-	append_log("[color=%s][%s][/color] %s" % [color_hex, speaker, text])
-	if speaker == "GPT-LIVE" and text.begins_with("🔊"):
-		_is_speaking = true
-		var duration: float = clampf(float(text.length()) * 0.05, 1.5, 4.0)
-		get_tree().create_timer(duration).timeout.connect(func() -> void:
-			_is_speaking = false
-		)
+func _select_provider(prov_id: int) -> void:
+	SpatialAudioScript.play_click(get_tree())
+	_model_manager.set_provider(prov_id as LiveModelManagerScript.Provider)
+	_refresh_all_ui()
+	_fetch_remote_models(prov_id)
+	append_log("Proveedor activo: %s" % _model_manager.PROVIDER_NAMES.get(prov_id, ""))
 
 
-func _on_workspace_action_requested(action_name: String, params: Dictionary) -> void:
-	match action_name:
-		"run_wzed":
-			run_wzed_requested.emit()
-		"open_browser":
-			var url: String = params.get("url", "http://localhost:5173/preview")
-			open_browser_requested.emit(url)
-		"recenter":
-			recenter_requested.emit()
-		"reset_layout":
-			recenter_requested.emit()
+func _select_model(model_name: String) -> void:
+	SpatialAudioScript.play_click(get_tree())
+	_model_manager.current_model = model_name
+	_model_manager.save_config()
+	_refresh_all_ui()
+	append_log("Modelo seleccionado: %s" % model_name)
 
 
-# --- Settings UI Handlers ----------------------------------------------------
+func _select_voice(voice_id: String, voice_name: String) -> void:
+	SpatialAudioScript.play_click(get_tree())
+	_model_manager.voice_id = voice_id
+	_model_manager.save_config()
+	if _test_result_label != null:
+		_test_result_label.text = "Voz: %s" % voice_name
 
-func _populate_settings_ui() -> void:
-	if _provider_option == null:
-		return
-	_provider_option.clear()
-	for p in [LiveModelManagerScript.Provider.MINIMAX, LiveModelManagerScript.Provider.OPENAI_REALTIME, LiveModelManagerScript.Provider.DEEPSEEK, LiveModelManagerScript.Provider.MOCK_LOCAL]:
-		var label: String = LiveModelManagerScript.PROVIDER_NAMES.get(p, "Provider")
-		_provider_option.add_item(label, p)
 
-	_provider_option.select(_model_manager.current_provider)
-	_refresh_models_and_voices()
+func _refresh_all_ui() -> void:
+	var prov_id: int = _model_manager.current_provider
+	var prov_name: String = _model_manager.PROVIDER_NAMES.get(prov_id, "MiniMax")
+	var active_model: String = _model_manager.current_model
 
-	if _api_key_edit != null:
+	# Header badge
+	if _model_badge != null:
+		_model_badge.text = "● GPT-LIVE + %s (%s)" % [prov_name.to_upper(), active_model.to_upper()]
+
+	# Selector bar
+	if _provider_cycle_btn != null:
+		_provider_cycle_btn.text = "🌐 %s" % prov_name.split(" ")[0]
+	if _model_direct_label != null:
+		_model_direct_label.text = "⚡ %s" % active_model
+
+	# Provider buttons highlight
+	if _prov_minimax_btn != null:
+		_prov_minimax_btn.modulate = Color(1.2, 1.2, 1.2) if prov_id == 0 else Color(0.7, 0.7, 0.7)
+	if _prov_azure_btn != null:
+		_prov_azure_btn.modulate = Color(1.2, 1.2, 1.2) if prov_id == 1 and not _model_manager.azure_resources.is_empty() else Color(0.7, 0.7, 0.7)
+	if _prov_openai_btn != null:
+		_prov_openai_btn.modulate = Color(1.2, 1.2, 1.2) if prov_id == 1 and _model_manager.azure_resources.is_empty() else Color(0.7, 0.7, 0.7)
+	if _prov_local_btn != null:
+		_prov_local_btn.modulate = Color(1.2, 1.2, 1.2) if prov_id == 3 else Color(0.7, 0.7, 0.7)
+
+	# API Key field
+	if _api_key_edit != null and not _model_manager.api_key.is_empty():
 		_api_key_edit.text = _model_manager.api_key
-	if _group_id_edit != null:
-		_group_id_edit.text = _model_manager.group_id
+
+	_rebuild_model_chips()
 
 
-var _model_http: HTTPRequest = null
-
-
-func _refresh_models_and_voices() -> void:
-	var provider_id: int = _provider_option.get_selected_id() if _provider_option != null else _model_manager.current_provider
-	var models: Array = _model_manager.get_models_for_provider(provider_id)
-	var voices: Array = LiveModelManagerScript.VOICES.get(provider_id, [])
-
-	if _model_option != null:
-		_model_option.clear()
-		for m in models:
-			_model_option.add_item(m)
-		var current_idx: int = models.find(_model_manager.current_model)
-		_model_option.select(max(0, current_idx))
-
-	if _voice_option != null:
-		_voice_option.clear()
-		for v in voices:
-			_voice_option.add_item(v.get("name", "Voice"), voices.find(v))
-		var selected_voice_idx := 0
-		for i in range(voices.size()):
-			if voices[i].get("id") == _model_manager.voice_id:
-				selected_voice_idx = i
-				break
-		_voice_option.select(selected_voice_idx)
-
-	if _group_id_row != null:
-		_group_id_row.visible = provider_id == LiveModelManagerScript.Provider.MINIMAX
-
-	_fetch_dynamic_models_if_possible(provider_id)
-
-
-func _fetch_dynamic_models_if_possible(provider_id: int) -> void:
-	if _model_http == null:
-		_model_http = HTTPRequest.new()
-		add_child(_model_http)
-		_model_http.request_completed.connect(_on_models_request_completed)
-
-	if _model_http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+func _rebuild_model_chips() -> void:
+	if _model_chips_container == null:
 		return
+	for child in _model_chips_container.get_children():
+		child.queue_free()
 
+	var models := _model_manager.get_models_for_provider(_model_manager.current_provider)
+	for m in models:
+		var btn := Button.new()
+		btn.text = str(m)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if str(m) == _model_manager.current_model:
+			btn.text = "⚡ " + str(m)
+			btn.modulate = Color(0.2, 1.0, 0.8) # Active highlight
+		btn.pressed.connect(func() -> void: _select_model(str(m)))
+		_model_chips_container.add_child(btn)
+
+
+func _on_apply_custom_model() -> void:
+	if _custom_model_edit == null:
+		return
+	var text: String = _custom_model_edit.text.strip_edges()
+	if text.is_empty():
+		return
+	SpatialAudioScript.play_click(get_tree())
+	_model_manager.set_custom_model(text)
+	_custom_model_edit.text = ""
+	_refresh_all_ui()
+	append_log("⚡ Modelo personalizado configurado: %s" % text)
+	if _test_result_label != null:
+		_test_result_label.text = "Modelo activo: %s" % text
+
+
+func _fetch_remote_models(provider_id: int) -> void:
+	if _model_http == null:
+		return
 	var req_info: Dictionary = _model_manager.get_models_endpoint_and_headers(provider_id)
 	var url: String = req_info.get("url", "")
 	var headers: PackedStringArray = req_info.get("headers", PackedStringArray())
-	if not url.is_empty():
-		_model_http.request(url, headers, HTTPClient.METHOD_GET)
+	if url.is_empty():
+		return
+	if provider_id != _model_manager.Provider.MOCK_LOCAL and _model_manager.api_key.is_empty() and _model_manager.custom_endpoint.is_empty():
+		return
+	_model_http.cancel_request()
+	_model_http.request(url, headers, HTTPClient.METHOD_GET)
+	if _test_result_label != null:
+		_test_result_label.text = "Consultando modelos en API..."
 
 
 func _on_models_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -330,35 +428,21 @@ func _on_models_request_completed(result: int, response_code: int, _headers: Pac
 		var provider_id: int = _model_manager.current_provider
 		var fetched: Array = _model_manager.parse_and_store_models_response(provider_id, json_str)
 		if fetched.size() > 0:
-			if _model_option != null:
-				_model_option.clear()
-				for m in fetched:
-					_model_option.add_item(m)
-				var current_idx: int = fetched.find(_model_manager.current_model)
-				_model_option.select(max(0, current_idx))
+			if not fetched.has(_model_manager.current_model):
+				if fetched.has("m3.1-flash"):
+					_model_manager.current_model = "m3.1-flash"
+				elif fetched.has("gpt-4o-realtime-preview"):
+					_model_manager.current_model = "gpt-4o-realtime-preview"
+				else:
+					_model_manager.current_model = str(fetched[0])
+				_model_manager.save_config()
+			_refresh_all_ui()
 			if _test_result_label != null:
 				_test_result_label.text = "Modelos remotos: %d disponibles" % fetched.size()
-
-
-func _on_provider_selected(_index: int) -> void:
-	var prov_id := _provider_option.get_selected_id() as LiveModelManagerScript.Provider
-	_model_manager.current_provider = prov_id
-	_model_manager.current_model = LiveModelManagerScript.DEFAULT_MODELS.get(prov_id, "")
-	_refresh_models_and_voices()
-	if _test_result_label != null:
-		_test_result_label.text = "Proveedor cambiado a %s" % LiveModelManagerScript.PROVIDER_NAMES.get(prov_id)
-
-
-func _on_model_selected(index: int) -> void:
-	if _model_option != null:
-		_model_manager.current_model = _model_option.get_item_text(index)
-
-
-func _on_voice_selected(index: int) -> void:
-	var provider_id: int = _provider_option.get_selected_id()
-	var voices: Array = LiveModelManagerScript.VOICES.get(provider_id, [])
-	if index >= 0 and index < voices.size():
-		_model_manager.voice_id = voices[index].get("id", "default")
+			append_log("📡 Lista de modelos actualizada desde el proveedor (%d modelos)" % fetched.size())
+	else:
+		if _test_result_label != null and _model_manager.current_provider != _model_manager.Provider.MOCK_LOCAL:
+			_test_result_label.text = "Modo offline / modelos guardados en caché."
 
 
 func _on_show_key_pressed() -> void:
@@ -380,28 +464,19 @@ func _on_paste_key_pressed() -> void:
 func _on_save_config_pressed() -> void:
 	if _api_key_edit != null:
 		_model_manager.api_key = _api_key_edit.text.strip_edges()
-	if _group_id_edit != null:
-		_model_manager.group_id = _group_id_edit.text.strip_edges()
-	if _model_option != null:
-		_model_manager.current_model = _model_option.get_item_text(_model_option.selected)
-
 	var ok: bool = _model_manager.save_config()
-	_update_model_badge()
+	_refresh_all_ui()
+	_fetch_remote_models(_model_manager.current_provider)
 	if _test_result_label != null:
 		_test_result_label.text = "✅ Guardado en %s" % LiveModelManagerScript.CONFIG_PATH if ok else "❌ Error al guardar"
-	append_log("Configuración guardada: %s" % _model_manager.get_badge_text())
-	model_configured.emit(
-		LiveModelManagerScript.PROVIDER_NAMES.get(_model_manager.current_provider, ""),
-		_model_manager.current_model,
-		_model_manager.voice_id
-	)
+	append_log("Configuración guardada: %s (%s)" % [_model_manager.get_badge_text(), _model_manager.current_model])
 
 
 func _on_load_secrets_pressed() -> void:
 	var result: Dictionary = _model_manager.scan_and_import_secrets()
 	if result.get("success", false):
-		_populate_settings_ui()
-		_update_model_badge()
+		_refresh_all_ui()
+		_fetch_remote_models(_model_manager.current_provider)
 		if _test_result_label != null:
 			_test_result_label.text = "✅ " + str(result.get("message", ""))
 		append_log("Secretos importados: %s" % str(result.get("message", "")))
@@ -411,14 +486,43 @@ func _on_load_secrets_pressed() -> void:
 
 
 func _on_test_voice_pressed() -> void:
+	SpatialAudioScript.play_voice_response(get_tree())
 	if _test_result_label != null:
 		_test_result_label.text = "🔊 Probando voz %s..." % _model_manager.voice_id
 	_orchestrator.submit_user_utterance("Prueba de voz en el orbe espacial")
 
 
-func _update_model_badge() -> void:
-	if _model_badge != null:
-		_model_badge.text = "● GPT-LIVE + %s SWARM" % _model_manager.get_badge_text().to_upper()
+func _on_orchestrator_state_changed(_new_state: int, state_name: String) -> void:
+	if _orb_state_label != null:
+		_orb_state_label.text = "ESTADO: %s" % state_name.to_upper()
+	_is_speaking = _new_state == _orchestrator.State.SPEAKING
+	if _start_button != null:
+		match _new_state:
+			_orchestrator.State.IDLE:
+				_start_button.text = "🔴 HEY BUDDY / INICIAR"
+				_start_button.modulate = Color(1.0, 1.0, 1.0)
+			_orchestrator.State.LISTENING:
+				_start_button.text = "🎙️ ESCUCHANDO..."
+				_start_button.modulate = Color(0.2, 1.0, 0.6)
+			_orchestrator.State.GPT_LIVE_THINKING:
+				_start_button.text = "🧠 GPT-LIVE PENSANDO..."
+				_start_button.modulate = Color(0.8, 0.4, 1.0)
+			_orchestrator.State.DELEGATING:
+				_start_button.text = "⚡ DELEGANDO A MINIMAX..."
+				_start_button.modulate = Color(1.0, 0.8, 0.2)
+			_orchestrator.State.EXPERT_EXECUTING:
+				_start_button.text = "⚙️ MINIMAX EJECUTANDO..."
+				_start_button.modulate = Color(0.9, 0.6, 0.2)
+			_orchestrator.State.SPEAKING:
+				_start_button.text = "🔊 GPT-LIVE HABLANDO..."
+				_start_button.modulate = Color(0.2, 0.9, 1.0)
+
+
+func _on_message_logged(speaker: String, text: String, color_hex: String) -> void:
+	if _transcript_label == null:
+		return
+	var time := Time.get_time_string_from_system()
+	_transcript_label.append_text("[color=#64748b][%s][/color] [color=%s][b]%s:[/b][/color] %s\n" % [time, color_hex, speaker, text])
 
 
 func toggle_settings_view() -> void:

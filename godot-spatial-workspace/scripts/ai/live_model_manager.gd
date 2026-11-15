@@ -98,16 +98,60 @@ func get_models_for_provider(provider_id: int) -> Array:
 	return AVAILABLE_MODELS.get(provider_id, [])
 
 
+## Cycles through the available models for the active provider.
+func cycle_model(forward: bool = true) -> String:
+	var list: Array = get_models_for_provider(current_provider)
+	if list.is_empty():
+		return current_model
+	var idx := list.find(current_model)
+	if idx < 0:
+		idx = 0
+	if forward:
+		idx = (idx + 1) % list.size()
+	else:
+		idx = (idx - 1 + list.size()) % list.size()
+	current_model = list[idx]
+	save_config()
+	return current_model
+
+
+## Cycles to the next or previous provider and selects its default model.
+func cycle_provider(forward: bool = true) -> int:
+	var total := Provider.size()
+	var next_id: int
+	if forward:
+		next_id = (int(current_provider) + 1) % total
+	else:
+		next_id = (int(current_provider) - 1 + total) % total
+	set_provider(next_id as Provider)
+	save_config()
+	return current_provider
+
+
 ## Constructs the endpoint and headers to dynamically query a provider's models list.
 func get_models_endpoint_and_headers(provider_id: int) -> Dictionary:
 	var url := ""
 	var headers: PackedStringArray = ["Content-Type: application/json"]
+
+	if not custom_endpoint.is_empty():
+		var ep := custom_endpoint.strip_edges().trim_suffix("/")
+		if ep.ends_with("/models"):
+			url = ep
+		elif ep.ends_with("/v1"):
+			url = ep + "/models"
+		else:
+			url = ep + "/v1/models"
+		if not api_key.is_empty():
+			headers.append("Authorization: Bearer %s" % api_key)
+		return {"url": url, "headers": headers}
 
 	match provider_id:
 		Provider.MINIMAX:
 			url = "https://api.minimax.chat/v1/models"
 			if not api_key.is_empty():
 				headers.append("Authorization: Bearer %s" % api_key)
+			if not group_id.is_empty():
+				headers.append("GroupId: %s" % group_id)
 		Provider.OPENAI_REALTIME:
 			url = "https://api.openai.com/v1/models"
 			if not api_key.is_empty():
@@ -126,25 +170,62 @@ func get_models_endpoint_and_headers(provider_id: int) -> Dictionary:
 func parse_and_store_models_response(provider_id: int, json_body: String) -> Array:
 	var parsed_models: Array = []
 	var json := JSON.new()
-	if json.parse(json_body) == OK and json.data is Dictionary:
+	if json.parse(json_body) != OK:
+		return parsed_models
+
+	if json.data is Dictionary:
 		var root: Dictionary = json.data
 		var data_array: Array = root.get("data", [])
 		for item in data_array:
 			if item is Dictionary and item.has("id"):
-				var mid: String = str(item["id"])
-				if not parsed_models.has(mid):
+				var mid: String = str(item["id"]).strip_edges()
+				if not mid.is_empty() and not parsed_models.has(mid):
 					parsed_models.append(mid)
-		# Ollama /tags format fallback
+		# Ollama /tags or /models fallback
 		if parsed_models.is_empty() and root.has("models"):
 			for m in root["models"]:
-				if m is Dictionary and m.has("name"):
-					parsed_models.append(str(m["name"]))
+				if m is Dictionary:
+					var m_name: String = str(m.get("name", m.get("model", ""))).strip_edges()
+					if not m_name.is_empty() and not parsed_models.has(m_name):
+						parsed_models.append(m_name)
+				elif m is String and not parsed_models.has(m):
+					parsed_models.append(m.strip_edges())
+		# MiniMax model_names list fallback
+		if parsed_models.is_empty() and root.has("model_names"):
+			for name_val in root["model_names"]:
+				var s := str(name_val).strip_edges()
+				if not s.is_empty() and not parsed_models.has(s):
+					parsed_models.append(s)
+	elif json.data is Array:
+		for item in json.data:
+			if item is String:
+				var s := str(item).strip_edges()
+				if not s.is_empty() and not parsed_models.has(s):
+					parsed_models.append(s)
+			elif item is Dictionary and item.has("id"):
+				var mid: String = str(item["id"]).strip_edges()
+				if not mid.is_empty() and not parsed_models.has(mid):
+					parsed_models.append(mid)
 
 	if not parsed_models.is_empty():
 		dynamic_models[provider_id] = parsed_models
+		save_config()
 		models_fetched.emit(provider_id, parsed_models)
 
 	return parsed_models
+
+
+## Sets an arbitrary custom model name (e.g. newly released model) and persists it.
+func set_custom_model(model_name: String) -> void:
+	var trimmed := model_name.strip_edges()
+	if trimmed.is_empty():
+		return
+	current_model = trimmed
+	var list: Array = dynamic_models.get(current_provider, []).duplicate()
+	if not list.has(trimmed):
+		list.push_front(trimmed)
+		dynamic_models[current_provider] = list
+	save_config()
 
 
 func _init() -> void:
@@ -272,6 +353,13 @@ func _apply_dictionary_data(data: Dictionary) -> int:
 		azure_resources = data["azure_resources"]
 		count += azure_resources.size()
 
+	if data.has("dynamic_models") and data["dynamic_models"] is Dictionary:
+		for k in data["dynamic_models"]:
+			var p_id := int(k)
+			var list_val = data["dynamic_models"][k]
+			if list_val is Array and not list_val.is_empty():
+				dynamic_models[p_id] = list_val
+
 	return count
 
 
@@ -317,6 +405,10 @@ func save_config() -> bool:
 	if file == null:
 		return false
 
+	var dyn_serialized: Dictionary = {}
+	for p_key in dynamic_models:
+		dyn_serialized[str(p_key)] = dynamic_models[p_key]
+
 	var data := {
 		"provider": current_provider,
 		"model": current_model,
@@ -328,6 +420,7 @@ func save_config() -> bool:
 		"system_prompt": system_prompt,
 		"vad_enabled": vad_enabled,
 		"temperature": temperature,
+		"dynamic_models": dyn_serialized,
 		"updated_at": Time.get_datetime_string_from_system(),
 	}
 

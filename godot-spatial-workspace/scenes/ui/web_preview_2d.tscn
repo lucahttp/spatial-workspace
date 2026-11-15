@@ -19,7 +19,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 4
 
 [node name="BrowserNav" type="PanelContainer" parent="Root"]
 layout_mode = 2
@@ -30,25 +30,25 @@ theme_override_constants/separation = 6
 
 [node name="BackButton" type="Button" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(30, 28)
+custom_minimum_size = Vector2(32, 28)
 layout_mode = 2
 text = "◀"
 
 [node name="ForwardButton" type="Button" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(30, 28)
+custom_minimum_size = Vector2(32, 28)
 layout_mode = 2
 text = "▶"
 
 [node name="ReloadButton" type="Button" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(30, 28)
+custom_minimum_size = Vector2(32, 28)
 layout_mode = 2
 text = "⟳"
 
 [node name="HomeButton" type="Button" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(30, 28)
+custom_minimum_size = Vector2(32, 28)
 layout_mode = 2
 text = "🏠"
 
@@ -66,7 +66,7 @@ text = "http://localhost:5173/preview"
 [node name="LiveBadge" type="Label" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "🟢 NodePod :5173"
+text = "🟢 Deno V8 :5173"
 
 [node name="FavoriteButton" type="Button" parent="Root/BrowserNav/Row"]
 unique_name_in_owner = true
@@ -79,26 +79,26 @@ layout_mode = 2
 
 [node name="TabsRow" type="HBoxContainer" parent="Root/TabBar"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
 [node name="TabPreview" type="Button" parent="Root/TabBar/TabsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
-text = "🌐 Vista Previa"
+text = "🌐 Vista Web Live"
 
 [node name="TabConsole" type="Button" parent="Root/TabBar/TabsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
-text = "⚡ Consola NodePod"
+text = "⚡ Consola Deno / Celld"
 
 [node name="TabVfs" type="Button" parent="Root/TabBar/TabsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
-text = "📦 VFS Archivos"
+text = "📦 VFS Archivos y Código"
 
 [node name="Spacer" type="Control" parent="Root/TabBar/TabsRow"]
 layout_mode = 2
@@ -107,7 +107,7 @@ size_flags_horizontal = 3
 [node name="HmrStatus" type="Label" parent="Root/TabBar/TabsRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "HMR Activo"
+text = "⚡ HMR Activo (Deno Isolate)"
 
 [node name="ViewStack" type="Control" parent="Root"]
 unique_name_in_owner = true
@@ -135,17 +135,41 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "NodePod Spatial App (Vite + WebXR)"
+text = "Deno Spatial App (TypeScript + WebXR)"
 
 [node name="VersionBadge" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/HeaderRow"]
 layout_mode = 2
-text = "v1.4-vr"
+text = "v2.0-deno"
 
 [node name="SummaryLabel" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Servidor de desarrollo NodePod activo en memoria VFS. Aplicación reactiva lista para inspeccionar."
+text = "Servidor Deno Web y daemon Celld V8 activos en memoria VFS. Aplicación reactiva lista para interactuar."
 autowrap_mode = 3
+
+[node name="MetricsRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Metric1" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/MetricsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⚡ V8 Boot: 2.8ms"
+
+[node name="Metric2" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/MetricsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "💾 RAM: 32MB"
+
+[node name="Metric3" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/MetricsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🕶️ WebXR: 90 FPS"
+
+[node name="Metric4" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/MetricsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🟢 Celld: Actor Sync"
 
 [node name="WidgetCard" type="PanelContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
 layout_mode = 2
@@ -156,21 +180,21 @@ theme_override_constants/separation = 6
 
 [node name="WidgetTitle" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox"]
 layout_mode = 2
-text = "⚡ Componente Reactivo en Vivo"
+text = "⚡ Componente Reactivo en Vivo (DOM wZed)"
 
 [node name="CounterRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="DecButton" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 32)
 layout_mode = 2
-text = "−"
+text = "-"
 
 [node name="CountDisplay" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/WidgetCard/WidgetVBox/CounterRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Clicks: 0"
 horizontal_alignment = 1
@@ -190,28 +214,8 @@ text = "↺ Reset"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Estado: Renderizado con NodePod VFS"
+text = "Estado: Renderizado con Deno/Celld V8"
 horizontal_alignment = 2
-
-[node name="Badges" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="Badge1" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
-layout_mode = 2
-text = "WebXR"
-
-[node name="Badge2" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
-layout_mode = 2
-text = "NodePod VFS"
-
-[node name="Badge3" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
-layout_mode = 2
-text = "wZed Engine"
-
-[node name="Badge4" type="Label" parent="Root/ViewStack/PreviewView/PreviewVBox/Badges"]
-layout_mode = 2
-text = "Hot-Reload"
 
 [node name="QuickNavRow" type="HBoxContainer" parent="Root/ViewStack/PreviewView/PreviewVBox"]
 layout_mode = 2
@@ -220,17 +224,26 @@ theme_override_constants/separation = 6
 [node name="QuickBtn1" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "🌐 localhost:5173"
 
 [node name="QuickBtn2" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "🕶️ Wolvic Layers"
 
 [node name="QuickBtn3" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "🤖 DeepSeek Harness"
+size_flags_horizontal = 3
+text = "🤖 DeepSeek Agent"
+
+[node name="QuickBtn4" type="Button" parent="Root/ViewStack/PreviewView/PreviewVBox/QuickNavRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "📄 wZed Docs"
 
 [node name="ReadingProgress" type="ProgressBar" parent="Root/ViewStack/PreviewView/PreviewVBox"]
 unique_name_in_owner = true
@@ -260,12 +273,12 @@ theme_override_constants/separation = 8
 [node name="ConsoleTitle" type="Label" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "⚡ NodePod Container Daemon v20.11.0"
+text = "⚡ Deno V8 Isolate & Celld Daemon v1.42.0"
 
 [node name="RestartDevBtn" type="Button" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "↺ Reiniciar Servidor"
+text = "↺ Reiniciar Isolate"
 
 [node name="ClearConsoleBtn" type="Button" parent="Root/ViewStack/ConsoleView/ConsoleVBox/ConsoleToolRow"]
 unique_name_in_owner = true
@@ -293,20 +306,35 @@ grow_vertical = 2
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="VfsTitle" type="Label" parent="Root/ViewStack/VfsView/VfsVBox"]
+[node name="VfsHeaderRow" type="HBoxContainer" parent="Root/ViewStack/VfsView/VfsVBox"]
 layout_mode = 2
-text = "📦 Sistema de Archivos Virtual (memfs)"
+theme_override_constants/separation = 8
 
-[node name="VfsFileList" type="ItemList" parent="Root/ViewStack/VfsView/VfsVBox"]
+[node name="VfsTitle" type="Label" parent="Root/ViewStack/VfsView/VfsVBox/VfsHeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "📦 Sistema de Archivos Virtual Deno (memfs)"
+
+[node name="ExecuteFileBtn" type="Button" parent="Root/ViewStack/VfsView/VfsVBox/VfsHeaderRow"]
 unique_name_in_owner = true
+layout_mode = 2
+text = "▶ Ejecutar en wZed"
+
+[node name="VfsContentSplit" type="HSplitContainer" parent="Root/ViewStack/VfsView/VfsVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VfsPreviewText" type="Label" parent="Root/ViewStack/VfsView/VfsVBox"]
+[node name="VfsFileList" type="ItemList" parent="Root/ViewStack/VfsView/VfsVBox/VfsContentSplit"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+
+[node name="VfsPreviewText" type="RichTextLabel" parent="Root/ViewStack/VfsView/VfsVBox/VfsContentSplit"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
 text = "Seleccione un archivo para ver detalles."
-autowrap_mode = 3
 
 [node name="StatusBar" type="PanelContainer" parent="Root"]
 layout_mode = 2
@@ -318,8 +346,8 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "NodePod en línea · http://localhost:5173"
+text = "Deno Web V8 en línea · http://localhost:5173"
 
 [node name="PingLabel" type="Label" parent="Root/StatusBar/StatusRow"]
 layout_mode = 2
-text = "⚡ 12ms"
+text = "⚡ 4ms"

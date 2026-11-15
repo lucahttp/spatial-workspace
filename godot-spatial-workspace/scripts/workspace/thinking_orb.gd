@@ -9,6 +9,9 @@ extends Node3D
 ## - Damped spring recoil physics on cognitive state transitions.
 ## - Full 6DoF grip drag & trigger cognitive state cycling for OpenXR / PICO 4 Ultra.
 
+signal state_changed(new_state: int, state_name: String)
+signal voice_trigger_requested()
+
 enum State {
 	BREATHING,
 	LISTENING,
@@ -160,6 +163,13 @@ var _dragging_hand := -1
 var _drag_depth := 0.0
 var _drag_offset := Vector3.ZERO
 var _trigger_consumed := [false, false]
+var _voice_energy := 0.0
+
+
+## Sets the live microphone voice volume level (0.0 to 1.0) from AudioCaptureService
+## Creates an organic fluid radial deformation and luminous bloom inspired by Bloub.
+func set_voice_level(level: float) -> void:
+	_voice_energy = lerpf(_voice_energy, clampf(level, 0.0, 1.0), 0.45)
 
 
 func _ready() -> void:
@@ -507,11 +517,15 @@ func _update_visuals(delta: float) -> void:
 
 	if _light != null:
 		_light.light_color = _light.light_color.lerp(_target_color, delta * 4.0)
-		_light.light_energy = _target_energy * (0.9 + _proximity * 0.8)
+		_light.light_energy = (_target_energy + _voice_energy * 2.4) * (0.9 + _proximity * 0.8)
+
+	if _core_material != null:
+		var fresnel_boost: float = 2.4 - (_voice_energy * 0.8)
+		_core_material.set_shader_parameter("rim_power", fresnel_boost)
 
 	if _ring_contour_material != null:
 		_ring_contour_material.emission = _target_color
-		_ring_contour_material.emission_energy_multiplier = 1.2 + _proximity * 1.6
+		_ring_contour_material.emission_energy_multiplier = 1.2 + _proximity * 1.6 + _voice_energy * 2.0
 	if _ring_material_inner != null:
 		_ring_material_inner.emission = _target_color
 		_ring_material_inner.emission_energy_multiplier = 0.9 + _proximity * 1.2
@@ -526,11 +540,12 @@ func _update_cloner(delta: float) -> void:
 
 	var mm := _cloner.multimesh
 	var breathe_wave := sin(_pulse * 2.8) * 0.003
+	var voice_swell := _voice_energy * 0.024
 	var total_spread := _target_spread * (1.0 + _proximity * 0.5)
 
 	for i in range(CLONE_COUNT):
 		var dir := _base_dirs[i]
-		var harmonic := sin(_pulse * 2.2 + float(i) * 0.4) * 0.0035
+		var harmonic := sin(_pulse * 2.2 + float(i) * 0.4) * (0.0035 + _voice_energy * 0.008)
 
 		# Localized distance bloom from the pointer
 		var base_pos := dir * BASE_CLONE_RADIUS
@@ -538,16 +553,16 @@ func _update_cloner(delta: float) -> void:
 		var local_infl := clampf(1.0 - (local_dist / 0.22), 0.0, 1.0)
 		var infl := maxf(local_infl, _proximity * 0.4)
 
-		var r := (BASE_CLONE_RADIUS + infl * MAX_CLONE_EXPANSION * total_spread + harmonic + breathe_wave) * _bounce_scale
-		var scale_rad := (1.0 + infl * 0.6) * _bounce_scale
-		var scale_len := (1.0 + infl * 1.3) * _bounce_scale
+		var r := (BASE_CLONE_RADIUS + infl * MAX_CLONE_EXPANSION * total_spread + harmonic + breathe_wave + voice_swell) * _bounce_scale
+		var scale_rad := (1.0 + infl * 0.6 + _voice_energy * 0.7) * _bounce_scale
+		var scale_len := (1.0 + infl * 1.3 + _voice_energy * 1.4) * _bounce_scale
 
 		var basis := _basis_from_up(dir)
 		basis = basis.scaled(Vector3(scale_rad, scale_len, scale_rad))
 		var xform := Transform3D(basis, dir * r)
 		mm.set_instance_transform(i, xform)
 
-		var clone_color := _target_color.lerp(_target_rim, infl * 0.8)
+		var clone_color := _target_color.lerp(_target_rim, clampf(infl * 0.8 + _voice_energy * 0.6, 0.0, 1.0))
 		mm.set_instance_color(i, clone_color)
 
 
@@ -568,13 +583,14 @@ func _handle_interaction() -> void:
 	if tree == null:
 		return
 
-	# 1. Trigger Click: Cycles cognitive state with spring recoil
+	# 1. Trigger Click: Cycles cognitive state with spring recoil & triggers voice
 	for hand: int in [0, 1]:
 		if _xr.is_trigger_pressed(hand):
 			if not _trigger_consumed[hand]:
 				var hit := _raycast_hit(hand)
 				if not hit.is_empty():
 					_trigger_consumed[hand] = true
+					voice_trigger_requested.emit()
 					cycle_state()
 					SpatialAudioScript.play_chime(tree, global_position)
 		else:
@@ -638,8 +654,21 @@ func set_state(new_state: State) -> void:
 	_apply_state(new_state, false)
 	# Trigger elastic spring recoil on state transition
 	_bounce_velocity = -1.9
+	state_changed.emit(int(state), get_state_name())
 	if _affordance != null and _affordance.has_method("set_label"):
-		_affordance.set_label("ORBE: %s" % get_state_name().to_upper())
+		var label_str := "✨ HEY BUDDY · GPT-LIVE"
+		match state:
+			State.LISTENING:
+				label_str = "🎙️ ESCUCHANDO..."
+			State.WORKING:
+				label_str = "🧠 GPT-LIVE PENSANDO"
+			State.SOLVING:
+				label_str = "⚙️ MINIMAX RESOLVIENDO"
+			State.COMPOSING:
+				label_str = "🔊 GPT-LIVE HABLANDO"
+			State.CONNECTING:
+				label_str = "⚡ DELEGANDO A MINIMAX"
+		_affordance.set_label(label_str)
 
 
 func get_state_name() -> String:

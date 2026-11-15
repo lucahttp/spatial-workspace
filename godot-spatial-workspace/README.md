@@ -25,6 +25,14 @@ godot-spatial-workspace/
 │       ├── idea_graph_3d.tscn        # Mapa de Ideas: cristal octaedro y enlaces de constelación
 │       └── spatial_pads_3d.tscn      # Bandejas 3D de Archivar y Descartar con gotas Bézier
 ├── scripts/
+│   ├── audio/
+│   │   ├── audio_capture_service.gd  # Captura hardware de micrófono, RMS en tiempo real y VAD
+│   │   └── spatial_audio.gd          # Síntesis procedural de efectos de sonido espacial
+│   ├── ai/
+│   │   ├── decision_router.gd        # Microsoft-Decision-1 (Foundry JEV) enrutador probabilístico
+│   │   ├── needle_tool_engine.gd     # Needle 3 (Cactus SAN) ejecutor de herramientas on-device
+│   │   ├── live_model_manager.gd     # Gestión y conmutación de modelos (MiniMax, OpenAI, DeepSeek)
+│   │   └── realtime_agent_orchestrator.gd # Orquestador Swarm cascada: JEV -> Needle -> Live Speech
 │   ├── xr/
 │   │   ├── xr_manager.gd             # Detección de runtime (OpenXR vs RealityKit), passthrough AR
 │   │   └── controller_pointer.gd     # Puntero láser con retícula normalizada y destellos
@@ -90,8 +98,21 @@ godot-spatial-workspace/
    - **Bandeja de Archivar**: Plinto de pizarra con borde verde menta y hojas levitantes (`sin(t * 2.2)`). Al soltar una tarjeta sobre ella, emite una gota luminosa en trayectoria parabólica cuadrática de Bézier hacia el Mapa de Ideas, incorporándola a la red de conocimiento.
    - **Tacho de Basura**: Receptáculo cilíndrico de titanio con anillo coral giratorio. Al soltar una tarjeta sobre él, reproduce sonido de residuo y la descarta.
 
-10. **Panel de Voz y Supervisión (`TranscriptPanel2D`)**:
-   - Ecualizador dinámico multibar, indicador *Foundry Live* en tiempo real, histórico de logs y botones de delegación rápida (*Correr wZed*, *Crear Módulo 3D*, *Listar VFS*). Conmutador de micrófono para silenciar o activar escucha.
+10. **Panel de Voz, Selección de Modelos Dinámica y Supervisión (`TranscriptPanel2D`)**:
+    - **Descubrimiento Dinámico de Modelos (`/v1/models`)**: El sistema consulta automáticamente las APIs de cada proveedor (MiniMax, OpenAI Realtime, DeepSeek, Ollama / Local y Endpoints Personalizados) sin hardcodear listas estáticas de modelos.
+    - **Caché Persistente en Disco**: Los modelos descubiertos se guardan en `user://live_model_config.json` para estar disponibles de inmediato en modo offline o re-arranque.
+    - **Entrada Manual de Modelos Custom**: Permite escribir o pegar cualquier identificador de modelo arbitrario (e.g., `m3.1-flash`, `deepseek-chat`, `gpt-4o-realtime-preview`, etc.).
+    - **Ecualizador Dinámico Multibar y VAD de Hardware**: Detección de volumen RMS en tiempo real, conmutador de micrófono físico, indicador *Foundry Live* en tiempo real, histórico de logs y botones de delegación rápida (*Correr wZed*, *Crear Módulo 3D*, *Listar VFS*). Conmutador de micrófono para silenciar o activar escucha.
+
+11. **Pipeline de Agentes: HeyBuddy -> GptLive -> Acciones en Pantalla / Búsqueda**:
+    - **Activación por Voz (HeyBuddy / VAD)**: Detección de palabra de activación (*"Hey Buddy"*, *"Oye Orbe"*, *"Computer"*), captura de hardware con VAD y transición instantánea del Orbe Cognitivo a `LISTENING` (destello esmeralda).
+    - **Frontman y Razonamiento (GptLive + Foundry JEV)**: Razonamiento ultra-rápido en sub-40ms sin generación redundante de tokens de texto, evaluando intención, urgencia y guardrails de seguridad destructiva.
+    - **Acciones Directas en Pantalla (Needle 3 SAN)**:
+      - **Búsqueda Web (`search_web`)**: *"Hey Buddy, busca noticias sobre Needle"* o *"busca cómo compilar WebXR"* abre el visor web espacial, navega el motor de búsqueda y renderiza los resultados en el panel interactivo.
+      - **Control de Ventanas y Layout (`set_layout_profile`)**: *"Pon modo mobile"*, *"modo TV"*, *"modo desktop"* reorganiza y anima suavemente todas las ventanas 3D frente al usuario.
+      - **Manipulación de Paneles (`toggle_panel`)**: Abre o cierra los paneles de wZed, Preview, Transcripción, Carrusel o Grafo de ideas.
+      - **Recentrado Ergonómico (`recenter_view`)**: Reubica y orienta el espacio entero respecto a la mirada del visor VR.
+      - **Ejecución y Hot-Reload (`run_wzed`)**: *"Hey Buddy, corre el código"* o *"crea un componente"* compila en Deno VFS, ejecuta la terminal y actualiza el preview web en vivo.
 
 ---
 
@@ -122,6 +143,29 @@ godot-spatial-workspace/
    open builds/visionos/SpatialWorkspace.xcodeproj
    ```
 5. Configurar el Signing & Capabilities con tu cuenta de Apple Developer y desplegar en el visor o simulador de visionOS.
+
+### 4. PC Desktop Nativo & Simulador XR (macOS, Windows, Linux)
+1. Presets disponibles:
+   - `macOS Desktop` -> `builds/desktop/macOS/SpatialWorkspace.dmg`
+   - `Windows Desktop` -> `builds/desktop/windows/SpatialWorkspace.exe`
+   - `Linux Desktop` -> `builds/desktop/linux/SpatialWorkspace.x86_64`
+2. **Ejecución y Test directo en PC / Mac**:
+   ```bash
+   /Applications/Godot.app/Contents/MacOS/Godot --path godot-spatial-workspace --rendering-driver opengl3 --xr-mode off
+   ```
+3. **Controles del Simulador Desktop**:
+   - **Click Izquierdo**: Trigger (interactúa con botones, selectores de modelos y controles 2D).
+   - **Click Medio / Tecla `G`**: Grip espacial (agarra y mueve paneles 3D en el espacio).
+   - **Click Derecho + Arrastrar**: Mouse look libre (gira la cámara en yaw y pitch).
+   - **WASD + Q/E**: Desplaza la cámara en el entorno espacial 3D.
+   - **Tecla `V` o `Espacio`**: Dispara la escucha de voz y el micro real (VAD).
+   - **Tecla `R`**: Recentra la vista al punto ergonómico frontal.
+   - **Teclas `1`, `2`, `3`, `4`, `5`**: Conmutan el diseño responsivo instantáneamente:
+     - `1`: **Desktop** (Widescreen 3 paneles + Orbe cenital).
+     - `2`: **Tablet** (Foco angular adaptativo).
+     - `3`: **Mobile** (Columna vertical compacta y apilada).
+     - `4`: **TV 4K** (Modo 10-foot panorámico a 2.2m).
+     - `5`: **MR/XR/VR** (Espacial inmersivo 6DoF en metros físicos).
 
 ---
 

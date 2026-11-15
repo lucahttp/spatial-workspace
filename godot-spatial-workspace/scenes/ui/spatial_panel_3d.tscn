@@ -49,6 +49,7 @@ material_override = SubResource("StandardMaterial3D_panel")
 own_world_3d = false
 transparent_bg = true
 handle_input_locally = true
+gui_embed_subwindows = true
 size = Vector2i(940, 580)
 render_target_update_mode = 4
 

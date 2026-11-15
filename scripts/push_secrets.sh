@@ -62,7 +62,7 @@ fi
 cat << EOF > "$TEMP_JSON"
 {
   "provider": 0,
-  "model": "speech-02-turbo",
+  "model": "m3.1-flash",
   "voice_id": "moss_audio",
   "api_key": "$MINIMAX_KEY",
   "group_id": "$MINIMAX_GROUP",
