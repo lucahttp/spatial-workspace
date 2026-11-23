@@ -33,3 +33,6 @@ secrets.json
 spatial_secrets.json
 spatial_workspace_secrets.json
 live_model_config.json
+
+# Tipografia licenciada (SF Pro es de Apple, no redistribuible)
+godot-spatial-workspace/assets/fonts/*.ttf
